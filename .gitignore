@@ -1,0 +1,85 @@
+# ===========================
+# Python
+# ===========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# ===========================
+# Virtual Environment
+# ===========================
+
+venv/
+env/
+.venv/
+
+# ===========================
+# Django
+# ===========================
+
+*.log
+local_settings.py
+db.sqlite3
+
+# Media and static files (optional)
+media/
+staticfiles/
+
+# Django migrations cache
+*/migrations/__pycache__/
+
+# ===========================
+# Environment variables
+# ===========================
+
+.env
+.env.*
+*.env
+
+# ===========================
+# IDEs / Editors
+# ===========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===========================
+# OS files
+# ===========================
+
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Testing
+# ===========================
+
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ===========================
+# Node (if Angular/React frontend)
+# ===========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===========================
+# Windows specific
+# ===========================
+
+*.exe
+*.msi
+*.bat
+*.cmd
