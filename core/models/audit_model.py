@@ -1,0 +1,46 @@
+from django.db import models
+from django.conf import settings
+
+class UserAuditModel(models.Model):
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_created",
+    )
+
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_updated",
+    )
+
+    class Meta:
+        abstract = True   
+
+
+class TimeAuditModel(models.Model):
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class ActiveModel(models.Model):
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        abstract = True
+
+
+class AuditModel(UserAuditModel, TimeAuditModel, ActiveModel):
+    
+    class Meta:
+        abstract = True
