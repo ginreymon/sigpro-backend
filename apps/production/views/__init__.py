@@ -1,0 +1,12 @@
+from .op_components_detail_view import OPComponentsDetailView
+from .op_production_detail_view import OPProductionDetailView
+from .module_assignee_view import ModuleAssigneeViewSet
+from .module_view import ModuleViewSet
+from .work_break_view import WorkBreakViewSet
+from .work_shift_view import WorkShiftViewSet
+from .work_session_view import WorkSessionViewSet
+from .employee_local_view import EmployeeLocalViewSet
+from .work_center_local_view import WorkCenterLocalViewSet
+from .production_record_view import ProductionRecordViewSet
+from .work_break_record_view import WorkBreakRecordViewSet
+

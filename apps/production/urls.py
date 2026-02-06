@@ -1,0 +1,32 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from .views.op_components_detail_view import OPComponentsDetailView
+from .views.op_production_detail_view import OPProductionDetailView
+from .views.module_assignee_view import ModuleAssigneeViewSet
+from .views.module_view import ModuleViewSet
+from .views.work_break_view import WorkBreakViewSet
+from .views.work_shift_view import WorkShiftViewSet
+from .views.work_session_view import WorkSessionViewSet
+from .views.employee_local_view import EmployeeLocalViewSet
+from .views.work_center_local_view import WorkCenterLocalViewSet
+from .views.production_record_view import ProductionRecordViewSet
+from .views.work_break_record_view import WorkBreakRecordViewSet
+
+
+router = DefaultRouter()
+router.register(r'modules', ModuleViewSet)
+router.register(r'module-assignees', ModuleAssigneeViewSet)
+router.register(r'work-breaks', WorkBreakViewSet)
+router.register(r'work-shifts', WorkShiftViewSet)
+router.register(r'work-sessions', WorkSessionViewSet)
+router.register(r'employees', EmployeeLocalViewSet)
+router.register(r'work-centers', WorkCenterLocalViewSet)
+router.register(r'production-records', ProductionRecordViewSet)
+router.register(r'work-break-records', WorkBreakRecordViewSet)
+
+urlpatterns = [
+    path("production-detail/", OPProductionDetailView.as_view(), name="production-detail-op"),
+    path("component-detail/", OPComponentsDetailView.as_view(), name="component-detail-op"),
+    path("", include(router.urls)),
+]
