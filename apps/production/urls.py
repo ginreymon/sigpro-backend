@@ -1,8 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .views.op_components_detail_view import OPComponentsDetailView
-from .views.op_production_detail_view import OPProductionDetailView
+from .views.op_components_detail_view import OPComponentsDetailViewSet
+from .views.op_production_detail_view import OPProductionDetailViewSet
 from .views.module_assignee_view import ModuleAssigneeViewSet
 from .views.module_view import ModuleViewSet
 from .views.work_break_view import WorkBreakViewSet
@@ -24,9 +24,9 @@ router.register(r'employees', EmployeeLocalViewSet)
 router.register(r'work-centers', WorkCenterLocalViewSet)
 router.register(r'production-records', ProductionRecordViewSet)
 router.register(r'work-break-records', WorkBreakRecordViewSet)
+router.register(r"production-detail", OPProductionDetailViewSet, basename="production-detail")
+router.register(r"component-detail", OPComponentsDetailViewSet, basename="components-detail")
 
-urlpatterns = [
-    path("production-detail/", OPProductionDetailView.as_view(), name="production-detail-op"),
-    path("component-detail/", OPComponentsDetailView.as_view(), name="component-detail-op"),
+urlpatterns = [    
     path("", include(router.urls)),
 ]

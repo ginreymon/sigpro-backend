@@ -1,13 +1,15 @@
-from rest_framework.views import APIView
+from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from apps.production.serializers import OPProductionDetailSerializer
 from apps.production.services.op_production_service import OPProductionService
 
 
-class OPProductionDetailView(APIView):
+class OPProductionDetailViewSet(viewsets.ViewSet):
 
-    def get(self, request):
+    serializer_class = OPProductionDetailSerializer
+
+    def list(self, request):
         doc_type = request.query_params.get("type")
         doc_number = request.query_params.get("number")        
 
