@@ -4,8 +4,13 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from apps.user.serializers import RegisterSerializer
+from rest_framework_simplejwt.exceptions import TokenError
+from django.utils.crypto import get_random_string
+from django.utils import timezone
+from datetime import timedelta
+from apps.user.serializers import RegisterSerializer, ChangePasswordSerializer
+from apps.production.models import EmployeeLocal
+from apps.user.models import PasswordResetToken, UserEmployeeLink
 
 
 class AuthViewSet(viewsets.ViewSet):    
@@ -30,7 +35,6 @@ class AuthViewSet(viewsets.ViewSet):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='login')
     def login(self, request):
@@ -38,11 +42,17 @@ class AuthViewSet(viewsets.ViewSet):
         username = request.data.get("username")
         password = request.data.get("password")
 
+        if not password or not username:
+            return Response(
+                {"message": "Usuario y contraseña requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         user = authenticate(username=username, password=password)
 
         if user is None:
             return Response(
-                {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+                {"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED
             )
 
         refresh = RefreshToken.for_user(user)
@@ -53,3 +63,128 @@ class AuthViewSet(viewsets.ViewSet):
                 "refresh": str(refresh),
             }
         )
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='refresh')
+    def refresh_token(self, request):
+
+        refresh_token = request.data.get("refresh")
+
+        if not refresh_token:
+            return Response(
+                {"error": "Refresh token requerido"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            refresh = RefreshToken(refresh_token)
+
+            return Response({"access": str(refresh.access_token)})
+
+        except TokenError:
+            return Response(
+                {"error": "Refresh token inválido o expirado"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path="change-password")
+    def change_password(self, request):
+
+        serializer = ChangePasswordSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+
+        old_password = serializer.validated_data["old_password"]
+        new_password = serializer.validated_data["new_password"]
+
+        if not user.check_password(old_password):
+            return Response(
+                {"message": "Contraseña actual incorrecta"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if old_password == new_password:
+            return Response(
+                {"message": "La nueva contraseña no puede ser igual a la anterior"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Contraseña actualizada correctamente"})
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path="password-reset-request")
+    def password_reset_request(self, request):
+
+        id_number = request.data.get("id_number")
+        username = request.data.get("username")
+
+        if not id_number or not username:
+            return Response(
+                {"message": "Usuario y número de identificación requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            employee = EmployeeLocal.objects.get(id_number=id_number)
+            link = UserEmployeeLink.objects.get(employee_local=employee)
+            user = link.django_user        
+
+            if user.username != username:
+                raise EmployeeLocal.DoesNotExist()
+
+            token_string = get_random_string(64)
+
+            PasswordResetToken.objects.create(
+                user=user,
+                token=token_string,
+                expires_at=timezone.now() + timedelta(minutes=15)
+            )
+
+            return Response({
+                "reset_token": token_string,
+                "expires_in_minutes": 15
+            })
+
+        except EmployeeLocal.DoesNotExist:
+            return Response({
+                "message": "Datos inválidos"
+            })
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path="password-reset-confirm")
+    def password_reset_confirm(self, request):
+
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+
+        if not token or not new_password:
+            return Response(
+                {"message": "Token y contraseña requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            reset_token = PasswordResetToken.objects.get(token=token)
+
+            if not reset_token.is_valid():
+                return Response(
+                    {"message": "Token expirado o usado"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = reset_token.user
+            user.set_password(new_password)
+            user.save()
+
+            reset_token.is_used = True
+            reset_token.save()
+
+            return Response({"message": "Contraseña actualizada correctamente"})
+
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {"message": "Token inválido"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
