@@ -64,7 +64,7 @@ class AuthViewSet(viewsets.ViewSet):
             }
         )
 
-    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='refresh')
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='token/refresh')
     def refresh_token(self, request):
 
         refresh_token = request.data.get("refresh")

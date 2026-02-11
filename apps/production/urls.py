@@ -25,7 +25,7 @@ router.register(r'work-centers', WorkCenterLocalViewSet)
 router.register(r'production-records', ProductionRecordViewSet)
 router.register(r'work-break-records', WorkBreakRecordViewSet)
 router.register(r"production-detail", OPProductionDetailViewSet, basename="production-detail")
-router.register(r"component-detail", OPComponentsDetailViewSet, basename="components-detail")
+router.register(r"components-detail", OPComponentsDetailViewSet, basename="components-detail")
 
 urlpatterns = [    
     path("", include(router.urls)),
