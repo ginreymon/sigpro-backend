@@ -11,6 +11,7 @@ from datetime import timedelta
 from apps.user.serializers import RegisterSerializer, ChangePasswordSerializer
 from apps.production.models import EmployeeLocal
 from apps.user.models import PasswordResetToken, UserEmployeeLink
+from core.models.option import Option
 
 
 class AuthViewSet(viewsets.ViewSet):    
@@ -188,3 +189,30 @@ class AuthViewSet(viewsets.ViewSet):
                 {"message": "Token inválido"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], url_path="has-access")
+    def has_access(self, request):
+        user = request.user
+        option_id = request.query_params.get("optionId")
+
+        if not option_id:
+            return Response(
+                {"message": "optionId is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            option_id = int(option_id)
+        except ValueError:
+            return Response(
+                {"message": "optionId must be an integer"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        has_access = Option.objects.filter(
+            id=option_id,
+            state=True,
+            module__state=True,
+            group_options__group__in=user.groups.all(),
+        ).exists()
+
+        return Response({"optionId": option_id, "hasAccess": has_access})
