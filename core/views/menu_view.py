@@ -32,6 +32,7 @@ class MenuViewSet(viewsets.ViewSet):
                 "id": module.id,
                 "name": str.capitalize(module.name),
                 "url": str.lower(module.url),
+                "order": module.order,
                 "options": [],
             }
 
@@ -42,6 +43,8 @@ class MenuViewSet(viewsets.ViewSet):
                         "name": str.capitalize(option.name),
                         "title": str.capitalize(option.title),
                         "url": str.lower(option.url),
+                        "order": option.order,
+                        "description": option.description
                     }
                 )
 

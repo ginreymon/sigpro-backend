@@ -58,6 +58,10 @@ class AuthViewSet(viewsets.ViewSet):
 
         refresh = RefreshToken.for_user(user)
 
+        refresh["username"] = user.username
+        refresh["user_id"] = user.id
+        refresh["groups"] = list(user.groups.values_list("name", flat=True))
+
         return Response(
             {
                 "access": str(refresh.access_token),
