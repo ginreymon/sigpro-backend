@@ -1,8 +1,8 @@
-from rest_framework.viewsets import ModelViewSet
+from core.views.base_model_view import BaseModelViewSet
 from core.models import Option
 from core.serializers.option_serializer import OptionSerializer
 
 
-class OptionViewSet(ModelViewSet):
+class OptionViewSet(BaseModelViewSet):
     queryset = Option.objects.all()
     serializer_class = OptionSerializer

@@ -1,8 +1,8 @@
-from rest_framework import viewsets
+from core.views.base_model_view import BaseModelViewSet
 from apps.production.models import WorkShift
 from apps.production.serializers import WorkShiftSerializer
 
 
-class WorkShiftViewSet(viewsets.ModelViewSet):
+class WorkShiftViewSet(BaseModelViewSet):
     queryset = WorkShift.objects.all()
     serializer_class = WorkShiftSerializer

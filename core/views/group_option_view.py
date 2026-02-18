@@ -1,8 +1,8 @@
-from rest_framework.viewsets import ModelViewSet
+from core.views.base_model_view import BaseModelViewSet
 from core.models.group_option import GroupOption
 from core.serializers.group_option_serializer import GroupOptionSerializer
 
 
-class GroupOptionViewSet(ModelViewSet):
+class GroupOptionViewSet(BaseModelViewSet):
     queryset = GroupOption.objects.all()
     serializer_class = GroupOptionSerializer

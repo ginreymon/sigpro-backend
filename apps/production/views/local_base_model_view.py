@@ -1,8 +1,9 @@
-from rest_framework import viewsets, status
+from rest_framework import status
 from rest_framework.response import Response
+from core.views.base_model_view import BaseModelViewSet
 
 
-class LocalBaseModelViewSet(viewsets.ModelViewSet):
+class LocalBaseModelViewSet(BaseModelViewSet):
 
     editable_fields = ["is_active"]
 
