@@ -12,6 +12,34 @@ class EmployeeLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
     last_name2 = models.CharField(max_length=255, blank=True, null=True)
     id_number = models.CharField(max_length=50, unique=True)
 
+    @property
+    def has_account(self):
+        return hasattr(self, "user_link")
+
+    @property
+    def username(self):
+        if self.has_account:
+            return self.user_link.django_user.username
+        return None
+
+    @property
+    def user_id(self):
+        if self.has_account:
+            return self.user_link.django_user.id
+        return None
+
+    @property
+    def is_account_active(self):
+        if self.has_account:
+            return self.user_link.django_user.is_active
+        return False
+    
+    @property
+    def groups(self):       
+        if self.has_account:
+            return list(self.user_link.django_user.groups.values("id", "name"))
+        return []
+
     class Meta:
         ordering = ["rowid"]
 

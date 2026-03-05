@@ -6,13 +6,8 @@ from apps.production.models import EmployeeLocal
 
 class UserEmployeeLink(TimeAuditModel, UserAuditModel):
 
-    django_user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="employee_link"
-    )
-
-    employee_local = models.OneToOneField(
-        EmployeeLocal, on_delete=models.CASCADE, related_name="user_links"
-    )
+    django_user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_link")
+    employee_local = models.OneToOneField(EmployeeLocal, on_delete=models.CASCADE, related_name="user_link")
 
     def __str__(self):
         return f"{self.employee_local.rowid} - {self.django_user.username}"

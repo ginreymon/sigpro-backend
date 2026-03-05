@@ -22,15 +22,13 @@ class AuthViewSet(viewsets.ViewSet):
         serializer = RegisterSerializer(data=request.data)
 
         if serializer.is_valid():
-            user = serializer.save()
-
-            refresh = RefreshToken.for_user(user)
+            user = serializer.save()          
 
             return Response(
                 {
                     "user": serializer.data,
-                    "access": str(refresh.access_token),
-                    "refresh": str(refresh),
+                    "user_id":user.id,
+                    "rol": list(user.groups.values_list("name", flat=True))
                 },
                 status=status.HTTP_201_CREATED,
             )

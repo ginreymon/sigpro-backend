@@ -9,6 +9,9 @@ class LocalBaseModel(models.Model):
     class Meta:
         abstract = True
 
+    def delete(self, using=None, keep_parents=False):
+        self.soft_delete()
+
     def soft_delete(self):
         self.is_deleted = True
         self.deleted_at = timezone.now()

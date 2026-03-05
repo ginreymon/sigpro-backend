@@ -1,2 +1,5 @@
 from .register_serializer import RegisterSerializer
 from .change_password_serializer import ChangePasswordSerializer
+from .group_serializer import GroupSerializer
+from .permission_serializer import PermissionSerializer
+from .user_update_serializer import UserUpdateSerializer
