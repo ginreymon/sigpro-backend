@@ -3,7 +3,7 @@ from core.models.audit_model import AuditModel
 
 
 class WorkShift(AuditModel):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
 

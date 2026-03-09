@@ -1,8 +1,6 @@
 from django.db import models
-from django.conf import settings
 from core.models.audit_model import TimeAuditModel, UserAuditModel
 from .module import Module
-from .work_center_local import WorkCenterLocal
 from .work_session import WorkSession
 
 
@@ -18,9 +16,9 @@ class ProductionRecord(TimeAuditModel, UserAuditModel):
         Module, on_delete=models.CASCADE, related_name="production_records"
     )
 
-    work_center = models.ForeignKey(
-        WorkCenterLocal, on_delete=models.PROTECT, related_name="production_records"
-    )
+    @property
+    def work_center(self):
+        return self.module.work_center
 
     ordered_quantity = models.DecimalField(max_digits=10, decimal_places=2)
     planned_quantity = models.DecimalField(max_digits=10, decimal_places=2)
