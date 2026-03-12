@@ -4,8 +4,8 @@ from core.models.audit_model import AuditModel
 
 class WorkBreak(AuditModel):
 
-    name = models.CharField(max_length=255)
-    description = models.TextField()
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(null=True, blank=True)
     duration = models.DurationField()
 
     class Meta:
