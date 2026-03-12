@@ -3,6 +3,8 @@ from django.utils import timezone
 
 
 class LocalBaseModel(models.Model):
+
+    rowid = models.BigIntegerField(unique=True)
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
 

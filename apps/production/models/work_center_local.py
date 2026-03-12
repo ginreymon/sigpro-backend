@@ -5,7 +5,6 @@ from core.models import LocalBaseModel
 
 class WorkCenterLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
 
-    rowid = models.BigIntegerField(unique=True)
     is_deleted = models.BooleanField(default=False)
 
     code = models.CharField(max_length=255)
