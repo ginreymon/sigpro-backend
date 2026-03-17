@@ -1,11 +1,11 @@
 from datetime import timedelta
-from core.views.base_model_view import BaseModelViewSet
+from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkBreak
 from apps.production.serializers import WorkBreakSerializer
 from django.db import models  # type: ignore
 
 
-class WorkBreakViewSet(BaseModelViewSet):
+class WorkBreakViewSet(AuditModelViewSet):
     queryset = WorkBreak.objects.all()
     serializer_class = WorkBreakSerializer
 

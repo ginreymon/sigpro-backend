@@ -1,9 +1,9 @@
-from core.views.base_model_view import BaseModelViewSet
+from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import Module
 from apps.production.serializers import ModuleSerializer
 
 
-class ModuleViewSet(BaseModelViewSet):
+class ModuleViewSet(AuditModelViewSet):
     queryset = Module.objects.select_related("work_center").all()
     serializer_class = ModuleSerializer
 
@@ -15,4 +15,4 @@ class ModuleViewSet(BaseModelViewSet):
         "work_center__description",
         "work_center__code",
         "work_center__short_description",
-    ] 
+    ]

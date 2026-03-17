@@ -44,7 +44,8 @@ class MenuViewSet(viewsets.ViewSet):
                         "title": str.capitalize(option.title),
                         "url": str.lower(option.url),
                         "order": option.order,
-                        "description": option.description
+                        "description": option.description,
+                        "visible": option.visible,
                     }
                 )
 

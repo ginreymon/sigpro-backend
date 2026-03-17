@@ -16,3 +16,18 @@ class ModuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Module
         fields = "__all__"
+
+    employees = serializers.SerializerMethodField()
+
+    def get_employees(self, obj):
+        assignees = obj.moduleassignee_set.select_related("employee")
+        return [
+            {
+                "id": a.employee.id,
+                "first_name": a.employee.first_name,
+                "last_name1": a.employee.last_name1,
+                "last_name2": a.employee.last_name2,
+            }
+            for a in assignees
+        ]
+

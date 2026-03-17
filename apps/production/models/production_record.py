@@ -1,6 +1,5 @@
 from django.db import models
 from core.models.audit_model import TimeAuditModel, UserAuditModel
-from .module import Module
 from .work_session import WorkSession
 
 
@@ -10,15 +9,7 @@ class ProductionRecord(TimeAuditModel, UserAuditModel):
 
     session = models.ForeignKey(
         WorkSession, on_delete=models.CASCADE, related_name="production_records"
-    )
-
-    module = models.ForeignKey(
-        Module, on_delete=models.CASCADE, related_name="production_records"
-    )
-
-    @property
-    def work_center(self):
-        return self.module.work_center
+    )    
 
     ordered_quantity = models.DecimalField(max_digits=10, decimal_places=2)
     planned_quantity = models.DecimalField(max_digits=10, decimal_places=2)
@@ -38,9 +29,7 @@ class ProductionRecord(TimeAuditModel, UserAuditModel):
 
     def __str__(self):
         return (
-            f"SKU {self.sku_rowid} | "
-            f"Module {self.module.number} | "
-            f"Center {self.work_center.code} | "
+            f"SKU {self.sku_rowid} | "     
             f"Session {self.session.created_at} | "
             f"Completed {self.completed_quantity}"
         )
