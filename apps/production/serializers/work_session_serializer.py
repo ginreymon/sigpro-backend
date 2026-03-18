@@ -1,10 +1,25 @@
 from rest_framework import serializers
+from apps.production.models.work_shift import WorkShift
+from apps.production.models.module import Module
+from apps.production.serializers.module_serializer import ModuleSerializer
+from apps.production.serializers.work_shift_serializer import WorkShiftSerializer
 from apps.production.models import WorkSession, ModuleAssignee, EmployeeLocal
 from django.db import transaction
+from core.serializers.audit_serializer import AuditSerializer
 
 
-class WorkSessionSerializer(serializers.ModelSerializer):
+class WorkSessionSerializer(AuditSerializer):
     employee_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+    module = ModuleSerializer(read_only=True)
+    work_shift = WorkShiftSerializer(read_only=True)
+
+    module_id = serializers.PrimaryKeyRelatedField(
+        queryset=Module.objects.all(), source="module", write_only=True
+    )
+
+    work_shift_id = serializers.PrimaryKeyRelatedField(
+        queryset=WorkShift.objects.all(), source="work_shift", write_only=True
+    )
 
     class Meta:
         model = WorkSession
@@ -25,7 +40,7 @@ class WorkSessionSerializer(serializers.ModelSerializer):
             for emp in EmployeeLocal.objects.filter(id__in=employee_ids)
         ]
 
-        work_session = WorkSession.objects.create(**validated_data)
+        work_session = super().create(validated_data)       
 
         module = work_session.module
 
@@ -47,7 +62,7 @@ class WorkSessionSerializer(serializers.ModelSerializer):
 
         assignees_to_create = [
             ModuleAssignee(
-                module=module, employee_id=emp_id, created_by=work_session.user
+                module=module, employee_id=emp_id, created_by=work_session.created_by,
             )
             for emp_id in to_add
         ]

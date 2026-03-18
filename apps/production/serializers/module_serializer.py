@@ -2,15 +2,14 @@ from rest_framework import serializers
 from apps.production.models.module import Module
 from apps.production.models.work_center_local import WorkCenterLocal
 from .work_center_local_serializer import WorkCenterLocalSerializer
+from core.serializers.audit_serializer import AuditSerializer
 
 
-class ModuleSerializer(serializers.ModelSerializer):
+class ModuleSerializer(AuditSerializer):
     work_center = WorkCenterLocalSerializer(read_only=True)
 
     work_center_id = serializers.PrimaryKeyRelatedField(
-        queryset=WorkCenterLocal.objects.all(),
-        source="work_center",
-        write_only=True
+        queryset=WorkCenterLocal.objects.all(), source="work_center", write_only=True
     )
 
     class Meta:
@@ -30,4 +29,3 @@ class ModuleSerializer(serializers.ModelSerializer):
             }
             for a in assignees
         ]
-

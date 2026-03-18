@@ -1,3 +1,4 @@
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,6 +17,24 @@ class WorkSessionViewSet(AuditModelViewSet):
         "is_closed": ["exact"],
         "started_at": ["gte", "lte"],
     }
+
+    def perform_create(self, serializer):
+        user = self.request.user
+       
+        if WorkSession.objects.filter(user=user, is_closed=False).exists():
+            raise ValidationError("User already has an active session")
+
+        extra = {}
+        
+        if hasattr(serializer.Meta.model, "created_by"):
+            extra["created_by"] = user
+
+        if hasattr(serializer.Meta.model, "updated_by"):
+            extra["updated_by"] = user
+        
+        extra["user"] = user
+
+        serializer.save(**extra)
 
     # /work-sessions/{id}/close/
     @action(detail=True, methods=["post"])
