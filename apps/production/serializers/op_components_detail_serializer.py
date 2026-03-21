@@ -12,6 +12,7 @@ class OPComponentsDetailSerializer(serializers.Serializer):
     Ref_Componente = serializers.CharField()
     Descripcion = serializers.CharField()
     Ref_Producto = serializers.CharField()
+    Id_Plan = serializers.CharField()
     Ext1_Detalle_Componente = serializers.CharField(
         required=False, allow_null=True, allow_blank=True
     )
