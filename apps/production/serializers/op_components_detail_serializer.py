@@ -8,6 +8,7 @@ class OPComponentsDetailSerializer(serializers.Serializer):
     Tipo_Doc = serializers.CharField()
     Numero_Doc = serializers.IntegerField()
     Grupo = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    Grupo_Id = serializers.IntegerField(required=False)
     Ref_Componente = serializers.CharField()
     Descripcion = serializers.CharField()
     Ref_Producto = serializers.CharField()

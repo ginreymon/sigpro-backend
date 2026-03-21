@@ -1,5 +1,6 @@
 from .op_components_detail_view import OPComponentsDetailViewSet
 from .op_production_detail_view import OPProductionDetailViewSet
+from .op_type_documents_view import OPTypeDocumentsViewSet
 from .module_assignee_view import ModuleAssigneeViewSet
 from .module_view import ModuleViewSet
 from .work_break_view import WorkBreakViewSet

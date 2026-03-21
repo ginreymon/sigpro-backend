@@ -26,23 +26,21 @@ class WorkSessionSerializer(AuditSerializer):
         fields = "__all__"
         read_only_fields = ("user", "total_time", "is_closed")
 
-    @transaction.atomic
-    def create(self, validated_data):
-        employee_ids = validated_data.pop("employee_ids", [])
 
-        validated_data["employees_snapshot"] = [
+    def _handle_employees(self, instance, employee_ids):
+        # Update snapshot
+        instance.employees_snapshot = [
             {
                 "id": emp.id,
                 "first_name": emp.first_name,
                 "last_name1": emp.last_name1,
-                "last_name2": emp.last_name2,             
+                "last_name2": emp.last_name2,
             }
             for emp in EmployeeLocal.objects.filter(id__in=employee_ids)
         ]
+        instance.save()
 
-        work_session = super().create(validated_data)       
-
-        module = work_session.module
+        module = instance.module
 
         current_assignees = ModuleAssignee.objects.filter(module=module)
         current_employee_ids = set(
@@ -52,21 +50,45 @@ class WorkSessionSerializer(AuditSerializer):
         new_employee_ids = set(employee_ids)
 
         to_add = new_employee_ids - current_employee_ids
-
         to_remove = current_employee_ids - new_employee_ids
 
         if to_remove:
             ModuleAssignee.objects.filter(
-                module=module, employee_id__in=to_remove
+                module=module,
+                employee_id__in=to_remove
             ).delete()
 
         assignees_to_create = [
             ModuleAssignee(
-                module=module, employee_id=emp_id, created_by=work_session.created_by,
+                module=module,
+                employee_id=emp_id,
+                created_by=getattr(instance, "updated_by", None) or instance.created_by,
             )
             for emp_id in to_add
         ]
 
         ModuleAssignee.objects.bulk_create(assignees_to_create)
 
+
+    @transaction.atomic
+    def create(self, validated_data):
+        employee_ids = validated_data.pop("employee_ids", [])
+
+        work_session = super().create(validated_data)
+
+        if employee_ids:
+            self._handle_employees(work_session, employee_ids)
+
         return work_session
+    
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        employee_ids = validated_data.pop("employee_ids", None)
+
+        instance = super().update(instance, validated_data)
+
+        if employee_ids is not None:
+            self._handle_employees(instance, employee_ids)
+
+        return instance

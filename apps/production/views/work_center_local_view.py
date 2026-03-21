@@ -4,5 +4,5 @@ from .local_base_model_view import LocalBaseModelViewSet
 
 
 class WorkCenterLocalViewSet(LocalBaseModelViewSet):
-    queryset = WorkCenterLocal.objects.all()
+    queryset = WorkCenterLocal.objects.filter(is_deleted=False)
     serializer_class = WorkCenterLocalSerializer

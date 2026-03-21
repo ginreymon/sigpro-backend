@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views.op_components_detail_view import OPComponentsDetailViewSet
 from .views.op_production_detail_view import OPProductionDetailViewSet
+from .views.op_type_documents_view import OPTypeDocumentsViewSet
 from .views.module_assignee_view import ModuleAssigneeViewSet
 from .views.module_view import ModuleViewSet
 from .views.work_break_view import WorkBreakViewSet
@@ -24,8 +25,9 @@ router.register(r'employees', EmployeeLocalViewSet)
 router.register(r'work-centers', WorkCenterLocalViewSet)
 router.register(r'production-records', ProductionRecordViewSet)
 router.register(r'work-break-records', WorkBreakRecordViewSet)
-router.register(r"production-detail", OPProductionDetailViewSet, basename="production-detail")
-router.register(r"components-detail", OPComponentsDetailViewSet, basename="components-detail")
+router.register(r"production-orders", OPProductionDetailViewSet, basename="production-orders")
+router.register(r"production-components", OPComponentsDetailViewSet, basename="production-components")
+router.register(r"document-types", OPTypeDocumentsViewSet, basename="document-types")
 
 urlpatterns = [    
     path("", include(router.urls)),
