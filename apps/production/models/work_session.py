@@ -2,7 +2,6 @@ from django.db import models
 from django.conf import settings
 from core.models.audit_model import TimeAuditModel, UserAuditModel
 from .work_shift import WorkShift
-from .module import Module
 from django.utils import timezone
 from django.db.models import Q
 
@@ -17,10 +16,6 @@ class WorkSession(TimeAuditModel, UserAuditModel):
         WorkShift, on_delete=models.PROTECT, related_name="work_sessions"
     )
 
-    module = models.ForeignKey(
-        Module, on_delete=models.PROTECT, related_name="work_sessions"
-    )
-
     employees_snapshot = models.JSONField(default=list, blank=True)
 
     started_at = models.DateTimeField(default=timezone.now)
@@ -33,8 +28,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
         ordering = ["started_at"]
         indexes = [
             models.Index(fields=["started_at"]),
-            models.Index(fields=["user", "is_closed"]),
-            models.Index(fields=["module"]),
+            models.Index(fields=["user", "is_closed"]),          
         ]
         constraints = [
             models.UniqueConstraint(
@@ -44,12 +38,29 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             )
         ]
 
+    def get_active_activity(self):
+        return self.work_session_activities.filter(ended_at__isnull=True).select_related("module").first()
+
+    def start_activity(self, module):
+        activity = self.get_active_activity()
+        if activity:
+            activity.close()
+
+        return self.work_session_activities.create(
+            module=module,
+            created_by=self.created_by,
+        )
+
     def close_session(self):
         if self.is_closed:
             return
 
         if not self.started_at:
             raise ValueError("Session has no start time")
+        
+        activity = self.get_active_activity()
+        if activity:
+            activity.close()
 
         self.ended_at = timezone.now()
         self.total_time = self.ended_at - self.started_at

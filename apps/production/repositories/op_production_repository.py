@@ -1,4 +1,5 @@
 from django.db import connection
+from apps.production.mappers.recursive_mapper import translate_keys
 import json
 
 
@@ -51,5 +52,7 @@ class OPProductionRepository:
 
             if not row or not row[0]:
                 return None
+            
+            data =json.loads(row[0])
 
-            return json.loads(row[0])
+            return translate_keys(data)

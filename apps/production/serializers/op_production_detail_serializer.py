@@ -4,40 +4,55 @@ from rest_framework import serializers
 
 class OPProductionDetailSerializer(serializers.Serializer):
 
-    RowID = serializers.IntegerField()
-    Color = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    Id_Doc = serializers.CharField()
-    Tipo_Doc = serializers.CharField()
-    Numero_Doc = serializers.IntegerField()
-    Referencia = serializers.CharField()
-    Ref_RowID = serializers.IntegerField()
-    Ref_Descripcion = serializers.CharField()
-    Ref_Producto = serializers.CharField()
-    Fecha_Creacion = serializers.DateTimeField()
-    Talla = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    Destino = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    Estado = serializers.IntegerField()
-    Cant_Ordenada = serializers.FloatField()
-    Cant_Planeada = serializers.FloatField()
-    Cant_Completada = serializers.FloatField()
-    Cant_Desechos = serializers.FloatField()
-    Cant_Rechazos = serializers.FloatField()
-    SKU_RowID = serializers.IntegerField()
-    Centro_Operaciones = serializers.SerializerMethodField()
-    Totales = serializers.SerializerMethodField()
+    rowId = serializers.IntegerField(source="RowID")
+    color = serializers.CharField(source="Color", required=False, allow_null=True, allow_blank=True)
 
-    def get_Centro_Operaciones(self, obj):
+    documentId = serializers.CharField(source="Id_Doc")
+    documentType = serializers.CharField(source="Tipo_Doc")
+    documentNumber = serializers.IntegerField(source="Numero_Doc")
+
+    reference = serializers.CharField(source="Referencia")
+    referenceRowId = serializers.IntegerField(source="Ref_RowID")
+    description = serializers.CharField(source="Ref_Descripcion")
+    product = serializers.CharField(source="Ref_Producto")
+
+    createdAt = serializers.DateTimeField(source="Fecha_Creacion")
+    size = serializers.CharField(source="Talla", required=False, allow_null=True, allow_blank=True)
+
+    destination = serializers.CharField(source="Destino", required=False, allow_null=True, allow_blank=True)
+    status = serializers.IntegerField(source="Estado")
+
+    orderedQty = serializers.FloatField(source="Cant_Ordenada")
+    plannedQty = serializers.FloatField(source="Cant_Planeada")
+    completedQty = serializers.FloatField(source="Cant_Completada")
+    wasteQty = serializers.FloatField(source="Cant_Desechos")
+    rejectedQty = serializers.FloatField(source="Cant_Rechazos")
+
+    skuRowId = serializers.IntegerField(source="SKU_RowID")
+
+    operationCenters = serializers.SerializerMethodField()
+    totals = serializers.SerializerMethodField()
+
+    def get_operationCenters(self, obj):
         value = obj.get("Centro_Operaciones")
 
         if not value:
             return []
 
         try:
-            return json.loads(value)
+            data = json.loads(value)
+            return [
+                {
+                    "operation": item.get("operacion"),
+                    "centerId": item.get("centro_id"),
+                    "centerName": item.get("centro_nombre"),
+                }
+                for item in data
+            ]
         except Exception:
             return []
 
-    def get_Totales(self, obj):
+    def get_totals(self, obj):
         value = obj.get("Totales")
 
         if not value:
@@ -45,6 +60,16 @@ class OPProductionDetailSerializer(serializers.Serializer):
 
         try:
             data = json.loads(value)
-            return data[0] if data else {}
+            if not data:
+                return {}
+
+            t = data[0]
+            return {
+                "orderedQty": t.get("Cant_Ordenada"),
+                "plannedQty": t.get("Cant_Planeada"),
+                "completedQty": t.get("Cant_Completada"),
+                "wasteQty": t.get("Cant_Desechos"),
+                "rejectedQty": t.get("Cant_Rechazos"),
+            }
         except Exception:
             return {}

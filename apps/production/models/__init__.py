@@ -7,3 +7,4 @@ from .employee_local import EmployeeLocal
 from .work_center_local import WorkCenterLocal
 from .production_record import ProductionRecord
 from .work_break_record import WorkBreakRecord
+from .work_session_activity import WorkSessionActivity
