@@ -1,7 +1,7 @@
 from django.db import models
 from core.models.audit_model import TimeAuditModel, UserAuditModel, ActiveModel
-from .work_session import WorkSession 
-from .module import Module
+from apps.production.models.work_session import WorkSession
+from apps.production.models.module import Module
 from django.utils import timezone
 from django.db.models import Q
 
@@ -17,8 +17,8 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
     ) 
 
     started_at = models.DateTimeField(default=timezone.now)
-    ended_at = models.DateTimeField(null=True, blank=True)     
-   
+    ended_at = models.DateTimeField(null=True, blank=True)    
+
     class Meta:
         ordering = ["started_at"]
         indexes = [
@@ -36,13 +36,24 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
         ]
 
     @property
+    def employees_snapshot(self):
+        return [
+            {
+                "id": emp.id,
+                "first_name": emp.first_name,
+                "last_name1": emp.last_name1,
+                "last_name2": emp.last_name2,
+            }
+            for emp in self.employee_snapshots.select_related("employee").all()
+        ]
+
+    @property
     def total_time_minutes(self):
         if not self.ended_at:
             return None
 
         delta = self.ended_at - self.started_at
         return delta.total_seconds() / 60
-
 
     def close(self):       
         if self.ended_at:

@@ -38,6 +38,13 @@ KEY_MAP = {
     "Cant_Completada": "completedQty",
     "Cant_Desechos": "wasteQty",
     "Cant_Rechazos": "rejectedQty",
+    # clasificacion
+    "Marca": "brand",
+    "Linea": "line",
+    "Clasificacion": "classification",
+    "Confeccion": "manufacture",
+    "Estampado": "print",
+    "Comercial": "commercial",
 }
 
 

@@ -2,9 +2,10 @@ from .module_assignee import ModuleAssignee
 from .module import Module
 from .work_break import WorkBreak
 from .work_shift import WorkShift
-from .work_session import WorkSession
 from .employee_local import EmployeeLocal
 from .work_center_local import WorkCenterLocal
 from .production_record import ProductionRecord
 from .work_break_record import WorkBreakRecord
 from .work_session_activity import WorkSessionActivity
+from .work_session_activity_employee import WorkSessionActivityEmployee
+from .work_session import WorkSession
