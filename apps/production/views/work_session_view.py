@@ -18,7 +18,7 @@ class WorkSessionViewSet(AuditModelViewSet):
 
     def get_queryset(self):
         return (
-            WorkSession.objects.filter(user=self.request.user)
+            WorkSession.objects.all()
             .select_related(
                 "work_shift",
                 "user",
