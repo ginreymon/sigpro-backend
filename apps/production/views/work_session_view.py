@@ -49,6 +49,7 @@ class WorkSessionViewSet(AuditModelViewSet):
 
         return Response(self.get_serializer(session).data)
 
+    # /work-sessions/active/
     @action(detail=False, methods=["get"])
     def active(self, request):
         session = self.get_queryset().filter(is_closed=False).first()

@@ -39,7 +39,12 @@ class WorkSession(TimeAuditModel, UserAuditModel):
         ]
 
     def get_active_activity(self):
-        return self.work_session_activities.filter(ended_at__isnull=True).select_related("module").first()
+        return (
+            self.work_session_activities.filter(ended_at__isnull=True, is_active=True)
+            .order_by("-started_at", "-id")
+            .select_related("module")
+            .first()
+        )
 
     def start_activity(self, module, employee_ids=None):
         activity = self.get_active_activity()

@@ -17,6 +17,7 @@ class WorkSessionSerializer(AuditSerializer):
     work_shift = WorkShiftSerializer(read_only=True)
     modules = serializers.SerializerMethodField()
     employees_snapshot = serializers.SerializerMethodField()
+    active_activity = serializers.SerializerMethodField()
 
     module_id = serializers.PrimaryKeyRelatedField(
         queryset=Module.objects.all(), write_only=True, required=False, allow_null=True,
@@ -52,15 +53,12 @@ class WorkSessionSerializer(AuditSerializer):
         return ModuleSerializer(activity.module).data if activity else None
 
     def get_modules(self, obj):
-        activities = obj.work_session_activities.all().order_by("started_at")
-
-        active_activities = getattr(obj, "_prefetched_active_activity", None)
-
-        if active_activities:
-            active_activity = active_activities[0] if isinstance(active_activities, list) else active_activities
-            activities = activities.exclude(id=active_activity.id)
-
-        return WorkSessionActivitySerializer(activities, many=True).data
+        modules = (
+            Module.objects.filter(activities__work_session=obj)
+            .distinct()
+            .values("id", "name", "number")
+        )
+        return list(modules)
 
     def get_employees_snapshot(self, obj):
         activity = obj.get_active_activity()
@@ -77,6 +75,19 @@ class WorkSessionSerializer(AuditSerializer):
             }
             for rel in activity.employee_snapshots.select_related("employee").all()
         ]
+
+    def get_active_activity(self, obj):
+        activity = obj.get_active_activity()
+
+        if not activity:
+            return None
+
+        return {
+            "id": activity.id,
+            "started_at": activity.started_at,
+            "ended_at": activity.ended_at,
+            "is_active": activity.is_active,
+        }
 
     def _handle_employees(self, instance, employee_ids, activity=None):   
         if not activity:

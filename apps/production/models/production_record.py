@@ -6,6 +6,9 @@ from apps.production.models.work_session_activity import WorkSessionActivity
 class ProductionRecord(TimeAuditModel, UserAuditModel):
 
     sku_rowid = models.BigIntegerField()
+    op_rowid = models.BigIntegerField()
+    op_number = models.IntegerField()
+    op_type = models.CharField(max_length=10)
 
     work_session_activity = models.ForeignKey(
         WorkSessionActivity, on_delete=models.CASCADE, related_name="production_records"
