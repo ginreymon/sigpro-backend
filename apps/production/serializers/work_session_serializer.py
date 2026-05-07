@@ -5,7 +5,7 @@ from apps.production.models.module import Module
 from apps.production.serializers.module_serializer import ModuleSerializer
 from apps.production.serializers.work_shift_serializer import WorkShiftSerializer
 from apps.production.models import WorkSession, ModuleAssignee, EmployeeLocal
-from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
+from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 from django.db import transaction
 from core.serializers.audit_serializer import AuditSerializer
@@ -82,11 +82,16 @@ class WorkSessionSerializer(AuditSerializer):
         if not activity:
             return None
 
+        last_record = activity.last_open_production_record
+
         return {
             "id": activity.id,
             "started_at": activity.started_at,
             "ended_at": activity.ended_at,
             "is_active": activity.is_active,
+            "last_open_production_record": (
+                ProductionRecordSerializer(last_record).data if last_record else None
+            ),
         }
 
     def _handle_employees(self, instance, employee_ids, activity=None):   

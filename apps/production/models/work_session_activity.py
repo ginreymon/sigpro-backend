@@ -54,6 +54,15 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
 
         delta = self.ended_at - self.started_at
         return delta.total_seconds() / 60
+    
+    @property
+    def last_open_production_record(self):
+        return (
+            self.production_records
+            .filter(end_time__isnull=True)
+            .order_by("-start_time")
+            .first()
+        )
 
     def close(self):       
         if self.ended_at:

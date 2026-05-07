@@ -38,6 +38,7 @@ KEY_MAP = {
     "Cant_Completada": "completedQty",
     "Cant_Desechos": "wasteQty",
     "Cant_Rechazos": "rejectedQty",
+    "Tiene_Registros_Abiertos": "hasOpenRecords",
     # clasificacion
     "Marca": "brand",
     "Linea": "line",
