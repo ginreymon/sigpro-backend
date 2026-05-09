@@ -46,14 +46,25 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             .first()
         )
 
-    def start_activity(self, module, employee_ids=None):
+    def close_all_open_records(self):
+        from apps.production.models.production_record import ProductionRecord
+        ProductionRecord.objects.filter(
+            work_session_activity__work_session=self,
+            end_time__isnull=True,
+        ).update(end_time=timezone.now())
+
+    def start_activity(self, module, employee_ids=None, created_by=None):
+        self.close_all_open_records()
+
         activity = self.get_active_activity()
         if activity:
             activity.close()
 
+        resolved_created_by = created_by or self.created_by
+
         activity = self.work_session_activities.create(
             module=module,
-            created_by=self.created_by,
+            created_by=resolved_created_by,
         )
 
         if employee_ids:
@@ -64,13 +75,42 @@ class WorkSession(TimeAuditModel, UserAuditModel):
                     WorkSessionActivityEmployee(
                         work_session_activity=activity,
                         employee=emp,
-                        created_by=self.created_by,
+                        created_by=resolved_created_by,
                     )
                     for emp in employees
                 ]
             )
 
         return activity
+
+    def continue_activity(self, employee_ids=None, created_by=None):
+                
+        last_activity = self.get_active_activity()
+
+        if not last_activity:
+            last_activity = (
+                self.work_session_activities
+                .order_by("-started_at")
+                .first()
+            )
+
+        if not last_activity:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No previous activity found to continue from")
+
+        module = last_activity.module
+        previous_employee_ids = list(
+            last_activity.employee_snapshots
+            .values_list("employee_id", flat=True)
+        )
+
+        resolved_employee_ids = employee_ids if employee_ids is not None else previous_employee_ids
+
+        return self.start_activity(
+            module=module,
+            employee_ids=resolved_employee_ids,
+            created_by=created_by,
+        )
 
     def close_session(self):
         if self.is_closed:

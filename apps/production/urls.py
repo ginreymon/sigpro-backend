@@ -9,6 +9,7 @@ from .views.module_view import ModuleViewSet
 from .views.work_break_view import WorkBreakViewSet
 from .views.work_shift_view import WorkShiftViewSet
 from .views.work_session_view import WorkSessionViewSet
+from .views.work_session_activity_view import WorkSessionActivityViewSet
 from .views.employee_local_view import EmployeeLocalViewSet
 from .views.work_center_local_view import WorkCenterLocalViewSet
 from .views.production_record_view import ProductionRecordViewSet
@@ -21,6 +22,7 @@ router.register(r'module-assignees', ModuleAssigneeViewSet)
 router.register(r'work-breaks', WorkBreakViewSet)
 router.register(r'work-shifts', WorkShiftViewSet)
 router.register(r'work-sessions', WorkSessionViewSet)
+router.register(r'work-session-activities', WorkSessionActivityViewSet)
 router.register(r'employees', EmployeeLocalViewSet)
 router.register(r'work-centers', WorkCenterLocalViewSet)
 router.register(r'production-records', ProductionRecordViewSet)

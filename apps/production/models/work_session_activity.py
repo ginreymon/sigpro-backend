@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import models
 from core.models.audit_model import TimeAuditModel, UserAuditModel, ActiveModel
 from apps.production.models.work_session import WorkSession
@@ -14,10 +15,10 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
 
     work_session = models.ForeignKey(
         WorkSession, on_delete=models.PROTECT, related_name="work_session_activities"
-    ) 
+    )
 
     started_at = models.DateTimeField(default=timezone.now)
-    ended_at = models.DateTimeField(null=True, blank=True)    
+    ended_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["started_at"]
@@ -54,7 +55,22 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
 
         delta = self.ended_at - self.started_at
         return delta.total_seconds() / 60
-    
+
+    @property
+    def is_paused(self):
+        return self.work_break_records.filter(end_time__isnull=True).exists()
+
+    @property
+    def active_break(self):
+        return self.work_break_records.filter(end_time__isnull=True).first()
+
+    @property
+    def total_pause_time(self):
+        total = timedelta()
+        for br in self.work_break_records.filter(end_time__isnull=False):
+            total += br.end_time - br.start_time
+        return total
+
     @property
     def last_open_production_record(self):
         return (
@@ -64,17 +80,17 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
             .first()
         )
 
-    def close(self):       
+    def close(self):
         if self.ended_at:
             return
 
-        self.ended_at = timezone.now()       
+        self.ended_at = timezone.now()
         self.is_active = False
 
         self.save(update_fields=["ended_at", "is_active"])
 
     def save(self, *args, **kwargs):
-        if self.ended_at:           
+        if self.ended_at:
             self.is_active = False
 
         super().save(*args, **kwargs)

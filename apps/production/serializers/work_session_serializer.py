@@ -83,12 +83,19 @@ class WorkSessionSerializer(AuditSerializer):
             return None
 
         last_record = activity.last_open_production_record
+        active_break = activity.active_break
+
+        from apps.production.serializers.work_break_record_serializer import WorkBreakRecordSerializer
 
         return {
             "id": activity.id,
             "started_at": activity.started_at,
             "ended_at": activity.ended_at,
             "is_active": activity.is_active,
+            "is_paused": activity.is_paused,
+            "active_break": (
+                WorkBreakRecordSerializer(active_break).data if active_break else None
+            ),
             "last_open_production_record": (
                 ProductionRecordSerializer(last_record).data if last_record else None
             ),
@@ -103,9 +110,7 @@ class WorkSessionSerializer(AuditSerializer):
 
         employees = EmployeeLocal.objects.filter(id__in=employee_ids)
 
-        WorkSessionActivityEmployee.objects.filter(
-            work_session_activity=activity
-        ).delete()
+        WorkSessionActivityEmployee.objects.filter(work_session_activity=activity).delete()
 
         WorkSessionActivityEmployee.objects.bulk_create(
             [
