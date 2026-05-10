@@ -38,17 +38,10 @@ class OPProductionService:
                 if size.get("skuRowId") == sku_rowid:
 
                     records = ProductionRecord.objects.filter(
-                        sku_rowid=sku_rowid,
-                        op_rowid=op_rowid,
+                        sku_rowid=sku_rowid,                     
                         op_number=consec_docto,
                         op_type=tipo_docto,
-                    )
-
-                    agg = records.aggregate(
-                        completedQty=Sum("completed_quantity"),
-                        wasteQty=Sum("scrap_quantity"),
-                        rejectedQty=Sum("rejected_quantity"),
-                    )
+                    )                   
 
                     return {
                         "opRowId": op_rowid,
@@ -61,9 +54,9 @@ class OPProductionService:
                         "skuRowId": size.get("skuRowId"),
                         "orderedQty": size.get("orderedQty"),
                         "plannedQty": size.get("plannedQty"),
-                        "completedQty": agg["completedQty"] or 0,
-                        "wasteQty": agg["wasteQty"] or 0,
-                        "rejectedQty": agg["rejectedQty"] or 0,
+                        "completedQty": size.get("completedQty"),
+                        "wasteQty": size.get("wasteQty"),
+                        "rejectedQty": size.get("rejectedQty"),
                         "baseRouteQuantity": size.get("baseRouteQuantity"),
                         "hasOpenRecords": records.filter(end_time__isnull=True).exists(),
                     }

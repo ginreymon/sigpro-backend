@@ -53,7 +53,12 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             )
 
         now = timezone.now()
-        break_kwargs = {"work_session_activity": activity, "start_time": now}
+        break_kwargs = {
+            "work_session_activity": activity,
+            "start_time": now,
+            "created_by": request.user,
+            "updated_by": request.user,
+        }
 
         if work_break_id:
             try:

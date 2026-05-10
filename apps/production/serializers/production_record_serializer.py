@@ -22,25 +22,13 @@ class ProductionRecordSerializer(AuditSerializer):
     def get_is_paused(self, obj):
         return obj.work_session_activity.is_paused
 
-    def create(self, validated_data):
-        missing = [f for f in ("op_number", "op_type") if not validated_data.get(f)]
-        if missing:
-            raise ValidationError({f: "This field is required." for f in missing})
-
-        validated_data["completed_quantity"] = 0
-        validated_data["scrap_quantity"] = 0
-        validated_data["rejected_quantity"] = 0
-        return super().create(validated_data)
-
-    def _rotate_activity(self, instance, validated_data):
+    def _open_new_activity(self, activity):
         """
-        Close current record and activity, open new activity (same module)
-        with new record carrying updated sku/op values and zero production quantities.
-        Employees are copied from the previous activity snapshot.
+        Close all open records and current activity, open a new activity on the same
+        module/session, and copy the employee snapshot. Returns the new activity.
         """
-        activity = instance.work_session_activity
-        work_session = activity.work_session
         user = self.context["request"].user
+        work_session = activity.work_session
 
         work_session.close_all_open_records()
         activity.close()
@@ -59,6 +47,34 @@ class ProductionRecordSerializer(AuditSerializer):
             )
             for rel in old_employees
         ])
+
+        return new_activity
+
+    @transaction.atomic
+    def create(self, validated_data):
+        missing = [f for f in ("op_number", "op_type") if not validated_data.get(f)]
+        if missing:
+            raise ValidationError({f: "This field is required." for f in missing})
+
+        activity = validated_data["work_session_activity"]
+        last_record = activity.production_records.order_by("-start_time").first()
+
+        if last_record is not None and last_record.sku_rowid != validated_data["sku_rowid"]:
+            validated_data["work_session_activity"] = self._open_new_activity(activity)
+
+        validated_data["completed_quantity"] = 0
+        validated_data["scrap_quantity"] = 0
+        validated_data["rejected_quantity"] = 0
+        return super().create(validated_data)
+
+    def _rotate_activity(self, instance, validated_data):
+        """
+        Close current record and activity, open new activity (same module)
+        with new record carrying updated sku/op values and zero production quantities.
+        Employees are copied from the previous activity snapshot.
+        """
+        user = self.context["request"].user
+        new_activity = self._open_new_activity(instance.work_session_activity)
 
         new_record = ProductionRecord.objects.create(
             work_session_activity=new_activity,
