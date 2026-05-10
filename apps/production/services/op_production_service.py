@@ -1,4 +1,6 @@
 from apps.production.repositories.op_production_repository import OPProductionRepository
+from apps.production.models.production_record import ProductionRecord
+from django.db.models import Sum
 
 
 class OPProductionService:
@@ -29,11 +31,27 @@ class OPProductionService:
         if not data:
             return None
 
+        op_rowid = data.get("rowId")
+
         for color in data.get("colors", []):
             for size in color.get("sizes", []):
                 if size.get("skuRowId") == sku_rowid:
+
+                    records = ProductionRecord.objects.filter(
+                        sku_rowid=sku_rowid,
+                        op_rowid=op_rowid,
+                        op_number=consec_docto,
+                        op_type=tipo_docto,
+                    )
+
+                    agg = records.aggregate(
+                        completedQty=Sum("completed_quantity"),
+                        wasteQty=Sum("scrap_quantity"),
+                        rejectedQty=Sum("rejected_quantity"),
+                    )
+
                     return {
-                        "opRowId": data.get("rowId"),
+                        "opRowId": op_rowid,
                         "opType": data.get("documentType"),
                         "opNumber": data.get("documentNumber"),
                         "reference": data.get("reference"),
@@ -43,10 +61,10 @@ class OPProductionService:
                         "skuRowId": size.get("skuRowId"),
                         "orderedQty": size.get("orderedQty"),
                         "plannedQty": size.get("plannedQty"),
-                        "completedQty": size.get("completedQty"),
-                        "wasteQty": size.get("wasteQty"),
-                        "rejectedQty": size.get("rejectedQty"),
+                        "completedQty": agg["completedQty"] or 0,
+                        "wasteQty": agg["wasteQty"] or 0,
+                        "rejectedQty": agg["rejectedQty"] or 0,
                         "baseRouteQuantity": size.get("baseRouteQuantity"),
-                        "hasOpenRecords": size.get("hasOpenRecords", False),
+                        "hasOpenRecords": records.filter(end_time__isnull=True).exists(),
                     }
         return None
