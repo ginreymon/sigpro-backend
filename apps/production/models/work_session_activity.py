@@ -58,11 +58,17 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
 
     @property
     def is_paused(self):
-        return self.work_break_records.filter(end_time__isnull=True).exists()
+        now = timezone.now()
+        return self.work_break_records.filter(
+            Q(end_time__isnull=True) | Q(end_time__gt=now)
+        ).exists()
 
     @property
     def active_break(self):
-        return self.work_break_records.filter(end_time__isnull=True).first()
+        now = timezone.now()
+        return self.work_break_records.filter(
+            Q(end_time__isnull=True) | Q(end_time__gt=now)
+        ).order_by("start_time").first()
 
     @property
     def total_pause_time(self):
