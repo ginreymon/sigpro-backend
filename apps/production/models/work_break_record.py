@@ -25,6 +25,7 @@ class WorkBreakRecord(TimeAuditModel, UserAuditModel):
 
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
+    resumed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["start_time", "end_time"]

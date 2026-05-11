@@ -93,6 +93,7 @@ class WorkSessionSerializer(AuditSerializer):
             "ended_at": activity.ended_at,
             "is_active": activity.is_active,
             "is_paused": activity.is_paused,
+            "total_pause_time_seconds": activity.total_pause_time.total_seconds(),
             "active_break": (
                 WorkBreakRecordSerializer(active_break).data if active_break else None
             ),

@@ -76,11 +76,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
         record.save()
 
         return Response(
-            {
-                "server_now": now,
-                "server_end_pause": record.end_time,
-                "work_break_record": WorkBreakRecordSerializer(record).data,
-            },
+            WorkBreakRecordSerializer(record).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -97,13 +93,19 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             )
 
         now = timezone.now()
-        active_break.end_time = now
+        active_break.resumed_at = now
+
+        if active_break.work_break_id:
+            if not active_break.end_time or active_break.end_time > now:
+                active_break.end_time = now
+        else:
+            active_break.end_time = now
+
         active_break.save()
 
+        activity.refresh_from_db()
+
         return Response(
-            {
-                "server_now": now,
-                "work_break_record": WorkBreakRecordSerializer(active_break).data,
-            },
+            WorkBreakRecordSerializer(active_break).data,
             status=status.HTTP_200_OK,
         )
