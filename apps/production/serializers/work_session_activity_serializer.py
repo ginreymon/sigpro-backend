@@ -51,15 +51,15 @@ class WorkSessionActivitySerializer(AuditSerializer):
 
     def get_duration_seconds(self, obj):
         end = obj.ended_at or timezone.now()
-        return (end - obj.started_at).total_seconds()
+        return int((end - obj.started_at).total_seconds())
 
     def get_total_pause_time_seconds(self, obj):
-        return obj.total_pause_time.total_seconds()
+        return int(obj.total_pause_time.total_seconds())
 
     def get_active_time_seconds(self, obj):
         end = obj.ended_at or timezone.now()
-        total = (end - obj.started_at).total_seconds()
-        pause = obj.total_pause_time.total_seconds()
+        total = int((end - obj.started_at).total_seconds())
+        pause = int(obj.total_pause_time.total_seconds())
         return max(total - pause, 0)
 
     def get_active_break(self, obj):
