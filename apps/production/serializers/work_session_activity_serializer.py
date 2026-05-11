@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from django.db.models import F
 from apps.production.models import WorkSessionActivity, WorkSession
 from apps.production.models.module import Module
 from apps.production.serializers.module_serializer import ModuleSerializer
@@ -72,6 +73,18 @@ class WorkSessionActivitySerializer(AuditSerializer):
         if not record:
             return None
         return ProductionRecordSerializer(record).data
+
+    def to_representation(self, instance):
+        now = timezone.now()
+        closed = instance.work_break_records.filter(
+            work_break__isnull=False,
+            end_time__isnull=False,
+            end_time__lte=now,
+            resumed_at__isnull=True,
+        ).update(resumed_at=F('end_time'))
+        if closed > 0:
+            instance.refresh_from_db()
+        return super().to_representation(instance)
 
     def create(self, validated_data):
         work_session = validated_data["work_session"]

@@ -68,7 +68,10 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
     def total_pause_time(self):
         now = timezone.now()
         total = timedelta()
-        for br in self.work_break_records.filter(end_time__isnull=False, end_time__lte=now):
+        for br in self.work_break_records.filter(
+            Q(resumed_at__isnull=False) |
+            Q(work_break__isnull=False, end_time__isnull=False, end_time__lte=now)
+        ):
             total += br.end_time - br.start_time
         return total
 
