@@ -4,6 +4,8 @@ from apps.production.models.sku_item_local import SkuItemLocal
 
 class SkuItemLocalSerializer(serializers.ModelSerializer):
 
+    sam_value = serializers.DecimalField(max_digits=10, decimal_places=4, read_only=True, allow_null=True)
+
     class Meta:
         model = SkuItemLocal
         fields = "__all__"

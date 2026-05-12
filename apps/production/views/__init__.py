@@ -9,6 +9,7 @@ from .work_session_view import WorkSessionViewSet
 from .employee_local_view import EmployeeLocalViewSet
 from .work_center_local_view import WorkCenterLocalViewSet
 from .sku_item_local_view import SkuItemLocalViewSet
+from .reference_sam_view import ReferenceSamViewSet
 from .production_record_view import ProductionRecordViewSet
 from .work_break_record_view import WorkBreakRecordViewSet
 

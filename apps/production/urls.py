@@ -13,6 +13,7 @@ from .views.work_session_activity_view import WorkSessionActivityViewSet
 from .views.employee_local_view import EmployeeLocalViewSet
 from .views.work_center_local_view import WorkCenterLocalViewSet
 from .views.sku_item_local_view import SkuItemLocalViewSet
+from .views.reference_sam_view import ReferenceSamViewSet
 from .views.production_record_view import ProductionRecordViewSet
 from .views.work_break_record_view import WorkBreakRecordViewSet
 
@@ -27,6 +28,7 @@ router.register(r'work-session-activities', WorkSessionActivityViewSet)
 router.register(r'employees', EmployeeLocalViewSet)
 router.register(r'work-centers', WorkCenterLocalViewSet)
 router.register(r'sku-items', SkuItemLocalViewSet)
+router.register(r'reference-sam', ReferenceSamViewSet)
 router.register(r'production-records', ProductionRecordViewSet)
 router.register(r'work-break-records', WorkBreakRecordViewSet)
 router.register(r"production-orders", OPProductionDetailViewSet, basename="production-orders")

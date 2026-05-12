@@ -10,3 +10,4 @@ from .work_session_activity import WorkSessionActivity
 from .work_session_activity_employee import WorkSessionActivityEmployee
 from .work_session import WorkSession
 from .sku_item_local import SkuItemLocal
+from .reference_sam import ReferenceSam
