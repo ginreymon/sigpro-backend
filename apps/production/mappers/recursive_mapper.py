@@ -40,6 +40,7 @@ KEY_MAP = {
     "Cant_Rechazos": "rejectedQty",
     "Tiene_Registros_Abiertos": "hasOpenRecords",
     "Cantidad_Base_Ruta": "baseRouteQuantity",
+    "SAM": "sam",
     # clasificacion
     "Marca": "brand",
     "Linea": "line",
