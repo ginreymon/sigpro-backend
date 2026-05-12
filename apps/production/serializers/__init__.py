@@ -8,6 +8,7 @@ from .work_shift_serializer import WorkShiftSerializer
 from .work_session_serializer import WorkSessionSerializer
 from .employee_local_serializer import EmployeeLocalSerializer
 from .work_center_local_serializer import WorkCenterLocalSerializer
+from .sku_item_local_serializer import SkuItemLocalSerializer
 from .production_record_serializer import ProductionRecordSerializer
 from .work_break_record_serializer import WorkBreakRecordSerializer
 from .work_session_activity_serializer import WorkSessionActivitySerializer
