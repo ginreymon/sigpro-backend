@@ -108,17 +108,9 @@ class ProductionRecordSerializer(AuditSerializer):
                 raise ValidationError({f: "Required when changing sku_rowid or op_rowid." for f in missing})
             return self._rotate_activity(instance, validated_data)
 
-        quantity_fields = [
-            "planned_quantity",
-            "completed_quantity",
-            "scrap_quantity",
-            "rejected_quantity",
-            "ordered_quantity",
-        ]
+        closing_fields = {"completed_quantity", "scrap_quantity", "rejected_quantity"}
 
-        for field in quantity_fields:
-            if field in validated_data and getattr(instance, field) != validated_data[field]:
-                instance.end_time = timezone.now()
-                break
+        if closing_fields & validated_data.keys():
+            instance.end_time = timezone.now()
 
         return super().update(instance, validated_data)
