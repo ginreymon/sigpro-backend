@@ -27,6 +27,7 @@ class SkuItemLocalSerializer(serializers.ModelSerializer):
 
 
 class SkuItemReferenceSerializer(serializers.Serializer):
+    id                 = serializers.IntegerField(source='rowid_item')
     rowid_item         = serializers.IntegerField()
     reference          = serializers.CharField()
     description        = serializers.CharField()
@@ -56,6 +57,7 @@ class SkuItemReferenceSerializer(serializers.Serializer):
     priority           = serializers.CharField(allow_null=True)
     pieces_per_set     = serializers.CharField(allow_null=True)
     sam_value          = serializers.DecimalField(max_digits=10, decimal_places=4, allow_null=True)
+    sam_id             = serializers.IntegerField(allow_null=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

@@ -13,4 +13,4 @@ class ReferenceSamSerializer(AuditSerializer):
         fields = "__all__"
 
     def get_skus_count(self, obj):
-        return obj.skus_count or 0
+        return getattr(obj, 'skus_count', None) or 0
