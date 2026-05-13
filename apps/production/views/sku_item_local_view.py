@@ -23,6 +23,7 @@ class SkuItemLocalViewSet(LocalBaseModelViewSet):
         "barcode",
         "size",
         "color",
+        "sewing",
     ]
 
     @action(detail=False, methods=["get"], url_path="references")
