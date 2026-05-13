@@ -1,6 +1,7 @@
 from apps.production.repositories.op_production_repository import OPProductionRepository
 from apps.production.models.production_record import ProductionRecord
-from django.db.models import Sum
+from apps.production.models.sku_item_local import SkuItemLocal
+from apps.production.models.reference_sam import ReferenceSam
 
 
 class OPProductionService:
@@ -38,10 +39,16 @@ class OPProductionService:
                 if size.get("skuRowId") == sku_rowid:
 
                     records = ProductionRecord.objects.filter(
-                        sku_rowid=sku_rowid,                     
+                        sku_rowid=sku_rowid,
                         op_number=consec_docto,
                         op_type=tipo_docto,
-                    )                   
+                    )
+
+                    sku_local = SkuItemLocal.objects.filter(rowid=sku_rowid).values("rowid_item").first()
+                    sam_value = None
+                    if sku_local:
+                        ref_sam = ReferenceSam.objects.filter(rowid_item=sku_local["rowid_item"]).values("sam").first()
+                        sam_value = float(ref_sam["sam"]) if ref_sam else None
 
                     return {
                         "opRowId": op_rowid,
@@ -59,5 +66,6 @@ class OPProductionService:
                         "rejectedQty": size.get("rejectedQty"),
                         "baseRouteQuantity": size.get("baseRouteQuantity"),
                         "hasOpenRecords": records.filter(end_time__isnull=True).exists(),
+                        "sam": sam_value,
                     }
         return None
