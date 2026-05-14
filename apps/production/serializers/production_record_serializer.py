@@ -28,12 +28,10 @@ class ProductionRecordSerializer(AuditSerializer):
         module/session, and copy the employee snapshot. Returns the new activity.
         """
         user = self.context["request"].user
-        work_session = activity.work_session
 
-        work_session.close_all_open_records()
         activity.close()
 
-        new_activity = work_session.work_session_activities.create(
+        new_activity = activity.work_session.work_session_activities.create(
             module=activity.module,
             created_by=user,
         )

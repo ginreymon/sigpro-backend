@@ -46,16 +46,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             .first()
         )
 
-    def close_all_open_records(self):
-        from apps.production.models.production_record import ProductionRecord
-        ProductionRecord.objects.filter(
-            work_session_activity__work_session=self,
-            end_time__isnull=True,
-        ).update(end_time=timezone.now())
-
     def start_activity(self, module, employee_ids=None, created_by=None):
-        self.close_all_open_records()
-
         activity = self.get_active_activity()
         if activity:
             activity.close()

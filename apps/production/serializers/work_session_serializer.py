@@ -36,20 +36,18 @@ class WorkSessionSerializer(AuditSerializer):
         employee_ids = attrs.get("employee_ids")
         module = attrs.get("module_id")
 
-        if employee_ids and not module:
+        if employee_ids and not module and not self.instance:
             raise ValidationError("module_id is required when sending employee_ids")
 
         return attrs
 
+    def _get_active_activity(self, obj):
+        if not hasattr(obj, '_cached_active_activity'):
+            obj._cached_active_activity = obj.get_active_activity()
+        return obj._cached_active_activity
+
     def get_current_module(self, obj):
-        activity = getattr(obj, "_prefetched_active_activity", None)
-
-        if activity:
-            activity = activity[0] if isinstance(activity, list) else activity
-            return ModuleSerializer(activity.module).data
-
-        activity = obj.get_active_activity()
-
+        activity = self._get_active_activity(obj)
         return ModuleSerializer(activity.module).data if activity else None
 
     def get_modules(self, obj):
@@ -61,7 +59,7 @@ class WorkSessionSerializer(AuditSerializer):
         return list(modules)
 
     def get_employees_snapshot(self, obj):
-        activity = obj.get_active_activity()
+        activity = self._get_active_activity(obj)
 
         if not activity:
             return []
@@ -77,7 +75,7 @@ class WorkSessionSerializer(AuditSerializer):
         ]
 
     def get_active_activity(self, obj):
-        activity = obj.get_active_activity()
+        activity = self._get_active_activity(obj)
 
         if not activity:
             return None
@@ -178,22 +176,30 @@ class WorkSessionSerializer(AuditSerializer):
         employee_ids = validated_data.pop("employee_ids", None)
         module = validated_data.pop("module_id", None)
 
+        # Capture current state before any changes
+        current_activity = instance.get_active_activity()
+        current_module = current_activity.module if current_activity else None
+        current_employee_ids = set(
+            current_activity.employee_snapshots.values_list("employee_id", flat=True)
+        ) if current_activity else set()
+
+        new_work_shift = validated_data.get("work_shift")
+
+        module_changed = module is not None and module != current_module
+        work_shift_changed = new_work_shift is not None and new_work_shift != instance.work_shift
+        employees_changed = employee_ids is not None and set(employee_ids) != current_employee_ids
+
+        any_field_changed = module_changed or work_shift_changed or employees_changed
+
         instance = super().update(instance, validated_data)
 
-        activity = None
+        if any_field_changed:
+            target_module = module or current_module
+            if not target_module:
+                return instance
 
-        if module is not None:
-            activity = instance.start_activity(module)
-
-        if employee_ids is not None:
-            if not activity:
-                activity = instance.get_active_activity()
-
-            if not activity:
-                raise ValidationError(
-                    "Cannot assign employees without an active module"
-                )
-
-            self._handle_employees(instance, employee_ids, activity)
+            activity = instance.start_activity(target_module)
+            effective_ids = list(employee_ids) if employee_ids is not None else list(current_employee_ids)
+            self._handle_employees(instance, effective_ids, activity)
 
         return instance

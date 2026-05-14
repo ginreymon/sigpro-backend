@@ -4,7 +4,7 @@ from core.models.audit_model import TimeAuditModel, UserAuditModel, ActiveModel
 from apps.production.models.work_session import WorkSession
 from apps.production.models.module import Module
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, F
 
 
 class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
@@ -69,10 +69,12 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
         now = timezone.now()
         total = timedelta()
         for br in self.work_break_records.filter(
-            Q(resumed_at__isnull=False) |
-            Q(work_break__isnull=False, end_time__isnull=False, end_time__lte=now)
+            Q(resumed_at__isnull=False)
+            | Q(work_break__isnull=False, end_time__isnull=False, end_time__lte=now)
         ):
-            total += br.end_time - br.start_time
+            if br.end_time:
+                total += br.end_time - br.start_time
+
         return total
 
     @property
@@ -88,7 +90,19 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
         if self.ended_at:
             return
 
-        self.ended_at = timezone.now()
+        now = timezone.now()
+
+        self.production_records.filter(end_time__isnull=True).update(end_time=now)
+
+        self.work_break_records.filter(resumed_at__isnull=True).update(
+            resumed_at=now,
+            end_time=Case(
+                When(end_time__isnull=True, then=Value(now)),
+                default=F("end_time"),
+            ),
+        )
+
+        self.ended_at = now
         self.is_active = False
 
         self.save(update_fields=["ended_at", "is_active"])
