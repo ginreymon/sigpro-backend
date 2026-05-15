@@ -9,7 +9,13 @@ class EmployeeLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
     last_name1 = models.CharField(max_length=255)
     last_name2 = models.CharField(max_length=255, blank=True, null=True)
     id_number = models.CharField(max_length=50, unique=True)
-
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    contract_status = models.CharField(max_length=50, blank=True, null=True)
+    cost_center_rowid = models.IntegerField(blank=True, null=True)
+    cost_center_description = models.CharField(max_length=255, blank=True, null=True)
+    cost_group_id = models.CharField(max_length=50, blank=True, null=True)
+    cost_group_description = models.CharField(max_length=255, blank=True, null=True)
+   
     @property
     def has_account(self):
         return hasattr(self, "user_link")
