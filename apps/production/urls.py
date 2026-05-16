@@ -16,6 +16,7 @@ from .views.sku_item_local_view import SkuItemLocalViewSet
 from .views.reference_sam_view import ReferenceSamViewSet
 from .views.production_record_view import ProductionRecordViewSet
 from .views.work_break_record_view import WorkBreakRecordViewSet
+from .views.productivity_view import ProductivityViewSet
 
 
 router = DefaultRouter()
@@ -34,6 +35,7 @@ router.register(r'work-break-records', WorkBreakRecordViewSet)
 router.register(r"production-orders", OPProductionDetailViewSet, basename="production-orders")
 router.register(r"production-components", OPComponentsDetailViewSet, basename="production-components")
 router.register(r"document-types", OPTypeDocumentsViewSet, basename="document-types")
+router.register(r"productivity", ProductivityViewSet, basename="productivity")
 
 urlpatterns = [    
     path("", include(router.urls)),

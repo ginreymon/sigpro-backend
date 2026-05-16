@@ -48,6 +48,19 @@ KEY_MAP = {
     "Confeccion": "manufacture",
     "Estampado": "print",
     "Comercial": "commercial",
+    # productivity sp columns
+    "total_ordenada": "total_ordered",
+    "total_planeada": "total_planned",
+    "total_completada": "total_completed",
+    "total_desechos": "total_scrap",
+    "total_rechazos": "total_rejected",
+    "total_sam_ganado": "total_sam_earned",
+    "total_segundos_productivos": "total_productive_seconds",
+    "total_segundos_pausa": "total_break_seconds",
+    "total_segundos_actividad": "total_activity_seconds",
+    "primer_record_inicio": "first_record_start",
+    "ultimo_record_fin": "last_record_end",
+    "segundos_transcurridos_turno": "elapsed_shift_seconds",
 }
 
 
