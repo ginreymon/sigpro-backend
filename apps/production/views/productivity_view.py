@@ -12,6 +12,7 @@ from django.utils.dateparse import parse_datetime
 
 from apps.production.services.productivity_service import ProductivityService
 from apps.production.reports.productivity_columns import SUMMARY_COLUMNS, EMPLOYEE_COLUMNS
+from apps.production.helpers.productivity_metrics import enrich_rows
 
 _SECONDS_FIELDS = {
     "shift_total_seconds",
@@ -139,7 +140,7 @@ class ProductivityViewSet(viewsets.ViewSet):
             module_id=module_id,
             shift_id=shift_id,
         )
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(enrich_rows(data), status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"], url_path="summary/export/excel")
     def summary_excel(self, request):
@@ -155,6 +156,7 @@ class ProductivityViewSet(viewsets.ViewSet):
             module_id=module_id,
             shift_id=shift_id,
         )
+        enrich_rows(data)
         utc_offset_minutes = _parse_optional_int(request.query_params, "utc_offset_minutes") or 0
         buf = _build_excel(_secs_to_mins(_localize_datetimes(data, utc_offset_minutes)), SUMMARY_COLUMNS, "Productividad")
         return _excel_response(buf, "productividad_resumen.xlsx")
@@ -178,7 +180,7 @@ class ProductivityViewSet(viewsets.ViewSet):
             module_id=module_id,
             shift_id=shift_id,
         )
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(enrich_rows(data), status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"], url_path="employee/export/excel")
     def employee_excel(self, request):
@@ -199,6 +201,7 @@ class ProductivityViewSet(viewsets.ViewSet):
             module_id=module_id,
             shift_id=shift_id,
         )
+        enrich_rows(data)
         utc_offset_minutes = _parse_optional_int(request.query_params, "utc_offset_minutes") or 0
         buf = _build_excel(_secs_to_mins(_localize_datetimes(data, utc_offset_minutes)), EMPLOYEE_COLUMNS, "Productividad Empleado")
         return _excel_response(buf, "productividad_empleado.xlsx")

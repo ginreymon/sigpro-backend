@@ -26,7 +26,8 @@ SUMMARY_COLUMNS = [
     ("total_productive_seconds",   "Min. Productivos"),
     ("total_break_seconds",        "Min. Pausa"),
     ("total_activity_seconds",     "Min. Actividad"),
-    ("elapsed_shift_seconds",      "Min. Transcurridos"),   
+    ("elapsed_shift_seconds",      "Min. Transcurridos"),
+    ("efficiency",                  "Eficiencia"),
     ("first_record_start",         "Primer Registro (Inicio)"),
     ("last_record_end",            "Último Registro (Cierre)"),
 ]
@@ -56,6 +57,7 @@ EMPLOYEE_COLUMNS = [
     ("sku_color",                  "Color"),
     ("sku_inv_type",               "Tipo Inv."),
     ("sku_sam",                    "SAM"),
+    ("employee_count",             "N° Operarios"),
     ("total_records",              "Registros"),
     ("total_ordered",              "Ordenado"),
     ("total_planned",              "Planeado"),
@@ -67,6 +69,7 @@ EMPLOYEE_COLUMNS = [
     ("total_break_seconds",        "Min. Pausa"),
     ("total_activity_seconds",     "Min. Actividad"),
     ("elapsed_shift_seconds",      "Min. Transcurridos"),
+    ("efficiency",                  "Eficiencia"),
     ("first_record_start",         "Primer Registro"),
     ("last_record_end",            "Último Registro"),
 ]
