@@ -159,4 +159,21 @@ class ProductivityViewSet(viewsets.ViewSet):
         utc_offset_minutes = _parse_optional_int(request.query_params, "utc_offset_minutes") or 0
         buf = _build_excel(_secs_to_mins(_localize_datetimes(data, utc_offset_minutes)), COLUMNS, "Productividad")
         return _excel_response(buf, f"productividad_resumen_{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}.xlsx")
+    
+    @action(detail=False, methods=["get"], url_path="efficiency")
+    def efficiency(self, request):
+        start_date, end_date, client_now, error = _parse_required_dates(request.query_params)
+        if error:
+            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
+        employee_id = _parse_optional_int(request.query_params, "employee_id")
+        module_id   = _parse_optional_int(request.query_params, "module_id")
+        shift_id    = _parse_optional_int(request.query_params, "shift_id")
+
+        data = ProductivityService.get_efficiency_period(
+            start_date, end_date, client_now,
+            employee_id=employee_id,
+            module_id=module_id,
+            shift_id=shift_id,
+        )
+        return Response(data, status=status.HTTP_200_OK)

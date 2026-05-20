@@ -61,6 +61,11 @@ KEY_MAP = {
     "primer_record_inicio": "first_record_start",
     "ultimo_record_fin": "last_record_end",
     "segundos_transcurridos_turno": "elapsed_shift_seconds",
+    "fecha_inicio":                 "period_start",
+    "fecha_fin":                    "period_end",
+    "total_segundos_disponibles":   "total_available_seconds",
+    "meta_intervalo":               "interval_target",
+    "promedio_operadores":          "avg_employee_count",
 }
 
 
