@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+﻿from datetime import datetime, timedelta
 from io import BytesIO
 
 import openpyxl
@@ -117,91 +117,46 @@ def _excel_response(buf: BytesIO, filename: str) -> HttpResponse:
 
 
 class ProductivityViewSet(viewsets.ViewSet):
-    """
-    Productivity reports backed by stored procedures.
 
-    GET /productivity/summary/              — JSON aggregated by module + shift + SKU/OP
-    GET /productivity/summary/export/excel  — Excel download
-    GET /productivity/employee/             — JSON aggregated by employee + module + shift + SKU/OP
-    GET /productivity/employee/export/excel — Excel download
-    """
-
+    #  GET /productivity/summary/
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request):
         start_date, end_date, client_now, error = _parse_required_dates(request.query_params)
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        module_id = _parse_optional_int(request.query_params, "module_id")
-        shift_id = _parse_optional_int(request.query_params, "shift_id")
+        employee_id = _parse_optional_int(request.query_params, "employee_id")
+        module_id   = _parse_optional_int(request.query_params, "module_id")
+        shift_id    = _parse_optional_int(request.query_params, "shift_id")
 
-        data = ProductivityService.get_productivity_summary(
+        data = ProductivityService.get_base_productivity(
             start_date, end_date, client_now,
+            employee_id=employee_id,
             module_id=module_id,
             shift_id=shift_id,
         )
-        return Response(enrich_rows(data), status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
 
+    # GET /productivity/summary/export/excel
     @action(detail=False, methods=["get"], url_path="summary/export/excel")
     def summary_excel(self, request):
         start_date, end_date, client_now, error = _parse_required_dates(request.query_params)
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        module_id = _parse_optional_int(request.query_params, "module_id")
-        shift_id = _parse_optional_int(request.query_params, "shift_id")
-
-        data = ProductivityService.get_productivity_summary(
-            start_date, end_date, client_now,
-            module_id=module_id,
-            shift_id=shift_id,
-        )
-        enrich_rows(data)
-        utc_offset_minutes = _parse_optional_int(request.query_params, "utc_offset_minutes") or 0
-        buf = _build_excel(_secs_to_mins(_localize_datetimes(data, utc_offset_minutes)), SUMMARY_COLUMNS, "Productividad")
-        return _excel_response(buf, "productividad_resumen.xlsx")
-
-    @action(detail=False, methods=["get"], url_path="employee")
-    def employee(self, request):
-        start_date, end_date, client_now, error = _parse_required_dates(request.query_params)
-        if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
-
         employee_id = _parse_optional_int(request.query_params, "employee_id")
-        if employee_id is None:
-            return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        module_id   = _parse_optional_int(request.query_params, "module_id")
+        shift_id    = _parse_optional_int(request.query_params, "shift_id")
 
-        module_id = _parse_optional_int(request.query_params, "module_id")
-        shift_id = _parse_optional_int(request.query_params, "shift_id")
-
-        data = ProductivityService.get_employee_productivity(
+        data = ProductivityService.get_base_productivity(
             start_date, end_date, client_now,
             employee_id=employee_id,
             module_id=module_id,
             shift_id=shift_id,
         )
-        return Response(enrich_rows(data), status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"], url_path="employee/export/excel")
-    def employee_excel(self, request):
-        start_date, end_date, client_now, error = _parse_required_dates(request.query_params)
-        if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
-
-        employee_id = _parse_optional_int(request.query_params, "employee_id")
-        if employee_id is None:
-            return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        module_id = _parse_optional_int(request.query_params, "module_id")
-        shift_id = _parse_optional_int(request.query_params, "shift_id")
-
-        data = ProductivityService.get_employee_productivity(
-            start_date, end_date, client_now,
-            employee_id=employee_id,
-            module_id=module_id,
-            shift_id=shift_id,
-        )
-        enrich_rows(data)
+        data = enrich_rows(data)
+        COLUMNS = EMPLOYEE_COLUMNS if employee_id else SUMMARY_COLUMNS
         utc_offset_minutes = _parse_optional_int(request.query_params, "utc_offset_minutes") or 0
-        buf = _build_excel(_secs_to_mins(_localize_datetimes(data, utc_offset_minutes)), EMPLOYEE_COLUMNS, "Productividad Empleado")
-        return _excel_response(buf, "productividad_empleado.xlsx")
+        buf = _build_excel(_secs_to_mins(_localize_datetimes(data, utc_offset_minutes)), COLUMNS, "Productividad")
+        return _excel_response(buf, f"productividad_resumen_{datetime.now().strftime('%d-%m-%Y_%H-%M-%S')}.xlsx")
+
