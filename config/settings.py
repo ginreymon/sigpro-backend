@@ -89,7 +89,9 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
-    "https://74fnhdf0-4200.use2.devtunnels.ms"
+    "https://74fnhdf0-4200.use2.devtunnels.ms",
+    "http://10.0.0.4:8101",
+    "http://10.0.0.4",
 ]
 
 CORS_ALLOW_HEADERS = [
