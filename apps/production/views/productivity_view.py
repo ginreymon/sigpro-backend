@@ -3,6 +3,8 @@ from io import BytesIO
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -20,6 +22,7 @@ _SECONDS_FIELDS = {
     "total_break_seconds",
     "total_activity_seconds",
     "elapsed_shift_seconds",
+    "total_meta_seconds",
 }
 
 
@@ -77,6 +80,18 @@ def _parse_optional_int(params, key):
         return None
 
 
+def _make_header_value(label):
+    if isinstance(label, str):
+        return label
+    parts = []
+    for text, is_sub in label:
+        attrs = {"b": True, "color": "FFFFFF"}
+        if is_sub:
+            attrs["vertAlign"] = "subscript"
+        parts.append(TextBlock(InlineFont(**attrs), text))
+    return CellRichText(*parts)
+
+
 def _build_excel(data: list[dict], columns: list[tuple], sheet_title: str) -> BytesIO:
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -87,8 +102,10 @@ def _build_excel(data: list[dict], columns: list[tuple], sheet_title: str) -> By
     header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     for col_idx, (_, label) in enumerate(columns, start=1):
-        cell = ws.cell(row=1, column=col_idx, value=label)
-        cell.font = header_font
+        value = _make_header_value(label)
+        cell = ws.cell(row=1, column=col_idx, value=value)
+        if isinstance(label, str):
+            cell.font = header_font
         cell.fill = header_fill
         cell.alignment = header_align
 

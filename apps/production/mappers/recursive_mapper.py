@@ -65,7 +65,9 @@ KEY_MAP = {
     "fecha_fin":                    "period_end",
     "total_segundos_disponibles":   "total_available_seconds",
     "meta_intervalo":               "interval_target",
+    "meta_unidades":                "unit_target",
     "promedio_operadores":          "avg_employee_count",
+    "tiempo_meta_segundos":         "total_meta_seconds",
 }
 
 
