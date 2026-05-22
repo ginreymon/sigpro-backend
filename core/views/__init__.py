@@ -3,3 +3,4 @@ from core.views.option_view import OptionViewSet
 from core.views.menu_view import MenuViewSet
 from core.views.base_model_view import BaseModelViewSet
 from core.views.audit_model_view import AuditModelViewSet
+from core.views.app_setting_view import AppSettingViewSet

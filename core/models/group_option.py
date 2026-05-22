@@ -11,4 +11,4 @@ class GroupOption(models.Model):
         unique_together = ("group", "option")
 
     def __str__(self):
-        return f"{self.group.name} - {self.option.name}"
+        return f"{self.group.name} - [{self.option.order}] {self.option.name}"

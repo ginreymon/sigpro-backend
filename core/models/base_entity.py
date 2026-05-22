@@ -13,4 +13,4 @@ class BaseEntity(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        return self.name
+        return f'[{self.order}] {self.name}'
