@@ -9,9 +9,10 @@ class AppSetting(AuditModel):
         INTEGER = "INTEGER", "Integer"
         DECIMAL = "DECIMAL", "Decimal"
         BOOLEAN = "BOOLEAN", "Boolean"
+        JSON = "JSON", "JSON"
 
     name = models.CharField(max_length=100, unique=True)
-    value = models.CharField(max_length=500)
+    value = models.CharField(max_length=2000)
     data_type = models.CharField(
         max_length=10,
         choices=DataType.choices,
