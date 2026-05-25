@@ -1,7 +1,10 @@
+from decimal import Decimal
+from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Sum, F
 from apps.production.models.production_record import ProductionRecord
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 from core.serializers.audit_serializer import AuditSerializer
@@ -60,10 +63,38 @@ class ProductionRecordSerializer(AuditSerializer):
         if last_record is not None and last_record.sku_rowid != validated_data["sku_rowid"]:
             validated_data["work_session_activity"] = self._open_new_activity(activity)
 
-        validated_data["completed_quantity"] = 0
-        validated_data["scrap_quantity"] = 0
-        validated_data["rejected_quantity"] = 0
-        return super().create(validated_data)
+        completed = Decimal(str(validated_data.get("completed_quantity") or 0))
+        scrap = Decimal(str(validated_data.get("scrap_quantity") or 0))
+        rejected = Decimal(str(validated_data.get("rejected_quantity") or 0))
+        has_quantities = completed > 0 or scrap > 0 or rejected > 0
+
+        if has_quantities:
+            ordered = Decimal(str(validated_data["ordered_quantity"]))
+            sku_rowid = validated_data["sku_rowid"]
+            existing_sum = (
+                ProductionRecord.objects.filter(sku_rowid=sku_rowid)
+                .aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
+                ["total"] or Decimal("0")
+            )
+            new_total = existing_sum + completed + scrap + rejected
+            if new_total > ordered:
+                raise ValidationError({
+                    "non_field_errors": (
+                        f"La suma de cantidades ({new_total}) supera la cantidad ordenada ({ordered})."
+                    )
+                })
+
+        validated_data["completed_quantity"] = completed
+        validated_data["scrap_quantity"] = scrap
+        validated_data["rejected_quantity"] = rejected
+
+        instance = super().create(validated_data)
+
+        if has_quantities:
+            instance.end_time = instance.start_time + timedelta(seconds=1)
+            instance.save(update_fields=["end_time"])
+
+        return instance
 
     def _rotate_activity(self, instance, validated_data):
         """
