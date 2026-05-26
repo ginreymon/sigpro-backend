@@ -1,4 +1,4 @@
-KEY_MAP = {
+﻿KEY_MAP = {
     # root
     "RowID": "rowId",
     "Tipo_Doc": "documentType",
@@ -72,6 +72,8 @@ KEY_MAP = {
 
 
 def translate_keys(data):
+    from datetime import datetime, timezone
+
     if isinstance(data, list):
         return [translate_keys(item) for item in data]
 
@@ -82,4 +84,8 @@ def translate_keys(data):
             new_dict[new_key] = translate_keys(value)
         return new_dict
 
+    if isinstance(data, datetime) and data.tzinfo is None:
+        return data.replace(tzinfo=timezone.utc)
+
     return data
+
