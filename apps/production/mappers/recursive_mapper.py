@@ -68,6 +68,9 @@
     "meta_unidades":                "unit_target",
     "promedio_operadores":          "avg_employee_count",
     "tiempo_meta_segundos":         "total_meta_seconds",
+    "promedio_sam_ponderado":       "weighted_avg_sam",
+    "total_produccion":             "total_produced",
+    "eficiencia":                   "efficiency",
 }
 
 
