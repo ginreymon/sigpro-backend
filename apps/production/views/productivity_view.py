@@ -15,6 +15,7 @@ from django.utils.dateparse import parse_datetime
 from apps.production.services.productivity_service import ProductivityService
 from apps.production.reports.productivity_columns import SUMMARY_COLUMNS, EMPLOYEE_COLUMNS
 from apps.production.helpers.productivity_metrics import enrich_rows
+from core.utils.date_utils import parse_to_utc_naive
 
 _SECONDS_FIELDS = {
     "shift_total_seconds",
@@ -44,24 +45,24 @@ def _localize_datetimes(data: list[dict], utc_offset_minutes: int) -> list[dict]
         for field in _DATETIME_FIELDS:
             val = row.get(field)
             if val is not None and isinstance(val, datetime):
-                row[field] = val + delta
+                row[field] = (val + delta).replace(tzinfo=None)
         result.append(row)
     return result
 
 
 def _parse_required_dates(params):
-    start_str = params.get("start_date")
-    end_str = params.get("end_date")
+    start_str      = params.get("start_date")
+    end_str        = params.get("end_date")
     client_now_str = params.get("client_now")
 
     if not start_str or not end_str or not client_now_str:
         return None, None, None, "start_date, end_date and client_now are required"
 
-    try:
-        start_date = datetime.fromisoformat(start_str)
-        end_date = datetime.fromisoformat(end_str)
-    except ValueError:
-        return None, None, None, "start_date and end_date must be ISO 8601 format (e.g. 2025-12-20T06:00:00)"
+    start_date = parse_to_utc_naive(start_str)
+    end_date   = parse_to_utc_naive(end_str)
+
+    if start_date is None or end_date is None:
+        return None, None, None, "start_date and end_date must be ISO 8601 with timezone (e.g. 2026-05-27T05:00:00Z)"
 
     client_now = parse_datetime(client_now_str)
     if client_now is None or client_now.tzinfo is None:
