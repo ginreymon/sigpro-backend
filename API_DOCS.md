@@ -1,4 +1,4 @@
-# Documentación de la API — SGIPRO
+# Documentación de la API — SIGPRO
 
 ## Requisitos previos
 
