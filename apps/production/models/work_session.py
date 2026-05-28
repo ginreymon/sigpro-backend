@@ -23,6 +23,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
     total_time = models.DurationField(null=True, blank=True)
 
     is_closed = models.BooleanField(default=False)
+    editing_finalized = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["started_at"]
