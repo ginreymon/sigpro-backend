@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from .audit_model import AuditModel
 
@@ -12,6 +13,7 @@ class AppSetting(AuditModel):
         JSON = "JSON", "JSON"
 
     name = models.CharField(max_length=100, unique=True)
+    key = models.CharField(max_length=100, unique=True, blank=True, null=True)
     value = models.CharField(max_length=2000)
     data_type = models.CharField(
         max_length=10,
@@ -25,6 +27,14 @@ class AppSetting(AuditModel):
         ordering = ["name"]
         verbose_name = "App Setting"
         verbose_name_plural = "App Settings"
+
+    def clean(self):
+        qs = AppSetting.objects.exclude(pk=self.pk)
+        if self.key:
+            if qs.filter(name=self.key).exists():
+                raise ValidationError({'key': f"'{self.key}' already exists as a name."})
+            if qs.filter(key=self.name).exists():
+                raise ValidationError({'name': f"'{self.name}' already exists as a key."})
 
     def __str__(self):
         return f"{self.name}: {self.value}"
