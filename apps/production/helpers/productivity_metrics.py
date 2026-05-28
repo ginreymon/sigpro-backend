@@ -1,46 +1,31 @@
-def _efficiency(sam, employee_count, productive_seconds, total_completed):
+def _available_minutes(elapsed_seconds: float, break_seconds: float) -> float:
+    return max(elapsed_seconds - break_seconds, 0) / 60
 
-    sam, employee_count, productive_seconds, total_completed = (
-        float(sam),
-        float(employee_count),
-        float(productive_seconds),
-        float(total_completed),
-    )
-    if not employee_count or not productive_seconds or not sam:
+
+def _productivity_target(sam: float, employee_count: float, elapsed_seconds: float, break_seconds: float):
+    if not sam or not employee_count:
         return None
-    
-    productive_units = _productivity_target(sam, employee_count, productive_seconds)
-    return round(total_completed / productive_units * 100, 2)
-
-
-def _productivity_target(sam, employee_count, productive_seconds):
-    sam, employee_count, productive_seconds = (
-        float(sam),
-        float(employee_count),
-        float(productive_seconds),
-    )
-    if not sam:
+    minutes = _available_minutes(elapsed_seconds, break_seconds)
+    if not minutes:
         return None
-    productive_minutes = productive_seconds / 60
-    return employee_count * productive_minutes / sam
+    return employee_count * minutes / sam
+
+
+def _efficiency(sam: float, employee_count: float, elapsed_seconds: float, break_seconds: float, total_completed: float):
+    target = _productivity_target(sam, employee_count, elapsed_seconds, break_seconds)
+    if not target:
+        return None
+    return round(total_completed / target * 100, 2)
 
 
 def enrich_rows(data: list[dict]) -> list[dict]:
     for row in data:
-        sam = row.get("sku_sam") or 0
-        employee_count = row.get("employee_count") or 0
-        productive_seconds = row.get("total_productive_seconds") or 0
+        sam            = float(row.get("sku_sam") or 0)
+        employee_count = float(row.get("employee_count") or 0)
+        elapsed        = float(row.get("elapsed_shift_seconds") or 0)
+        breaks         = float(row.get("total_break_seconds") or 0)
+        completed      = float(row.get("total_completed") or 0)
 
-        row["productivity_target"] = _productivity_target(
-            sam,
-            employee_count,
-            productive_seconds,
-        )
-
-        row["efficiency"] = _efficiency(
-            sam,
-            employee_count,
-            productive_seconds,
-            total_completed=row.get("total_completed") or 0,
-        )
+        row["productivity_target"] = _productivity_target(sam, employee_count, elapsed, breaks)
+        row["efficiency"]          = _efficiency(sam, employee_count, elapsed, breaks, completed)
     return data
