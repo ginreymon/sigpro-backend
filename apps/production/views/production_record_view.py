@@ -14,7 +14,9 @@ class ProductionRecordViewSet(AuditModelViewSet):
         record = (
             ProductionRecord.objects
             .filter(work_session_activity__work_session__user=request.user)
-            .order_by('-start_time')
+            .select_related('work_session_activity')
+            .prefetch_related('work_session_activity__work_break_records')
+            .order_by('-updated_at')
             .first()
         )
         if not record:
