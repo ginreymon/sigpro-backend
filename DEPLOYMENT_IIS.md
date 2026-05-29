@@ -224,3 +224,144 @@ C:\inetpub\wwwroot\SIGPRO\backend\venv\Scripts\python.exe C:\inetpub\wwwroot\SIG
 | `ALLOWED_HOSTS error` | IP no en .env | Agregar IP a `ALLOWED_HOSTS` en `.env` |
 | `venv bloqueado al borrar` | IIS usa el proceso | Detener app pool → borrar → recrear |
 | `pip instala en system Python` | venv roto | Borrar venv con `iisreset /stop` + `rmdir /s /q venv` y recrear |
+
+---
+
+---
+
+# Despliegue Angular Frontend en IIS — SGIPRO
+
+**Stack:** Angular 21 · IIS URL Rewrite Module  
+**Ruta servidor:** `C:\inetpub\wwwroot\SIGPRO\frontend`  
+**Puerto IIS:** `80`
+
+---
+
+## Prerrequisitos
+
+- IIS instalado con módulo **URL Rewrite** ([descarga](https://www.iis.net/downloads/microsoft/url-rewrite))
+- Build de Angular generado (`npm run build`) — archivos en `dist/`
+- CMD abierto como **Administrador**
+
+Verificar que URL Rewrite está instalado:
+
+```cmd
+%windir%\system32\inetsrv\appcmd list module /name:RewriteModule
+```
+
+Respuesta esperada: `MODULE "RewriteModule" ...`
+
+---
+
+## 1. Copiar build al servidor
+
+Estructura esperada en el servidor:
+
+```
+C:\inetpub\wwwroot\SIGPRO\frontend\
+  index.html
+  main-XXXXXXXX.js
+  styles-XXXXXXXX.css
+  favicon.ico
+  web.config
+```
+
+---
+
+## 2. Crear web.config
+
+Crear `C:\inetpub\wwwroot\SIGPRO\frontend\web.config` con este contenido:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="Angular SPA" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/index.html" />
+        </rule>
+      </rules>
+    </rewrite>
+    <httpErrors errorMode="Custom" existingResponse="PassThrough" />
+  </system.webServer>
+</configuration>
+```
+
+La regla redirige toda ruta desconocida a `index.html` — necesario para que Angular Router funcione al refrescar o navegar directamente por URL.
+
+---
+
+## 3. Configurar IIS Manager
+
+### 3.1 Application Pool
+
+IIS Manager → **Application Pools** → clic derecho → **Add Application Pool**
+
+| Campo | Valor |
+|-------|-------|
+| Name | `SGIPRO-Frontend` |
+| .NET CLR version | **No Managed Code** |
+| Managed pipeline | Integrated |
+
+### 3.2 Sitio
+
+IIS Manager → **Sites** → clic derecho → **Add Website**
+
+| Campo | Valor |
+|-------|-------|
+| Site name | `SGIPRO-Frontend` |
+| Application pool | `SGIPRO-Frontend` |
+| Physical path | `C:\inetpub\wwwroot\SIGPRO\frontend` |
+| Port | `80` |
+| Host name | (dejar vacío o dominio si aplica) |
+
+---
+
+## 4. Permisos
+
+```cmd
+icacls "C:\inetpub\wwwroot\SIGPRO\frontend" /grant "IIS AppPool\SGIPRO-Frontend:(OI)(CI)R" /T
+```
+
+---
+
+## 5. Verificar
+
+Navegar a:
+```
+http://localhost/
+```
+
+- Carga la app Angular correctamente
+- Refrescar en cualquier ruta (`/produccion`, `/login`) → no devuelve 404
+
+---
+
+## Actualizar despliegue (cambios futuros)
+
+```cmd
+:: 1. Generar nuevo build en máquina de desarrollo
+::    npm run build  (desde frontend/)
+
+:: 2. Copiar contenido de dist/ a servidor (reemplazar archivos)
+::    Los nombres de .js y .css cambian por hash en cada build
+
+:: 3. No es necesario reiniciar IIS — archivos estáticos
+```
+
+---
+
+## Errores comunes
+
+| Error | Causa | Fix |
+|-------|-------|-----|
+| `404` al refrescar ruta Angular | URL Rewrite no instalado o web.config ausente | Instalar módulo + verificar web.config en Paso 2 |
+| `500.19` al iniciar sitio | web.config con error de sintaxis o módulo faltante | Validar XML + verificar URL Rewrite instalado |
+| Pantalla en blanco, errores en consola | Rutas de assets rotas (base href incorrecto) | Verificar `base href="/"` en `index.html` |
+| `RewriteModule` no encontrado | URL Rewrite no instalado | Descargar e instalar desde iis.net |
