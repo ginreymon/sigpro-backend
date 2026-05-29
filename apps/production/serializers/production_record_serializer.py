@@ -1,5 +1,4 @@
 from decimal import Decimal
-from datetime import timedelta
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
@@ -92,57 +91,36 @@ class ProductionRecordSerializer(AuditSerializer):
         validated_data["rejected_quantity"] = rejected
 
         instance = super().create(validated_data)
-
-        if has_quantities:
-            instance.end_time = instance.start_time + timedelta(seconds=1)
-            instance.save(update_fields=["end_time"])
+        instance.end_time = instance.start_time
+        instance.save(update_fields=["end_time"])
 
         return instance
 
-    def _rotate_activity(self, instance, validated_data):
-        """
-        Close current record and activity, open new activity (same module)
-        with new record carrying updated sku/op values and zero production quantities.
-        Employees are copied from the previous activity snapshot.
-        """
-        user = self.context["request"].user
-        new_activity = self._open_new_activity(instance.work_session_activity)
-
-        new_record = ProductionRecord.objects.create(
-            work_session_activity=new_activity,
-            sku_rowid=validated_data.get("sku_rowid", instance.sku_rowid),
-            op_rowid=validated_data.get("op_rowid", instance.op_rowid),
-            op_number=validated_data.get("op_number", instance.op_number),
-            op_type=validated_data.get("op_type", instance.op_type),
-            ordered_quantity=validated_data["ordered_quantity"],
-            planned_quantity=validated_data["planned_quantity"],
-            completed_quantity=0,
-            scrap_quantity=0,
-            rejected_quantity=0,
-            created_by=user,
-        )
-        return new_record
-
     @transaction.atomic
     def update(self, instance, validated_data):
-        sku_changed = (
-            "sku_rowid" in validated_data
-            and validated_data["sku_rowid"] != instance.sku_rowid
-        )
-        op_changed = (
-            "op_rowid" in validated_data
-            and validated_data["op_rowid"] != instance.op_rowid
-        )
+        completed = Decimal(str(validated_data.get("completed_quantity") or 0))
+        scrap = Decimal(str(validated_data.get("scrap_quantity") or 0))
+        rejected = Decimal(str(validated_data.get("rejected_quantity") or 0))
+        has_quantities = completed > 0 or scrap > 0 or rejected > 0
 
-        if sku_changed or op_changed:
-            missing = [f for f in ("ordered_quantity", "planned_quantity") if f not in validated_data]
-            if missing:
-                raise ValidationError({f: "Required when changing sku_rowid or op_rowid." for f in missing})
-            return self._rotate_activity(instance, validated_data)
+        if has_quantities:
+            existing_sum = (
+                ProductionRecord.objects.filter(sku_rowid=instance.sku_rowid)
+                .exclude(pk=instance.pk)
+                .aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
+                ["total"] or Decimal("0")
+            )
+            new_total = existing_sum + completed + scrap + rejected
+            if new_total > instance.ordered_quantity:
+                raise ValidationError({
+                    "non_field_errors": (
+                        f"La suma de cantidades ({new_total}) supera la cantidad ordenada ({instance.ordered_quantity})."
+                    )
+                })
 
-        closing_fields = {"completed_quantity", "scrap_quantity", "rejected_quantity"}
+        instance.completed_quantity = completed
+        instance.scrap_quantity = scrap
+        instance.rejected_quantity = rejected
+        instance.save(update_fields=["completed_quantity", "scrap_quantity", "rejected_quantity"])
 
-        if closing_fields & validated_data.keys():
-            instance.end_time = timezone.now()
-
-        return super().update(instance, validated_data)
+        return instance
