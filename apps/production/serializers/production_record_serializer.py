@@ -23,6 +23,9 @@ class ProductionRecordSerializer(AuditSerializer):
         return timezone.now()
 
     def get_is_paused(self, obj):
+        activity = self.context.get("activity")
+        if activity is not None:
+            return activity.is_paused
         return obj.work_session_activity.is_paused
 
     def _open_new_activity(self, activity):

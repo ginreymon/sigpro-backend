@@ -58,33 +58,29 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
 
     @property
     def is_paused(self):
-        return self.work_break_records.filter(resumed_at__isnull=True).exists()
+        return any(br.resumed_at is None for br in self.work_break_records.all())
 
     @property
     def active_break(self):
-        return self.work_break_records.filter(resumed_at__isnull=True).order_by("-start_time").first()
+        open_breaks = [br for br in self.work_break_records.all() if br.resumed_at is None]
+        return max(open_breaks, key=lambda br: br.start_time) if open_breaks else None
 
     @property
     def total_pause_time(self):
         now = timezone.now()
         total = timedelta()
-        for br in self.work_break_records.filter(
-            Q(resumed_at__isnull=False)
-            | Q(work_break__isnull=False, end_time__isnull=False, end_time__lte=now)
-        ):
-            if br.end_time:
+        for br in self.work_break_records.all():
+            if br.end_time and (
+                br.resumed_at is not None
+                or (br.work_break_id is not None and br.end_time <= now)
+            ):
                 total += br.end_time - br.start_time
-
         return total
 
     @property
     def last_open_production_record(self):
-        return (
-            self.production_records
-            .filter(end_time__isnull=True)
-            .order_by("-start_time")
-            .first()
-        )
+        open_records = [r for r in self.production_records.all() if r.end_time is None]
+        return max(open_records, key=lambda r: r.start_time) if open_records else None
 
     @property
     def last_production_record(self):

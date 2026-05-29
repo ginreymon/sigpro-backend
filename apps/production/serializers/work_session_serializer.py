@@ -43,7 +43,11 @@ class WorkSessionSerializer(AuditSerializer):
 
     def _get_active_activity(self, obj):
         if not hasattr(obj, '_cached_active_activity'):
-            obj._cached_active_activity = obj.get_active_activity()
+            obj._cached_active_activity = max(
+                (a for a in obj.work_session_activities.all() if a.is_active and a.ended_at is None),
+                key=lambda a: (a.started_at, a.id),
+                default=None,
+            )
         return obj._cached_active_activity
 
     def get_current_module(self, obj):
@@ -51,12 +55,12 @@ class WorkSessionSerializer(AuditSerializer):
         return ModuleSerializer(activity.module).data if activity else None
 
     def get_modules(self, obj):
-        modules = (
-            Module.objects.filter(activities__work_session=obj)
-            .distinct()
-            .values("id", "name", "number")
-        )
-        return list(modules)
+        seen = {}
+        for activity in obj.work_session_activities.all():
+            m = activity.module
+            if m.id not in seen:
+                seen[m.id] = {"id": m.id, "name": m.name, "number": m.number}
+        return list(seen.values())
 
     def get_employees_snapshot(self, obj):
         activity = self._get_active_activity(obj)
@@ -71,7 +75,7 @@ class WorkSessionSerializer(AuditSerializer):
                 "last_name1": rel.employee.last_name1,
                 "last_name2": rel.employee.last_name2,
             }
-            for rel in activity.employee_snapshots.select_related("employee").all()
+            for rel in activity.employee_snapshots.all()
         ]
 
     def get_active_activity(self, obj):
@@ -96,7 +100,8 @@ class WorkSessionSerializer(AuditSerializer):
                 WorkBreakRecordSerializer(active_break).data if active_break else None
             ),
             "last_open_production_record": (
-                ProductionRecordSerializer(last_record).data if last_record else None
+                ProductionRecordSerializer(last_record, context={**self.context, "activity": activity}).data
+                if last_record else None
             ),
         }
 

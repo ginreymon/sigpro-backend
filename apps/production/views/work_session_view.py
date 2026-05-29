@@ -29,6 +29,7 @@ class WorkSessionViewSet(AuditModelViewSet):
                 "work_session_activities__module",
                 "work_session_activities__employee_snapshots__employee",
                 "work_session_activities__work_break_records",
+                "work_session_activities__production_records",
             )
         )
 
@@ -55,7 +56,7 @@ class WorkSessionViewSet(AuditModelViewSet):
     # /work-sessions/active/
     @action(detail=False, methods=["get"])
     def active(self, request):
-        session = self.get_queryset().filter(is_closed=False).first()
+        session = self.get_queryset().filter(is_closed=False, user=request.user).first()
 
         if not session:
             return Response(None)
