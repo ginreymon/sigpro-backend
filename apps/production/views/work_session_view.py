@@ -44,13 +44,14 @@ class WorkSessionViewSet(AuditModelViewSet):
     # /work-sessions/{id}/close/
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):
-        session = self.get_queryset().get(pk=pk)
+        session = WorkSession.objects.select_related("work_shift", "user").get(pk=pk)
 
         if session.is_closed:
             return Response({"detail": "Session already closed"}, status=400)
 
         session.close_session()
 
+        session = self.get_queryset().get(pk=pk)
         return Response(self.get_serializer(session).data)
 
     # /work-sessions/active/
