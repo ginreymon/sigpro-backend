@@ -25,6 +25,7 @@ class WorkSessionActivitySerializer(AuditSerializer):
     active_break = serializers.SerializerMethodField()
     work_break_records = WorkBreakRecordSerializer(many=True, read_only=True)
     last_open_production_record = serializers.SerializerMethodField()
+    last_production_record = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkSessionActivity
@@ -43,6 +44,7 @@ class WorkSessionActivitySerializer(AuditSerializer):
             "active_time_seconds",
             "work_break_records",
             "last_open_production_record",
+            "last_production_record",
             "created_by",
             "created_by_username",
             "updated_by",
@@ -70,6 +72,12 @@ class WorkSessionActivitySerializer(AuditSerializer):
 
     def get_last_open_production_record(self, obj):
         record = obj.last_open_production_record
+        if not record:
+            return None
+        return ProductionRecordSerializer(record).data
+
+    def get_last_production_record(self, obj):
+        record = obj.last_production_record
         if not record:
             return None
         return ProductionRecordSerializer(record).data

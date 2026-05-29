@@ -86,6 +86,14 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
             .first()
         )
 
+    @property
+    def last_production_record(self):
+        return (
+            self.production_records
+            .order_by("-start_time")
+            .first()
+        )
+
     def close(self):
         if self.ended_at:
             return
