@@ -73,8 +73,9 @@ class ProductionRecordSerializer(AuditSerializer):
         if has_quantities:
             ordered = Decimal(str(validated_data["ordered_quantity"]))
             sku_rowid = validated_data["sku_rowid"]
+            op_rowid = validated_data["op_rowid"]
             existing_sum = (
-                ProductionRecord.objects.filter(sku_rowid=sku_rowid)
+                ProductionRecord.objects.filter(sku_rowid=sku_rowid, op_rowid=op_rowid)
                 .aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
                 ["total"] or Decimal("0")
             )
@@ -105,7 +106,7 @@ class ProductionRecordSerializer(AuditSerializer):
 
         if has_quantities:
             existing_sum = (
-                ProductionRecord.objects.filter(sku_rowid=instance.sku_rowid)
+                ProductionRecord.objects.filter(sku_rowid=instance.sku_rowid, op_rowid=instance.op_rowid)
                 .exclude(pk=instance.pk)
                 .aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
                 ["total"] or Decimal("0")
