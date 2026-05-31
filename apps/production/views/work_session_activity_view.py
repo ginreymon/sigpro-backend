@@ -2,6 +2,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
+from django.db import transaction
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkSessionActivity
 from apps.production.models.work_break import WorkBreak
@@ -34,6 +35,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
     # POST /work-session-activities/{id}/pause/
     # Payload: { "work_break": <id> }  OR  { "custom_reason": "texto" }
     @action(detail=True, methods=["post"], url_path="pause")
+    @transaction.atomic
     def pause(self, request, pk=None):
         activity = self.get_object()
 
