@@ -75,7 +75,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
 
         return activity
 
-    def continue_activity(self, employee_ids=None, created_by=None):
+    def restart_activity(self, employee_ids=None, created_by=None):
                 
         last_activity = self.get_active_activity()
 

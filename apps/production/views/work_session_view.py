@@ -71,12 +71,12 @@ class WorkSessionViewSet(AuditModelViewSet):
 
         return Response(self.get_serializer(session).data)
 
-    # /work-sessions/{id}/continue/
-    # Crea nueva activity con el mismo módulo de la activity anterior.
+    # /work-sessions/{id}/rotate/
+    # Cierra activity actual y abre una nueva con el mismo módulo.
     # Usar cuando cambia SKU, empleados, o OP pero el módulo no cambia.
-    @action(detail=True, methods=["post"], url_path="continue")
+    @action(detail=True, methods=["post"], url_path="rotate")
     @transaction.atomic
-    def continue_activity(self, request, pk=None):
+    def rotate_activity(self, request, pk=None):
         session = WorkSession.objects.select_for_update().get(pk=pk)
 
         if session.is_closed:
@@ -88,7 +88,7 @@ class WorkSessionViewSet(AuditModelViewSet):
         employee_ids = input_serializer.validated_data.get("employee_ids", None)
 
         try:
-            new_activity = session.continue_activity(
+            new_activity = session.restart_activity(
                 employee_ids=employee_ids,
                 created_by=request.user,
             )
