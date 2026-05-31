@@ -2,10 +2,17 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import transaction
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkSession
 from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
+
+
+class ContinueInputSerializer(drf_serializers.Serializer):
+    employee_ids = drf_serializers.ListField(
+        child=drf_serializers.IntegerField(), required=False, allow_empty=True
+    )
 
 
 class WorkSessionViewSet(AuditModelViewSet):
@@ -44,7 +51,7 @@ class WorkSessionViewSet(AuditModelViewSet):
     # /work-sessions/{id}/close/
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):
-        session = WorkSession.objects.select_related("work_shift", "user").get(pk=pk)
+        session = self.get_object()
 
         if session.is_closed:
             return Response({"detail": "Session already closed"}, status=400)
@@ -68,26 +75,25 @@ class WorkSessionViewSet(AuditModelViewSet):
     # Crea nueva activity con el mismo módulo de la activity anterior.
     # Usar cuando cambia SKU, empleados, o OP pero el módulo no cambia.
     @action(detail=True, methods=["post"], url_path="continue")
+    @transaction.atomic
     def continue_activity(self, request, pk=None):
-        session = self.get_queryset().get(pk=pk)
+        session = WorkSession.objects.select_for_update().get(pk=pk)
 
         if session.is_closed:
             return Response({"detail": "Session is closed"}, status=400)
-
-        class ContinueInputSerializer(drf_serializers.Serializer):
-            employee_ids = drf_serializers.ListField(
-                child=drf_serializers.IntegerField(), required=False, allow_empty=True
-            )
 
         input_serializer = ContinueInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
         employee_ids = input_serializer.validated_data.get("employee_ids", None)
 
-        new_activity = session.continue_activity(
-            employee_ids=employee_ids,
-            created_by=request.user,
-        )
+        try:
+            new_activity = session.continue_activity(
+                employee_ids=employee_ids,
+                created_by=request.user,
+            )
+        except LookupError as e:
+            return Response({"detail": str(e)}, status=400)
 
         return Response(
             WorkSessionActivitySerializer(new_activity, context={"request": request}).data,

@@ -87,8 +87,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             )
 
         if not last_activity:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError("No previous activity found to continue from")
+            raise LookupError("No previous activity found to continue from")
 
         module = last_activity.module
         previous_employee_ids = list(
