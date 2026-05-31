@@ -26,7 +26,6 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             WorkSessionActivity.objects.all()
             .select_related("module", "work_session")
             .prefetch_related(
-                "employee_snapshots__employee",
                 "work_break_records",
                 "production_records",
             )
@@ -104,8 +103,6 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             active_break.end_time = now
 
         active_break.save()
-
-        activity.refresh_from_db()
 
         return Response(
             WorkBreakRecordSerializer(active_break).data,
