@@ -84,7 +84,8 @@ class WorkSessionSerializer(AuditSerializer):
         if not activity:
             return None
 
-        last_record = activity.last_open_production_record
+        last_open_record = activity.last_open_production_record
+        last_record = activity.last_production_record
         active_break = activity.active_break
 
         from apps.production.serializers.work_break_record_serializer import WorkBreakRecordSerializer
@@ -100,6 +101,10 @@ class WorkSessionSerializer(AuditSerializer):
                 WorkBreakRecordSerializer(active_break).data if active_break else None
             ),
             "last_open_production_record": (
+                ProductionRecordSerializer(last_open_record, context={**self.context, "activity": activity}).data
+                if last_open_record else None
+            ),
+            "last_production_record": (
                 ProductionRecordSerializer(last_record, context={**self.context, "activity": activity}).data
                 if last_record else None
             ),
