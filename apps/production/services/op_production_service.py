@@ -23,6 +23,10 @@ class OPProductionService:
         return OPProductionRepository.get_tipo_documentos_op()
 
     @staticmethod
+    def get_materiales_op_json(tipo_docto, consec_docto):
+        return OPProductionRepository.get_materiales_op_json(tipo_docto, consec_docto)
+
+    @staticmethod
     def get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan="300"):
         return OPProductionRepository.get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan)
 

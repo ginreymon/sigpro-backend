@@ -73,3 +73,21 @@ class OPProductionDetailViewSet(viewsets.ViewSet):
             )
 
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="materials")
+    def materials(self, request):
+        doc_type = request.query_params.get("type")
+        doc_number = request.query_params.get("number")
+
+        if not doc_type or not doc_number:
+            return Response(
+                {"error": "type and number are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = OPProductionService.get_materiales_op_json(doc_type, int(doc_number))
+
+        if not data:
+            return Response({"error": "No data found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(data, status=status.HTTP_200_OK)
