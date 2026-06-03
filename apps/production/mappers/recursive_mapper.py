@@ -73,6 +73,18 @@
     "eficiencia":                   "efficiency",
     "modulo_id":                    "module_id",
     "turno_id":                     "shift_id",
+    # materials sp columns
+    "Referencias":                  "references",
+    "Materiales":                   "materials",
+    "Material":                     "materialNumber",
+    "Codigo_Tela":                  "fabricCode",
+    "Color_Tela":                   "fabricColor",
+    "Consumo":                      "consumption",
+    "Descripcion_Referencia":       "description",
+    "Total":                        "total",
+    "TipoDocto":                    "docType",
+    "ConsecDocto":                  "docNumber",
+    "OP":                           "op",
 }
 
 
