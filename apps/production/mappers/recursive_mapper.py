@@ -71,6 +71,8 @@
     "promedio_sam_ponderado":       "weighted_avg_sam",
     "total_produccion":             "total_produced",
     "eficiencia":                   "efficiency",
+    "modulo_id":                    "module_id",
+    "turno_id":                     "shift_id",
 }
 
 

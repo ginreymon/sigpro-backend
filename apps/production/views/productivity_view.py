@@ -184,13 +184,11 @@ class ProductivityViewSet(viewsets.ViewSet):
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        employee_id = _parse_optional_int(request.query_params, "employee_id")
-        module_id   = _parse_optional_int(request.query_params, "module_id")
-        shift_id    = _parse_optional_int(request.query_params, "shift_id")
+        module_id = _parse_optional_int(request.query_params, "module_id")
+        shift_id  = _parse_optional_int(request.query_params, "shift_id")
 
         data = ProductivityService.get_efficiency_period(
             start_date, end_date, client_now,
-            employee_id=employee_id,
             module_id=module_id,
             shift_id=shift_id,
         )
