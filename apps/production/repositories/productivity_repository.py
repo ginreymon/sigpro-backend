@@ -1,4 +1,5 @@
-﻿from django.db import connection
+﻿import json
+from django.db import connection
 from apps.production.mappers.recursive_mapper import translate_keys
 
 
@@ -35,5 +36,11 @@ class ProductivityRepository:
             )
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
-            return [dict(zip(columns, row)) for row in rows]
+            result = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                if isinstance(record.get("records_detail"), str):
+                    record["records_detail"] = json.loads(record["records_detail"])
+                result.append(record)
+            return result
 
