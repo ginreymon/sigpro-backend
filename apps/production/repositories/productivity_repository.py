@@ -26,3 +26,14 @@ class ProductivityRepository:
             row = cursor.fetchone()
             return translate_keys([dict(zip(columns, row))])[0] if row else {}
 
+    @staticmethod
+    def get_shift_summary(start_date, end_date, shift_id, module_id, employee_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_resumen_produccion_turno %s, %s, %s, %s, %s",
+                [start_date, end_date, shift_id, module_id, employee_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            return [dict(zip(columns, row)) for row in rows]
+
