@@ -201,6 +201,13 @@ class ProductivityViewSet(viewsets.ViewSet):
         )
         return Response(data, status=status.HTTP_200_OK)
 
+    # GET /productivity/module-shift-summary/
+    @action(detail=False, methods=["get"], url_path="module-shift-summary")
+    def module_shift_summary(self, request):
+        data = ProductivityService.get_module_shift_summary()
+        return Response(data, status=status.HTTP_200_OK)
+
+    # GET /productivity/efficiency/
     @action(detail=False, methods=["get"], url_path="efficiency")
     def efficiency(self, request):
         start_date, end_date, client_now, error = _parse_required_dates(request.query_params)

@@ -28,6 +28,16 @@ class ProductivityRepository:
             return translate_keys([dict(zip(columns, row))])[0] if row else {}
 
     @staticmethod
+    def get_module_shift_summary() -> list[dict]:
+        with connection.cursor() as cursor:
+            cursor.execute("EXEC sp_resumen_modulos_eficiencia_turno")
+            rows = cursor.fetchall()
+            if not rows:
+                return []
+            json_str = ''.join(row[0] for row in rows)
+            return translate_keys(json.loads(json_str))
+
+    @staticmethod
     def get_shift_summary(start_date, end_date, shift_id, module_id, employee_id=None):
         with connection.cursor() as cursor:
             cursor.execute(
