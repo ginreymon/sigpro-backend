@@ -25,6 +25,10 @@ class ProductivityService:
         return ProductivityRepository.get_module_shift_summary()
 
     @staticmethod
+    def get_module_efficiency(start_date: str, end_date: str, module_id: int | None = None) -> list[dict]:
+        return ProductivityRepository.get_module_efficiency(start_date, end_date, module_id)
+
+    @staticmethod
     def get_shift_summary(start_date, end_date, client_now, shift_id, module_id, employee_id=None):
         corrected_start = apply_client_offset(start_date, client_now)
         corrected_end   = apply_client_offset(end_date,   client_now)

@@ -38,6 +38,17 @@ class ProductivityRepository:
             return translate_keys(json.loads(json_str))
 
     @staticmethod
+    def get_module_efficiency(start_date: str, end_date: str, module_id: int | None = None) -> list[dict]:
+        with connection.cursor() as cursor:
+            cursor.execute("EXEC sp_eficiencia_modulos %s, %s", [start_date, end_date])
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result = translate_keys([dict(zip(columns, row)) for row in rows])
+            if module_id is not None:
+                result = [r for r in result if r.get('module_id') == module_id]
+            return result
+
+    @staticmethod
     def get_shift_summary(start_date, end_date, shift_id, module_id, employee_id=None):
         with connection.cursor() as cursor:
             cursor.execute(
