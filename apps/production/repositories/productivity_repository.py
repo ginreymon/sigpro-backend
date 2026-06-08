@@ -38,6 +38,22 @@ class ProductivityRepository:
             return result
 
     @staticmethod
+    def get_efficiency_report(start_date, end_date, module_id=None, shift_id=None, employee_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_reporte_eficiencia_detallada %s, %s, %s, %s, %s",
+                [start_date, end_date, module_id, shift_id, employee_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result = translate_keys([dict(zip(columns, row)) for row in rows])
+            for record in result:
+                for field in ("breaks", "employees"):
+                    if isinstance(record.get(field), str):
+                        record[field] = json.loads(record[field])
+            return result
+
+    @staticmethod
     def get_shift_summary(start_date, end_date, shift_id, module_id, employee_id=None):
         with connection.cursor() as cursor:
             cursor.execute(
