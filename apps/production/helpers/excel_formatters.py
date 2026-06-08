@@ -25,5 +25,5 @@ def fmt_breaks_text(breaks: list) -> str:
     for b in breaks:
         name = (b.get("name") or "").strip()
         desc = (b.get("description") or b.get("custom_reason") or "").strip()
-        parts.append(f"{name}: {desc}" if desc else name)
+        parts.append(name or desc)
     return " ; ".join(parts)
