@@ -13,6 +13,7 @@ from core.serializers.audit_serializer import AuditSerializer
 
 class WorkSessionSerializer(AuditSerializer):
     employee_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    apprentice_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
     current_module = serializers.SerializerMethodField()
     work_shift = WorkShiftSerializer(read_only=True)
     modules = serializers.SerializerMethodField()
@@ -74,6 +75,7 @@ class WorkSessionSerializer(AuditSerializer):
                 "first_name": rel.employee.first_name,
                 "last_name1": rel.employee.last_name1,
                 "last_name2": rel.employee.last_name2,
+                "is_apprentice": rel.is_apprentice,
             }
             for rel in activity.employee_snapshots.all()
         ]
@@ -110,7 +112,7 @@ class WorkSessionSerializer(AuditSerializer):
             ),
         }
 
-    def _handle_employees(self, instance, employee_ids, activity=None):   
+    def _handle_employees(self, instance, employee_ids, activity=None, apprentice_ids=None):
         if not activity:
             activity = instance.get_active_activity()
 
@@ -118,6 +120,7 @@ class WorkSessionSerializer(AuditSerializer):
             raise ValidationError("No active activity found")
 
         employees = EmployeeLocal.objects.filter(id__in=employee_ids)
+        apprentice_set = set(apprentice_ids or [])
 
         WorkSessionActivityEmployee.objects.filter(work_session_activity=activity).delete()
 
@@ -126,6 +129,7 @@ class WorkSessionSerializer(AuditSerializer):
                 WorkSessionActivityEmployee(
                     work_session_activity=activity,
                     employee=emp,
+                    is_apprentice=emp.id in apprentice_set,
                     created_by=getattr(instance, "updated_by", None)
                     or instance.created_by,
                 )
@@ -164,6 +168,7 @@ class WorkSessionSerializer(AuditSerializer):
     @transaction.atomic
     def create(self, validated_data):
         employee_ids = validated_data.pop("employee_ids", [])
+        apprentice_ids = validated_data.pop("apprentice_ids", [])
         module = validated_data.pop("module_id", None)
 
         work_session = super().create(validated_data)
@@ -177,13 +182,14 @@ class WorkSessionSerializer(AuditSerializer):
             if not activity:
                 raise ValidationError("Cannot assign employees without a module")
 
-            self._handle_employees(work_session, employee_ids, activity)
+            self._handle_employees(work_session, employee_ids, activity, apprentice_ids)
 
         return work_session
 
     @transaction.atomic
     def update(self, instance, validated_data):
         employee_ids = validated_data.pop("employee_ids", None)
+        apprentice_ids = validated_data.pop("apprentice_ids", None)
         module = validated_data.pop("module_id", None)
 
         # Capture current state before any changes
@@ -192,14 +198,18 @@ class WorkSessionSerializer(AuditSerializer):
         current_employee_ids = set(
             current_activity.employee_snapshots.values_list("employee_id", flat=True)
         ) if current_activity else set()
+        current_apprentice_ids = set(
+            current_activity.employee_snapshots.filter(is_apprentice=True).values_list("employee_id", flat=True)
+        ) if current_activity else set()
 
         new_work_shift = validated_data.get("work_shift")
 
         module_changed = module is not None and module != current_module
         work_shift_changed = new_work_shift is not None and new_work_shift != instance.work_shift
         employees_changed = employee_ids is not None and set(employee_ids) != current_employee_ids
+        apprentice_changed = apprentice_ids is not None and set(apprentice_ids) != current_apprentice_ids
 
-        any_field_changed = module_changed or work_shift_changed or employees_changed
+        any_field_changed = module_changed or work_shift_changed or employees_changed or apprentice_changed
 
         instance = super().update(instance, validated_data)
 
@@ -210,6 +220,7 @@ class WorkSessionSerializer(AuditSerializer):
 
             activity = instance.start_activity(target_module)
             effective_ids = list(employee_ids) if employee_ids is not None else list(current_employee_ids)
-            self._handle_employees(instance, effective_ids, activity)
+            effective_apprentice_ids = list(apprentice_ids) if apprentice_ids is not None else list(current_apprentice_ids)
+            self._handle_employees(instance, effective_ids, activity, effective_apprentice_ids)
 
         return instance

@@ -13,6 +13,9 @@ class ContinueInputSerializer(drf_serializers.Serializer):
     employee_ids = drf_serializers.ListField(
         child=drf_serializers.IntegerField(), required=False, allow_empty=True
     )
+    apprentice_ids = drf_serializers.ListField(
+        child=drf_serializers.IntegerField(), required=False, allow_empty=True
+    )
 
 
 class WorkSessionViewSet(AuditModelViewSet):
@@ -86,11 +89,13 @@ class WorkSessionViewSet(AuditModelViewSet):
         input_serializer.is_valid(raise_exception=True)
 
         employee_ids = input_serializer.validated_data.get("employee_ids", None)
+        apprentice_ids = input_serializer.validated_data.get("apprentice_ids", None)
 
         try:
             new_activity = session.restart_activity(
                 employee_ids=employee_ids,
                 created_by=request.user,
+                apprentice_ids=apprentice_ids,
             )
         except LookupError as e:
             return Response({"detail": str(e)}, status=400)

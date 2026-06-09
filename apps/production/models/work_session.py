@@ -47,7 +47,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             .first()
         )
 
-    def start_activity(self, module, employee_ids=None, created_by=None):
+    def start_activity(self, module, employee_ids=None, created_by=None, apprentice_ids=None):
         activity = self.get_active_activity()
         if activity:
             activity.close()
@@ -61,12 +61,14 @@ class WorkSession(TimeAuditModel, UserAuditModel):
 
         if employee_ids:
             employees = EmployeeLocal.objects.filter(id__in=employee_ids)
+            apprentice_set = set(apprentice_ids or [])
 
             activity.employee_snapshots.bulk_create(
                 [
                     WorkSessionActivityEmployee(
                         work_session_activity=activity,
                         employee=emp,
+                        is_apprentice=emp.id in apprentice_set,
                         created_by=resolved_created_by,
                     )
                     for emp in employees
@@ -75,8 +77,8 @@ class WorkSession(TimeAuditModel, UserAuditModel):
 
         return activity
 
-    def restart_activity(self, employee_ids=None, created_by=None):
-                
+    def restart_activity(self, employee_ids=None, created_by=None, apprentice_ids=None):
+
         last_activity = self.get_active_activity()
 
         if not last_activity:
@@ -90,17 +92,24 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             raise LookupError("No previous activity found to continue from")
 
         module = last_activity.module
-        previous_employee_ids = list(
-            last_activity.employee_snapshots
-            .values_list("employee_id", flat=True)
-        )
 
-        resolved_employee_ids = employee_ids if employee_ids is not None else previous_employee_ids
+        if employee_ids is not None:
+            resolved_employee_ids = employee_ids
+            resolved_apprentice_ids = apprentice_ids
+        else:
+            prev_snapshots = list(
+                last_activity.employee_snapshots.values("employee_id", "is_apprentice")
+            )
+            resolved_employee_ids = [s["employee_id"] for s in prev_snapshots]
+            resolved_apprentice_ids = [
+                s["employee_id"] for s in prev_snapshots if s["is_apprentice"]
+            ]
 
         return self.start_activity(
             module=module,
             employee_ids=resolved_employee_ids,
             created_by=created_by,
+            apprentice_ids=resolved_apprentice_ids,
         )
 
     def close_session(self):
