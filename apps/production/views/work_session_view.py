@@ -7,6 +7,7 @@ from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkSession
 from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
+from apps.production.services.employee_assignment_service import validate_employee_conflicts, sync_module_assignees
 
 
 class ContinueInputSerializer(drf_serializers.Serializer):
@@ -91,6 +92,19 @@ class WorkSessionViewSet(AuditModelViewSet):
         employee_ids = input_serializer.validated_data.get("employee_ids", None)
         apprentice_ids = input_serializer.validated_data.get("apprentice_ids", None)
 
+        current_activity = session.get_active_activity()
+
+        if employee_ids is not None:
+            resolved_employee_ids = employee_ids
+        elif current_activity:
+            resolved_employee_ids = list(
+                current_activity.employee_snapshots.values_list("employee_id", flat=True)
+            )
+        else:
+            resolved_employee_ids = []
+
+        validate_employee_conflicts(resolved_employee_ids, current_activity)
+
         try:
             new_activity = session.restart_activity(
                 employee_ids=employee_ids,
@@ -99,6 +113,8 @@ class WorkSessionViewSet(AuditModelViewSet):
             )
         except LookupError as e:
             return Response({"detail": str(e)}, status=400)
+
+        sync_module_assignees(new_activity.module, request.user)
 
         return Response(
             WorkSessionActivitySerializer(new_activity, context={"request": request}).data,

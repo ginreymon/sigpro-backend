@@ -4,16 +4,17 @@ from apps.production.models.work_shift import WorkShift
 from apps.production.models.module import Module
 from apps.production.serializers.module_serializer import ModuleSerializer
 from apps.production.serializers.work_shift_serializer import WorkShiftSerializer
-from apps.production.models import WorkSession, ModuleAssignee, EmployeeLocal
+from apps.production.models import WorkSession, EmployeeLocal
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
+from apps.production.services.employee_assignment_service import validate_employee_conflicts, sync_module_assignees, validate_module_conflict
 from django.db import transaction
 from core.serializers.audit_serializer import AuditSerializer
 
 
 class WorkSessionSerializer(AuditSerializer):
     employee_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
-    apprentice_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
+    apprentice_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
     current_module = serializers.SerializerMethodField()
     work_shift = WorkShiftSerializer(read_only=True)
     modules = serializers.SerializerMethodField()
@@ -112,6 +113,21 @@ class WorkSessionSerializer(AuditSerializer):
             ),
         }
 
+    def _sync_activity_employees(self, activity, employee_ids, apprentice_ids, created_by):
+        employees = EmployeeLocal.objects.filter(id__in=employee_ids)
+        apprentice_set = set(apprentice_ids or [])
+
+        WorkSessionActivityEmployee.objects.filter(work_session_activity=activity).delete()
+        WorkSessionActivityEmployee.objects.bulk_create([
+            WorkSessionActivityEmployee(
+                work_session_activity=activity,
+                employee=emp,
+                is_apprentice=emp.id in apprentice_set,
+                created_by=created_by,
+            )
+            for emp in employees
+        ])
+
     def _handle_employees(self, instance, employee_ids, activity=None, apprentice_ids=None):
         if not activity:
             activity = instance.get_active_activity()
@@ -119,51 +135,11 @@ class WorkSessionSerializer(AuditSerializer):
         if not activity:
             raise ValidationError("No active activity found")
 
-        employees = EmployeeLocal.objects.filter(id__in=employee_ids)
-        apprentice_set = set(apprentice_ids or [])
+        created_by = getattr(instance, "updated_by", None) or instance.created_by
 
-        WorkSessionActivityEmployee.objects.filter(work_session_activity=activity).delete()
-
-        WorkSessionActivityEmployee.objects.bulk_create(
-            [
-                WorkSessionActivityEmployee(
-                    work_session_activity=activity,
-                    employee=emp,
-                    is_apprentice=emp.id in apprentice_set,
-                    created_by=getattr(instance, "updated_by", None)
-                    or instance.created_by,
-                )
-                for emp in employees
-            ]
-        )
-
-        module = activity.module
-        current_assignees = ModuleAssignee.objects.filter(module=module)
-        current_employee_ids = set(
-            current_assignees.values_list("employee_id", flat=True)
-        )
-
-        new_employee_ids = set(employee_ids)
-
-        to_add = new_employee_ids - current_employee_ids
-        to_remove = current_employee_ids - new_employee_ids
-
-        if to_remove:
-            ModuleAssignee.objects.filter(
-                module=module,
-                employee_id__in=to_remove
-            ).delete()
-
-        assignees_to_create = [
-            ModuleAssignee(
-                module=module,
-                employee_id=emp_id,
-                created_by=getattr(instance, "updated_by", None) or instance.created_by,
-            )
-            for emp_id in to_add
-        ]
-
-        ModuleAssignee.objects.bulk_create(assignees_to_create)
+        validate_employee_conflicts(employee_ids, activity)
+        self._sync_activity_employees(activity, employee_ids, apprentice_ids, created_by)
+        sync_module_assignees(activity.module, created_by)
 
     @transaction.atomic
     def create(self, validated_data):
@@ -176,6 +152,7 @@ class WorkSessionSerializer(AuditSerializer):
         activity = None
 
         if module:
+            validate_module_conflict(module)
             activity = work_session.start_activity(module)
 
         if employee_ids:
@@ -217,6 +194,9 @@ class WorkSessionSerializer(AuditSerializer):
             target_module = module or current_module
             if not target_module:
                 return instance
+
+            if module_changed:
+                validate_module_conflict(target_module, current_session=instance)
 
             activity = instance.start_activity(target_module)
             effective_ids = list(employee_ids) if employee_ids is not None else list(current_employee_ids)

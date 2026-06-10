@@ -59,6 +59,13 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             created_by=resolved_created_by,
         )
 
+        if employee_ids is None:
+            from apps.production.models.module_assignee import ModuleAssignee
+            employee_ids = list(
+                ModuleAssignee.objects.filter(module=module).values_list("employee_id", flat=True)
+            )
+            apprentice_ids = []
+
         if employee_ids:
             employees = EmployeeLocal.objects.filter(id__in=employee_ids)
             apprentice_set = set(apprentice_ids or [])
