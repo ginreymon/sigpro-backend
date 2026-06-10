@@ -18,7 +18,7 @@ _SHARED_COLUMNS = [
     ("shift_name",         "Turno"),
     ("shift_start_time",   "Inicio Turno"),
     ("shift_end_time",     "Fin Turno"),
-    ("total_employees",    "N° Operarios"),
+    ("total_employees",    "N° Operarios (ef.)"),
     ("total_ordered",      "Ordenadas"),
     ("total_planned",      "Planeadas"),
     ("total_completed",    "Completadas"),
