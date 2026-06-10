@@ -11,7 +11,7 @@ class WorkSessionActivityEmployee(AuditModel):
     )
 
     employee = models.ForeignKey(EmployeeLocal, on_delete=models.PROTECT)
-    is_apprentice = models.BooleanField(default=False)
+    is_apprentice = models.BooleanField(default=False, db_default=False)
 
     class Meta:
         unique_together = ("work_session_activity", "employee")
