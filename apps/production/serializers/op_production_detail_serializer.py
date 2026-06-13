@@ -21,6 +21,7 @@ class OPProductionDetailSerializer(serializers.Serializer):
 
     destination = serializers.CharField(source="Destino", required=False, allow_null=True, allow_blank=True)
     status = serializers.IntegerField(source="Estado")
+    sam = serializers.FloatField(source="SAM", required=False, allow_null=True, default=None)
 
     orderedQty = serializers.FloatField(source="Cant_Ordenada")
     plannedQty = serializers.FloatField(source="Cant_Planeada")
