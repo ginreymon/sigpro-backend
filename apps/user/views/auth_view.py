@@ -15,7 +15,7 @@ from apps.user.models import PasswordResetToken, UserEmployeeLink
 from core.models.option import Option
 from core.models.app_setting import AppSetting
 
-HOME_CUSTOM_VIEW_SETTING = 'HOME_GRUPOS_VISTA_PERSONALIZADA'
+HOME_CUSTOM_VIEW_SETTING = 'HOME_ROLE_BASED_VIEWS'
 
 
 class AuthViewSet(viewsets.ViewSet):
@@ -24,10 +24,10 @@ class AuthViewSet(viewsets.ViewSet):
         if not group_ids:
             return ''
         try:
-            raw = AppSetting.objects.filter(
-                name=HOME_CUSTOM_VIEW_SETTING,
-                is_active=True,
-            ).values_list('value', flat=True).first()
+            qs = AppSetting.objects.filter(key=HOME_CUSTOM_VIEW_SETTING, is_active=True)
+            if not qs.exists():
+                qs = AppSetting.objects.filter(name=HOME_CUSTOM_VIEW_SETTING, is_active=True)
+            raw = qs.values_list('value', flat=True).first()
             if raw:
                 mapping = json.loads(raw)  # { "ComponentKey": [id1, id2, ...] }
                 for component_key, allowed_ids in mapping.items():
