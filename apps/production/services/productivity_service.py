@@ -31,3 +31,9 @@ class ProductivityService:
         return ProductivityRepository.get_shift_summary(
             corrected_start, corrected_end, shift_id, module_id, employee_id
         )
+
+    @staticmethod
+    def get_balance_summary(start_date, end_date, client_now, module_id=None):
+        corrected_start = apply_client_offset(start_date, client_now)
+        corrected_end   = apply_client_offset(end_date,   client_now)
+        return ProductivityRepository.get_balance_summary(corrected_start, corrected_end, module_id)

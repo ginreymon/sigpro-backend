@@ -70,3 +70,20 @@ class ProductivityRepository:
                 result.append(record)
             return result
 
+    @staticmethod
+    def get_balance_summary(start_date, end_date, module_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_resumen_produccion %s, %s, %s",
+                [start_date, end_date, module_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                if isinstance(record.get("records_detail"), str):
+                    record["records_detail"] = json.loads(record["records_detail"])
+                result.append(record)
+            return result
+
