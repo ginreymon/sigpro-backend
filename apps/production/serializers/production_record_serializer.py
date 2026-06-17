@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum, F
 from apps.production.models.production_record import ProductionRecord
+from apps.production.models.work_session_activity import WorkSessionActivity
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 from core.serializers.audit_serializer import AuditSerializer
 
@@ -32,6 +33,9 @@ class ProductionRecordSerializer(AuditSerializer):
         Close all open records and current activity, open a new activity on the same
         module/session, and copy the employee snapshot. Returns the new activity.
         """
+        if activity.work_session.is_closed:
+            raise ValidationError("Work session is closed")
+
         user = self.context["request"].user
 
         activity.close()
@@ -59,7 +63,20 @@ class ProductionRecordSerializer(AuditSerializer):
         if missing:
             raise ValidationError({f: "This field is required." for f in missing})
 
-        activity = validated_data["work_session_activity"]
+        activity = (
+            WorkSessionActivity.objects
+            .select_for_update()
+            .select_related("work_session")
+            .get(pk=validated_data["work_session_activity"].pk)
+        )
+        validated_data["work_session_activity"] = activity
+
+        if not activity.is_active:
+            raise ValidationError("Activity is not active")
+
+        if activity.work_session.is_closed:
+            raise ValidationError("Work session is closed")
+
         last_record = activity.production_records.order_by("-start_time").first()
 
         if last_record is not None and last_record.sku_rowid != validated_data["sku_rowid"]:

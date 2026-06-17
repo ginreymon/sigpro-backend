@@ -1,13 +1,14 @@
 from rest_framework import serializers as drf_serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.utils import timezone
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkSession
 from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
 from apps.production.services.employee_assignment_service import validate_employee_conflicts, sync_module_assignees
+from apps.production.services.work_session_service import force_close, get_grace_hours, session_expires_at
 
 
 class ContinueInputSerializer(drf_serializers.Serializer):
@@ -47,10 +48,15 @@ class WorkSessionViewSet(AuditModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
 
-        if WorkSession.objects.filter(user=user, is_closed=False).exists():
-            raise ValidationError("User already has an active session")
-
-        serializer.save(user=user, created_by=user, updated_by=user)
+        with transaction.atomic():
+            active = (
+                WorkSession.objects.select_for_update()
+                .filter(user=user, is_closed=False)
+                .first()
+            )
+            if active:
+                active.close_session()
+            serializer.save(user=user, created_by=user, updated_by=user)
 
     # /work-sessions/{id}/close/
     @action(detail=True, methods=["post"])
@@ -73,6 +79,13 @@ class WorkSessionViewSet(AuditModelViewSet):
         if not session:
             return Response(None)
 
+        grace_hours = get_grace_hours()
+        expires_at = session_expires_at(session, grace_hours)
+
+        if timezone.now() >= expires_at:
+            force_close(session, expires_at)
+            return Response(None)
+
         return Response(self.get_serializer(session).data)
 
     # /work-sessions/{id}/rotate/
@@ -81,10 +94,17 @@ class WorkSessionViewSet(AuditModelViewSet):
     @action(detail=True, methods=["post"], url_path="rotate")
     @transaction.atomic
     def rotate_activity(self, request, pk=None):
-        session = WorkSession.objects.select_for_update().get(pk=pk)
+        session = WorkSession.objects.select_for_update().select_related("work_shift").get(pk=pk)
 
         if session.is_closed:
             return Response({"detail": "Session is closed"}, status=400)
+
+        grace_hours = get_grace_hours()
+        expires_at = session_expires_at(session, grace_hours)
+
+        if timezone.now() >= expires_at:
+            force_close(session, expires_at)
+            return Response(["Session expired"], status=400)
 
         input_serializer = ContinueInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)

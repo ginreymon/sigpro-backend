@@ -38,6 +38,12 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
     def pause(self, request, pk=None):
         activity = self.get_object()
 
+        if not activity.is_active:
+            return Response({"detail": "Activity is not active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if activity.work_session.is_closed:
+            return Response({"detail": "Work session is closed."}, status=status.HTTP_400_BAD_REQUEST)
+
         if activity.is_paused:
             return Response(
                 {"detail": "Activity is already paused."},
@@ -85,6 +91,13 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
     @action(detail=True, methods=["post"], url_path="resume")
     def resume(self, request, pk=None):
         activity = self.get_object()
+
+        if not activity.is_active:
+            return Response({"detail": "Activity is not active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if activity.work_session.is_closed:
+            return Response({"detail": "Work session is closed."}, status=status.HTTP_400_BAD_REQUEST)
+
         active_break = activity.active_break
 
         if not active_break:

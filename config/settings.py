@@ -224,5 +224,10 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "production": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
