@@ -51,6 +51,7 @@ class ProductionRecordSerializer(AuditSerializer):
                 work_session_activity=new_activity,
                 employee=rel.employee,
                 created_by=rel.created_by,
+                is_apprentice=rel.is_apprentice,
             )
             for rel in old_employees
         ])
