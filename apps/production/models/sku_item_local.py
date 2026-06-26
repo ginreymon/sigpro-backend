@@ -10,7 +10,7 @@ class SkuItemLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
 
     # --- Identifiers ---
     # rowid                                                                # t121_mc_items_extensiones.f121_rowid SKU rowid
-    rowid_item = models.BigIntegerField()                                 # t120_mc_items.f120_rowid reference rowid
+    rowid_item = models.BigIntegerField(db_index=True)                    # t120_mc_items.f120_rowid reference rowid
     barcode    = models.CharField(max_length=50, blank=True, null=True)   # f121_id_barras_principal
 
     # --- Item classification ---
