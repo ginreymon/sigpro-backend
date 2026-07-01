@@ -8,3 +8,4 @@ from .sheet_measurement_detail import SheetMeasurementDetail
 from .sheet_elastic_cut import SheetElasticCut
 from .sheet_elastic_cut_detail import SheetElasticCutDetail
 from .technical_sheet_image import TechnicalSheetImage
+from .technical_sheet_piece_image import TechnicalSheetPieceImage
