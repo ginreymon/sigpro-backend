@@ -1,4 +1,5 @@
+from django.db import models
 from .base_entity import BaseEntity
 
 class Module(BaseEntity):
-    pass
+    has_shifts = models.BooleanField(default=False)
