@@ -4,7 +4,9 @@ from apps.catalog.views import (
     TechnicalSheetViewSet,
     TechnicalSheetStatusViewSet,
     SheetMeasurementViewSet,
+    SheetMeasurementDetailViewSet,
     SheetElasticCutViewSet,
+    SheetElasticCutDetailViewSet,
     TechnicalSheetImageViewSet,
     TechnicalSheetPieceImageViewSet,
     TechnicalSheetDataViewSet,
@@ -15,7 +17,9 @@ router = DefaultRouter()
 router.register('technical-sheets', TechnicalSheetViewSet, basename='technical-sheet')
 router.register('technical-sheet-statuses', TechnicalSheetStatusViewSet, basename='technical-sheet-status')
 router.register('sheet-measurements', SheetMeasurementViewSet, basename='sheet-measurement')
+router.register('sheet-measurement-details', SheetMeasurementDetailViewSet, basename='sheet-measurement-detail')
 router.register('sheet-elastic-cuts', SheetElasticCutViewSet, basename='sheet-elastic-cut')
+router.register('sheet-elastic-cut-details', SheetElasticCutDetailViewSet, basename='sheet-elastic-cut-detail')
 router.register('technical-sheet-images', TechnicalSheetImageViewSet, basename='technical-sheet-image')
 router.register('technical-sheet-piece-images', TechnicalSheetPieceImageViewSet, basename='technical-sheet-piece-image')
 router.register('collections', CollectionViewSet, basename='collection')
