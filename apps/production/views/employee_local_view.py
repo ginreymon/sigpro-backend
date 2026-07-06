@@ -1,10 +1,15 @@
 from apps.production.models import EmployeeLocal
 from apps.production.serializers import EmployeeLocalSerializer
+from apps.production.constants import PRODUCTION_COST_CENTERS
 from .local_base_model_view import LocalBaseModelViewSet
 
 
 class EmployeeLocalViewSet(LocalBaseModelViewSet):
-    queryset = (EmployeeLocal.objects.filter(is_deleted=False).select_related("user_link__django_user"))
+    queryset = (
+        EmployeeLocal.objects.filter(
+            is_deleted=False, cost_center_rowid__in=PRODUCTION_COST_CENTERS
+        ).select_related("user_link__django_user")
+    )
     serializer_class = EmployeeLocalSerializer
 
     search_fields = [
