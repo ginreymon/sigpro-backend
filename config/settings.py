@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'core',
     'apps.user',
     'apps.production',
+    'apps.stamping',
     'apps.catalog',
 ]
 
