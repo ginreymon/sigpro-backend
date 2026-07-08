@@ -4,7 +4,7 @@ from core.models import AuditModel
 
 class StampingReferenceSam(AuditModel):
     rowid_item = models.BigIntegerField(db_index=True)  # production_skuitemlocal.rowid_item
-    reference_name = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
+    identification = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
     machine = models.CharField(max_length=100)
     people_count = models.IntegerField()
     piece = models.CharField(max_length=255)
@@ -21,7 +21,7 @@ class StampingReferenceSam(AuditModel):
     frames = models.IntegerField(null=True, blank=True)
     inks = models.IntegerField(null=True, blank=True)
     prints = models.IntegerField(null=True, blank=True)
-    pieces_per_table = models.IntegerField(null=True, blank=True)
+    pieces_per_board = models.IntegerField(null=True, blank=True)
     layout_form = models.CharField(max_length=100, null=True, blank=True)
     pre_dried = models.IntegerField(null=True, blank=True)
     sam_single_person = models.DecimalField(max_digits=10, decimal_places=4)  
@@ -29,7 +29,7 @@ class StampingReferenceSam(AuditModel):
   
 
     class Meta:
-        ordering = ["reference_name"]
+        ordering = ["identification"]
 
     def __str__(self):
-        return f"{self.reference_name} - {self.process}"
+        return f"{self.identification} - {self.process}"
