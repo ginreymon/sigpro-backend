@@ -1,3 +1,5 @@
+from .stamping_machine_type import StampingMachineType
+from .stamping_machine import StampingMachine
 from .additional_stamping_time import AdditionalStampingTime
 from .stamping_reference_sam import StampingReferenceSam
 from .stamping_process import StampingProcess

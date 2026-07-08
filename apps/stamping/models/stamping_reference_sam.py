@@ -1,11 +1,12 @@
 from django.db import models
 from core.models import AuditModel
+from .stamping_machine import StampingMachine
 
 
 class StampingReferenceSam(AuditModel):
     rowid_item = models.BigIntegerField(db_index=True)  # production_skuitemlocal.rowid_item
     identification = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
-    machine = models.CharField(max_length=100)
+    machine = models.ForeignKey(StampingMachine, on_delete=models.PROTECT, related_name='reference_sams')
     people_count = models.IntegerField()
     piece = models.CharField(max_length=255)
     stamped_pieces = models.IntegerField()
