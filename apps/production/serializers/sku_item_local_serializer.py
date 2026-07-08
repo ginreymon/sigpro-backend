@@ -26,6 +26,25 @@ class SkuItemLocalSerializer(serializers.ModelSerializer):
         return data
 
 
+class SkuItemReferenceDetailSerializer(serializers.ModelSerializer):
+    """Reference-level SkuItemLocal fields only — excludes per-variant fields
+    (barcode/size/color/size_key) since callers resolve a single matching row
+    as a stand-in for the whole reference, and those fields differ per variant."""
+
+    class Meta:
+        model = SkuItemLocal
+        fields = ["rowid_item"] + _REFERENCE_STR_FIELDS + [
+            "status", "replenishment_time", "lot_size", "safety_stock", "cost", "suggested_price",
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for field in _REFERENCE_STR_FIELDS:
+            if data.get(field):
+                data[field] = data[field].strip()
+        return data
+
+
 class SkuItemReferenceSerializer(serializers.Serializer):
     id                 = serializers.IntegerField(source='rowid_item')
     rowid_item         = serializers.IntegerField()

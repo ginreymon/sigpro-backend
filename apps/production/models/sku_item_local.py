@@ -60,3 +60,14 @@ class SkuItemLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
 
     def __str__(self):
         return f"{self.reference} - {self.size} / {self.color}"
+
+    @classmethod
+    def map_by_rowid_item(cls, rowid_items):
+        """One SkuItemLocal per rowid_item (first match), keyed by rowid_item. Batch fetch to avoid N+1."""
+        skus = cls.objects.filter(
+            rowid_item__in=rowid_items, is_deleted=False
+        ).order_by("rowid_item", "id")
+        mapping = {}
+        for sku in skus:
+            mapping.setdefault(sku.rowid_item, sku)
+        return mapping
