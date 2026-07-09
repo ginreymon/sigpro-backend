@@ -8,6 +8,11 @@ class StampingReferenceSamSerializer(AuditSerializer):
 
     reference = serializers.SerializerMethodField()
     machine_name = serializers.SerializerMethodField()
+    piece_name = serializers.SerializerMethodField()
+    location_name = serializers.SerializerMethodField()
+    stamp_type_description_name = serializers.SerializerMethodField()
+    fabric_type_name = serializers.SerializerMethodField()
+    technique_name = serializers.SerializerMethodField()
 
     class Meta:
         model = StampingReferenceSam
@@ -20,3 +25,18 @@ class StampingReferenceSamSerializer(AuditSerializer):
 
     def get_machine_name(self, obj):
         return obj.machine.name if obj.machine else None
+
+    def get_piece_name(self, obj):
+        return obj.piece.name if obj.piece else None
+
+    def get_location_name(self, obj):
+        return obj.location.name if obj.location else None
+
+    def get_stamp_type_description_name(self, obj):
+        return obj.stamp_type_description.name if obj.stamp_type_description else None
+
+    def get_fabric_type_name(self, obj):
+        return obj.fabric_type.name if obj.fabric_type else None
+
+    def get_technique_name(self, obj):
+        return obj.technique.name if obj.technique else None

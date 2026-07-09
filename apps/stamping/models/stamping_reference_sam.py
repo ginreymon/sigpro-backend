@@ -1,6 +1,11 @@
 from django.db import models
 from core.models import AuditModel
 from .stamping_machine import StampingMachine
+from .stamping_piece import StampingPiece
+from .stamping_location import StampingLocation
+from .stamping_stamp_type_description import StampingStampTypeDescription
+from .stamping_fabric_type import StampingFabricType
+from .stamping_technique import StampingTechnique
 
 
 class StampingReferenceSam(AuditModel):
@@ -8,13 +13,13 @@ class StampingReferenceSam(AuditModel):
     identification = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
     machine = models.ForeignKey(StampingMachine, on_delete=models.PROTECT, related_name='reference_sams')
     people_count = models.IntegerField()
-    piece = models.CharField(max_length=255)
+    piece = models.ForeignKey(StampingPiece, on_delete=models.PROTECT, related_name='reference_sams')
     stamped_pieces = models.IntegerField()
-    location = models.CharField(max_length=255, null=True, blank=True)
-    stamp_type_description = models.CharField(max_length=255, null=True, blank=True)
-    technique = models.CharField(max_length=255, null=True, blank=True)
+    location = models.ForeignKey(StampingLocation, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
+    stamp_type_description = models.ForeignKey(StampingStampTypeDescription, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
+    technique = models.ForeignKey(StampingTechnique, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     garment_type = models.CharField(max_length=100, null=True, blank=True)
-    fabric_type = models.CharField(max_length=100, null=True, blank=True)
+    fabric_type = models.ForeignKey(StampingFabricType, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     line = models.CharField(max_length=100, null=True, blank=True)
     brand = models.CharField(max_length=100, null=True, blank=True)
     collection = models.CharField(max_length=100, null=True, blank=True)
