@@ -6,3 +6,4 @@ from apps.stamping.serializers import StampingMachineTypeSerializer
 class StampingMachineTypeViewSet(BaseModelViewSet):
     queryset = StampingMachineType.objects.all()
     serializer_class = StampingMachineTypeSerializer
+    search_fields = ['name']

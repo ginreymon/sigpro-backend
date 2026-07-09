@@ -6,6 +6,7 @@ from apps.stamping.serializers import AdditionalStampingTimeSerializer
 class AdditionalStampingTimeViewSet(BaseModelViewSet):
     queryset = AdditionalStampingTime.objects.all()
     serializer_class = AdditionalStampingTimeSerializer
+    search_fields = ['code_number', 'engineering_code', 'process', 'machine__name']
     # process_description is JSONField, unsupported by django-filter's auto filterset
     filterset_fields = [
         'code_number', 'engineering_code', 'machine', 'process',
