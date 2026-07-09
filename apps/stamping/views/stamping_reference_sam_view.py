@@ -1,3 +1,4 @@
+from django.db.models import CharField, OuterRef, Subquery
 from rest_framework.response import Response
 from core.views.base_model_view import BaseModelViewSet
 from apps.production.models import SkuItemLocal
@@ -6,8 +7,17 @@ from apps.stamping.serializers import StampingReferenceSamSerializer
 
 
 class StampingReferenceSamViewSet(BaseModelViewSet):
-    queryset = StampingReferenceSam.objects.all()
+    queryset = StampingReferenceSam.objects.annotate(
+        reference=Subquery(
+            SkuItemLocal.objects.filter(
+                rowid_item=OuterRef("rowid_item"),
+                is_deleted=False,
+            ).order_by().values("reference")[:1],
+            output_field=CharField(),
+        ),
+    )
     serializer_class = StampingReferenceSamSerializer
+    search_fields = ["identification", "reference"]
 
     def _serializer_context_with_skus(self, objs):
         rowid_items = {obj.rowid_item for obj in objs}
