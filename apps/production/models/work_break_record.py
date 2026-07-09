@@ -46,7 +46,7 @@ class WorkBreakRecord(TimeAuditModel, UserAuditModel):
     def clean(self):
         if not self.work_break:
             if not self.custom_reason or not self.custom_reason.strip():
-                raise ValidationError("Custom reason must not be empty.")
+                raise ValidationError("El motivo personalizado no puede estar vacío.")
 
     def save(self, *args, **kwargs):
         self.full_clean()

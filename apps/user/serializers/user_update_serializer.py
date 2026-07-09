@@ -10,7 +10,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         required=False,
         validators=[
             UniqueValidator(
-                queryset=User.objects.all(), message="Username already exists"
+                queryset=User.objects.all(), message="El nombre de usuario ya existe"
             )
         ],
     )
@@ -34,11 +34,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         if email:
             if User.objects.filter(email=email).exclude(id=user.id).exists():
-                raise serializers.ValidationError({"email": "Email already exists"})
+                raise serializers.ValidationError({"email": "El correo ya existe"})
 
         if group_id:
             if not Group.objects.filter(id=group_id).exists():
-                raise serializers.ValidationError({"group_id": "Role does not exist"})
+                raise serializers.ValidationError({"group_id": "El rol no existe"})
 
         return attrs
 

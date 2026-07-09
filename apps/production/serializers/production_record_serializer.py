@@ -34,7 +34,7 @@ class ProductionRecordSerializer(AuditSerializer):
         module/session, and copy the employee snapshot. Returns the new activity.
         """
         if activity.work_session.is_closed:
-            raise ValidationError("Work session is closed")
+            raise ValidationError("La sesión de trabajo está cerrada.")
 
         user = self.context["request"].user
 
@@ -62,7 +62,7 @@ class ProductionRecordSerializer(AuditSerializer):
     def create(self, validated_data):
         missing = [f for f in ("op_number", "op_type") if not validated_data.get(f)]
         if missing:
-            raise ValidationError({f: "This field is required." for f in missing})
+            raise ValidationError({f: "Este campo es obligatorio." for f in missing})
 
         activity = (
             WorkSessionActivity.objects
@@ -73,10 +73,10 @@ class ProductionRecordSerializer(AuditSerializer):
         validated_data["work_session_activity"] = activity
 
         if not activity.is_active:
-            raise ValidationError("Activity is not active")
+            raise ValidationError("La actividad no está activa.")
 
         if activity.work_session.is_closed:
-            raise ValidationError("Work session is closed")
+            raise ValidationError("La sesión de trabajo está cerrada.")
 
         last_record = activity.production_records.order_by("-start_time").first()
 

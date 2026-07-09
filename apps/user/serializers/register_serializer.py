@@ -10,7 +10,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     username = serializers.CharField(
         validators=[
-            UniqueValidator(queryset=User.objects.all(), message="El usuario ya existe")
+            UniqueValidator(queryset=User.objects.all(), message="El nombre de usuario ya existe")
         ]
     )
 
@@ -30,7 +30,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         email = attrs.get("email")
 
         if email and User.objects.filter(email=email).exists():
-            raise serializers.ValidationError({"email": "El email ya existe"})
+            raise serializers.ValidationError({"email": "El correo ya existe"})
 
         try:
             employee = EmployeeLocal.objects.get(id=employee_id)

@@ -32,9 +32,9 @@ class AppSetting(AuditModel):
         qs = AppSetting.objects.exclude(pk=self.pk)
         if self.key:
             if qs.filter(name=self.key).exists():
-                raise ValidationError({'key': f"'{self.key}' already exists as a name."})
+                raise ValidationError({'key': f"'{self.key}' ya existe como nombre."})
             if qs.filter(key=self.name).exists():
-                raise ValidationError({'name': f"'{self.name}' already exists as a key."})
+                raise ValidationError({'name': f"'{self.name}' ya existe como clave."})
 
     def __str__(self):
         return f"{self.name}: {self.value}"

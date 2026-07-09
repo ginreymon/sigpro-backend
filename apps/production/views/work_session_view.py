@@ -97,14 +97,14 @@ class WorkSessionViewSet(AuditModelViewSet):
         session = WorkSession.objects.select_for_update().select_related("work_shift").get(pk=pk)
 
         if session.is_closed:
-            return Response({"detail": "Session is closed"}, status=400)
+            return Response({"detail": "La sesión está cerrada."}, status=400)
 
         grace_hours = get_grace_hours()
         expires_at = session_expires_at(session, grace_hours)
 
         if timezone.now() >= expires_at:
             force_close(session, expires_at)
-            return Response(["Session expired"], status=400)
+            return Response(["La sesión ha expirado."], status=400)
 
         input_serializer = ContinueInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)

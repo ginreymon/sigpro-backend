@@ -39,7 +39,7 @@ class WorkSessionSerializer(AuditSerializer):
         module = attrs.get("module_id")
 
         if employee_ids and not module and not self.instance:
-            raise ValidationError("module_id is required when sending employee_ids")
+            raise ValidationError("Debe indicar module_id al enviar employee_ids.")
 
         return attrs
 
@@ -133,7 +133,7 @@ class WorkSessionSerializer(AuditSerializer):
             activity = instance.get_active_activity()
 
         if not activity:
-            raise ValidationError("No active activity found")
+            raise ValidationError("No se encontró una actividad activa.")
 
         created_by = getattr(instance, "updated_by", None) or instance.created_by
 
@@ -157,7 +157,7 @@ class WorkSessionSerializer(AuditSerializer):
 
         if employee_ids:
             if not activity:
-                raise ValidationError("Cannot assign employees without a module")
+                raise ValidationError("No se pueden asignar empleados sin un módulo.")
 
             self._handle_employees(work_session, employee_ids, activity, apprentice_ids)
 

@@ -15,7 +15,7 @@ def validate_module_conflict(module, current_session=None):
 
     if qs.exists():
         raise ValidationError(
-            f"Module '{module.name}' is already active in another session."
+            f"El módulo '{module.name}' ya está activo en otra sesión."
         )
 
 
@@ -35,7 +35,7 @@ def validate_employee_conflicts(employee_ids, current_activity):
         return
 
     errors = [
-        f"{c.employee.first_name} {c.employee.last_name1} is already assigned to module "
+        f"{c.employee.first_name} {c.employee.last_name1} ya está asignado al módulo "
         f"'{c.work_session_activity.module.name}'"
         for c in conflicts
     ]

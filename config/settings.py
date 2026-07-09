@@ -167,13 +167,18 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es'
 
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
 USE_TZ = True
+
+# DRF's unique-field validator reads this template directly, bypassing Model.unique_error_message.
+from django.db.models.fields import Field
+
+Field.default_error_messages['unique'] = 'Ya existe un registro con este valor.'
 
 
 # Static files (CSS, JavaScript, Images)

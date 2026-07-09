@@ -1,7 +1,19 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
-class UserAuditModel(models.Model):
+
+class SpanishUniqueErrorMixin:
+    # Avoids Django's default message, which interpolates verbose_name (English by default).
+    def unique_error_message(self, model_class, unique_check):
+        if len(unique_check) == 1:
+            return ValidationError('Ya existe un registro con este valor.', code='unique')
+        return ValidationError(
+            'Ya existe un registro con esta combinación de valores.', code='unique_together'
+        )
+
+
+class UserAuditModel(SpanishUniqueErrorMixin, models.Model):
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -23,7 +35,7 @@ class UserAuditModel(models.Model):
         abstract = True   
 
 
-class TimeAuditModel(models.Model):
+class TimeAuditModel(SpanishUniqueErrorMixin, models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -32,7 +44,7 @@ class TimeAuditModel(models.Model):
         abstract = True
 
 
-class ActiveModel(models.Model):
+class ActiveModel(SpanishUniqueErrorMixin, models.Model):
 
     is_active = models.BooleanField(default=True)
 
