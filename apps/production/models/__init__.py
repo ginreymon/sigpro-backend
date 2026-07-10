@@ -1,4 +1,5 @@
 from .module_assignee import ModuleAssignee
+from .production_area import ProductionArea
 from .module import Module
 from .work_break import WorkBreak
 from .work_shift import WorkShift

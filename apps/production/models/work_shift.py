@@ -1,5 +1,6 @@
 from django.db import models
 from core.models.audit_model import AuditModel
+from .production_area import ProductionArea
 
 
 class WorkShift(AuditModel):
@@ -9,6 +10,13 @@ class WorkShift(AuditModel):
     app_module = models.ForeignKey(
         "core.Module",
         on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="work_shifts",
+    )
+    location = models.ForeignKey(
+        ProductionArea,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="work_shifts",

@@ -2,6 +2,7 @@ from .op_components_detail_serializer import OPComponentsDetailSerializer
 from .op_production_detail_serializer import OPProductionDetailSerializer
 from .op_type_documents_serializer import OPTypeDocumentsSerializer
 from .module_assignee_serializer import ModuleAssigneeSerializer
+from .production_area_serializer import ProductionAreaSerializer
 from .module_serializer import ModuleSerializer
 from .work_break_serializer import WorkBreakSerializer
 from .work_shift_serializer import WorkShiftSerializer

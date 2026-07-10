@@ -4,14 +4,14 @@ from apps.production.serializers import ModuleSerializer
 
 
 class ModuleViewSet(AuditModelViewSet):
-    queryset = Module.objects.select_related("work_center").all()
+    queryset = Module.objects.select_related("work_center", "location").all()
     serializer_class = ModuleSerializer
 
     search_fields = [
         "name",
         "number",
         "operator_count",
-        "location",
+        "location__name",
         "work_center__description",
         "work_center__code",
         "work_center__short_description",

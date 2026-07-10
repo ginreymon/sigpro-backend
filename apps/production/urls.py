@@ -6,6 +6,7 @@ from .views.op_production_detail_view import OPProductionDetailViewSet
 from .views.op_type_documents_view import OPTypeDocumentsViewSet
 from .views.module_assignee_view import ModuleAssigneeViewSet
 from .views.module_view import ModuleViewSet
+from .views.production_area_view import ProductionAreaViewSet
 from .views.work_break_view import WorkBreakViewSet
 from .views.work_shift_view import WorkShiftViewSet
 from .views.work_session_view import WorkSessionViewSet
@@ -21,6 +22,7 @@ from .views.productivity_view import ProductivityViewSet
 
 router = DefaultRouter()
 router.register(r'modules', ModuleViewSet)
+router.register(r'production-areas', ProductionAreaViewSet)
 router.register(r'module-assignees', ModuleAssigneeViewSet)
 router.register(r'work-breaks', WorkBreakViewSet)
 router.register(r'work-shifts', WorkShiftViewSet)

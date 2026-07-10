@@ -4,7 +4,7 @@ from apps.production.serializers import WorkShiftSerializer
 
 
 class WorkShiftViewSet(AuditModelViewSet):
-    queryset = WorkShift.objects.all()
+    queryset = WorkShift.objects.select_related("app_module", "location").all()
     serializer_class = WorkShiftSerializer
 
-    search_fields = ["name", "start_time", "end_time"]
+    search_fields = ["name", "start_time", "end_time", "location__name"]

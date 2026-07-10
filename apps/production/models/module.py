@@ -1,6 +1,7 @@
 from django.db import models
 from core.models import AuditModel
 from .work_center_local import WorkCenterLocal
+from .production_area import ProductionArea
 
 
 class Module(AuditModel):
@@ -8,7 +9,6 @@ class Module(AuditModel):
     name = models.CharField(max_length=255,unique=True)
     number = models.IntegerField(unique=True)
     operator_count = models.IntegerField()
-    location = models.CharField(max_length=255)
 
     work_center = models.ForeignKey(
         WorkCenterLocal,
@@ -16,6 +16,14 @@ class Module(AuditModel):
         related_name="modules",
         null=False,
         blank=False,
+    )
+
+    location = models.ForeignKey(
+        ProductionArea,
+        on_delete=models.PROTECT,
+        related_name="modules",
+        null=True,
+        blank=True,
     )
 
     class Meta:
