@@ -4,7 +4,7 @@ from apps.production.serializers import ProductionAreaSerializer
 
 
 class ProductionAreaViewSet(AuditModelViewSet):
-    queryset = ProductionArea.objects.select_related("app_module").all()
+    queryset = ProductionArea.objects.select_related("core_module").all()
     serializer_class = ProductionAreaSerializer
 
-    search_fields = ["name", "description", "app_module__name"]
+    search_fields = ["name", "description", "core_module__name"]

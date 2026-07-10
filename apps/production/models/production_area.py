@@ -6,7 +6,7 @@ class ProductionArea(AuditModel):
 
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(null=True, blank=True)
-    app_module = models.ForeignKey(
+    core_module = models.ForeignKey(
         "core.Module",
         on_delete=models.SET_NULL,
         null=True,

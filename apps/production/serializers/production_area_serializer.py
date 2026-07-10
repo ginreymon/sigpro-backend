@@ -6,11 +6,11 @@ from core.serializers.module_serializer import ModuleSerializer as CoreModuleSer
 
 
 class ProductionAreaSerializer(AuditSerializer):
-    app_module = CoreModuleSerializer(read_only=True)
+    core_module = CoreModuleSerializer(read_only=True)
 
-    app_module_id = serializers.PrimaryKeyRelatedField(
+    core_module_id = serializers.PrimaryKeyRelatedField(
         queryset=CoreModule.objects.all(),
-        source="app_module",
+        source="core_module",
         write_only=True,
         required=False,
         allow_null=True,
