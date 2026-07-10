@@ -16,3 +16,10 @@ class ModuleViewSet(AuditModelViewSet):
         "work_center__code",
         "work_center__short_description",
     ]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        core_module_id = self.request.query_params.get("core_module_id")
+        if core_module_id:
+            queryset = queryset.filter(location__core_module_id=core_module_id)
+        return queryset

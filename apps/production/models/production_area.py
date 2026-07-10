@@ -13,6 +13,7 @@ class ProductionArea(AuditModel):
         blank=True,
         related_name="production_area",
     )
+    cost_centers = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["name"]
