@@ -13,6 +13,7 @@ from apps.production.models import (
     WorkSession,
     WorkShift,
     WorkSessionActivityEmployee,
+    ProductionArea,
 )
 
 admin.site.register([
@@ -27,4 +28,5 @@ admin.site.register([
     WorkSession,
     WorkShift,
     WorkSessionActivityEmployee,
+    ProductionArea
 ])

@@ -6,12 +6,11 @@ class ProductionArea(AuditModel):
 
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(null=True, blank=True)
-    core_module = models.ForeignKey(
+    core_module = models.OneToOneField(
         "core.Module",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        unique=True,
         related_name="production_area",
     )
 
