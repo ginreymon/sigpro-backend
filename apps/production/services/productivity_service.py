@@ -16,13 +16,17 @@ class ProductivityService:
     @staticmethod
     def get_module_shift_summary(core_module_id: int | None = None) -> list[dict]:
         data = ProductivityRepository.get_module_shift_summary()
+
+        core_module_by_id = dict(
+            Module.objects.values_list("id", "location__core_module_id")
+        )
+        for row in data:
+            row["core_module_id"] = core_module_by_id.get(row.get("module_id"))
+
         if core_module_id is None:
             return data
 
-        allowed_ids = set(
-            Module.objects.filter(location__core_module_id=core_module_id).values_list("id", flat=True)
-        )
-        return [row for row in data if row.get("module_id") in allowed_ids]
+        return [row for row in data if row["core_module_id"] == core_module_id]
 
     @staticmethod
     def get_module_efficiency(start_date: str, end_date: str, module_id: int | None = None) -> list[dict]:
