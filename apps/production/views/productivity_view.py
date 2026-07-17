@@ -79,10 +79,11 @@ class ProductivityViewSet(viewsets.ViewSet):
         )
         return Response(data, status=status.HTTP_200_OK)
 
-    # GET /productivity/module-shift-summary/
+    # GET /productivity/module-shift-summary/[?core_module_id=N]
     @action(detail=False, methods=["get"], url_path="module-shift-summary")
     def module_shift_summary(self, request):
-        data = ProductivityService.get_module_shift_summary()
+        core_module_id = _parse_optional_int(request.query_params, "core_module_id")
+        data = ProductivityService.get_module_shift_summary(core_module_id)
         return Response(data, status=status.HTTP_200_OK)
 
     # GET /productivity/module-efficiency/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD[&module_id=N]

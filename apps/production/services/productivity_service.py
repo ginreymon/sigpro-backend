@@ -1,4 +1,5 @@
 from apps.production.repositories.productivity_repository import ProductivityRepository
+from apps.production.models import Module
 from core.utils.date_utils import apply_client_offset
 
 
@@ -13,8 +14,15 @@ class ProductivityService:
         )
 
     @staticmethod
-    def get_module_shift_summary() -> list[dict]:
-        return ProductivityRepository.get_module_shift_summary()
+    def get_module_shift_summary(core_module_id: int | None = None) -> list[dict]:
+        data = ProductivityRepository.get_module_shift_summary()
+        if core_module_id is None:
+            return data
+
+        allowed_ids = set(
+            Module.objects.filter(location__core_module_id=core_module_id).values_list("id", flat=True)
+        )
+        return [row for row in data if row.get("module_id") in allowed_ids]
 
     @staticmethod
     def get_module_efficiency(start_date: str, end_date: str, module_id: int | None = None) -> list[dict]:
