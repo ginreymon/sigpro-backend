@@ -43,6 +43,14 @@ def session_expires_at(session, grace_hours: int) -> datetime:
     return shift_end_local + timedelta(hours=grace_hours)
 
 
+def session_core_module_id(session):
+    """core_module_id (process) of the session's active activity, or None if it has none/unassigned location."""
+    activity = session.get_active_activity()
+    if not activity or not activity.module.location_id:
+        return None
+    return activity.module.location.core_module_id
+
+
 def force_close(session, expires_at: datetime) -> None:
     """
     Closes a session using expires_at as ended_at.

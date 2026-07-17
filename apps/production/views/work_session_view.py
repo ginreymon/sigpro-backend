@@ -1,14 +1,20 @@
 from rest_framework import serializers as drf_serializers
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from django.db import transaction
 from django.utils import timezone
 from core.views.audit_model_view import AuditModelViewSet
-from apps.production.models import WorkSession
+from apps.production.models import Module, WorkSession
 from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
 from apps.production.services.employee_assignment_service import validate_employee_conflicts, sync_module_assignees
-from apps.production.services.work_session_service import force_close, get_grace_hours, session_expires_at
+from apps.production.services.work_session_service import (
+    force_close,
+    get_grace_hours,
+    session_core_module_id,
+    session_expires_at,
+)
 
 
 class ContinueInputSerializer(drf_serializers.Serializer):
@@ -55,6 +61,22 @@ class WorkSessionViewSet(AuditModelViewSet):
                 .first()
             )
             if active:
+                target_module_id = self.request.data.get("module_id")
+                if target_module_id:
+                    target_module = (
+                        Module.objects.select_related("location")
+                        .filter(id=target_module_id)
+                        .first()
+                    )
+                    target_core_module_id = (
+                        target_module.location.core_module_id
+                        if target_module and target_module.location_id
+                        else None
+                    )
+                    if str(session_core_module_id(active)) != str(target_core_module_id):
+                        raise ValidationError(
+                            "Ya tienes una sesión activa en otro proceso. Ciérrala antes de iniciar una nueva."
+                        )
                 active.close_session()
             serializer.save(user=user, created_by=user, updated_by=user)
 
@@ -77,6 +99,10 @@ class WorkSessionViewSet(AuditModelViewSet):
         session = self.get_queryset().filter(is_closed=False, user=request.user).first()
 
         if not session:
+            return Response(None)
+
+        core_module_id = request.query_params.get("core_module_id")
+        if core_module_id and str(session_core_module_id(session)) != str(core_module_id):
             return Response(None)
 
         grace_hours = get_grace_hours()
