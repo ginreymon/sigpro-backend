@@ -7,7 +7,7 @@ from apps.production.serializers.work_shift_serializer import WorkShiftSerialize
 from apps.production.models import WorkSession, EmployeeLocal
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
-from apps.production.services.employee_assignment_service import validate_employee_conflicts, sync_module_assignees, validate_module_conflict
+from apps.production.services.employee_assignment_service import validate_employee_conflicts, validate_employees_active, sync_module_assignees, validate_module_conflict
 from django.db import transaction
 from core.serializers.audit_serializer import AuditSerializer
 
@@ -137,6 +137,7 @@ class WorkSessionSerializer(AuditSerializer):
 
         created_by = getattr(instance, "updated_by", None) or instance.created_by
 
+        validate_employees_active(employee_ids)
         validate_employee_conflicts(employee_ids, activity)
         self._sync_activity_employees(activity, employee_ids, apprentice_ids, created_by)
         sync_module_assignees(activity.module, created_by)

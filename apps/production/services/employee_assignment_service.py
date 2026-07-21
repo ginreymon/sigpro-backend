@@ -1,6 +1,23 @@
 from rest_framework.exceptions import ValidationError
-from apps.production.models import ModuleAssignee, WorkSessionActivity
+from apps.production.models import ModuleAssignee, WorkSessionActivity, EmployeeLocal
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
+
+
+def validate_employees_active(employee_ids):
+    if not employee_ids:
+        return
+
+    valid_ids = set(
+        EmployeeLocal.objects.filter(
+            id__in=employee_ids, is_deleted=False, is_active=True
+        ).values_list("id", flat=True)
+    )
+    invalid_ids = set(employee_ids) - valid_ids
+
+    if invalid_ids:
+        raise ValidationError(
+            f"Empleado(s) inactivo(s) o eliminado(s): {', '.join(str(i) for i in sorted(invalid_ids))}"
+        )
 
 
 def validate_module_conflict(module, current_session=None):

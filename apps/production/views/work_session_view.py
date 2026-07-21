@@ -8,7 +8,7 @@ from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import Module, WorkSession
 from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
-from apps.production.services.employee_assignment_service import validate_employee_conflicts, sync_module_assignees
+from apps.production.services.employee_assignment_service import validate_employee_conflicts, validate_employees_active, sync_module_assignees
 from apps.production.services.work_session_service import (
     force_close,
     get_grace_hours,
@@ -149,6 +149,7 @@ class WorkSessionViewSet(AuditModelViewSet):
         else:
             resolved_employee_ids = []
 
+        validate_employees_active(resolved_employee_ids)
         validate_employee_conflicts(resolved_employee_ids, current_activity)
 
         try:

@@ -62,7 +62,11 @@ class WorkSession(TimeAuditModel, UserAuditModel):
         if employee_ids is None:
             from apps.production.models.module_assignee import ModuleAssignee
             employee_ids = list(
-                ModuleAssignee.objects.filter(module=module).values_list("employee_id", flat=True)
+                ModuleAssignee.objects.filter(
+                    module=module,
+                    employee__is_deleted=False,
+                    employee__is_active=True,
+                ).values_list("employee_id", flat=True)
             )
             apprentice_ids = []
 
