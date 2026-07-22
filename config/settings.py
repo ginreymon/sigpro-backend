@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import sys
 from pathlib import Path
 from datetime import timedelta
 import environ
@@ -202,6 +204,16 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_COERCE_PATH_PK_SUFFIX": True,
 }
 
+# runserver's autoreload spawns a child process (RUN_MAIN=true); the pre-fork
+# parent never serves requests but would otherwise open the same log file too,
+# causing PermissionError on rotation when the child rotates it.
+_RUNSERVER_PARENT = (
+    "runserver" in sys.argv
+    and "--noreload" not in sys.argv
+    and os.environ.get("RUN_MAIN") != "true"
+)
+_LOG_HANDLERS = ["console"] if _RUNSERVER_PARENT else ["file", "console"]
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -227,12 +239,12 @@ LOGGING = {
     },
     "loggers": {
         "django": {
-            "handlers": ["file", "console"],
+            "handlers": _LOG_HANDLERS,
             "level": "INFO",
             "propagate": False,
         },
         "production": {
-            "handlers": ["file", "console"],
+            "handlers": _LOG_HANDLERS,
             "level": "INFO",
             "propagate": False,
         },
