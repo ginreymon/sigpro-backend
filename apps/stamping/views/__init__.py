@@ -8,3 +8,4 @@ from .stamping_fabric_type_view import StampingFabricTypeViewSet
 from .stamping_technique_view import StampingTechniqueViewSet
 from .stamping_reference_sam_view import StampingReferenceSamViewSet
 from .additional_stamping_time_view import AdditionalStampingTimeViewSet
+from .op_stamping_detail_view import OPStampingDetailViewSet
