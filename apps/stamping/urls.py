@@ -12,6 +12,7 @@ from apps.stamping.views import (
     StampingReferenceSamViewSet,
     AdditionalStampingTimeViewSet,
     OPStampingDetailViewSet,
+    StampingRecordViewSet,
 )
 
 router = DefaultRouter()
@@ -26,6 +27,7 @@ router.register('techniques', StampingTechniqueViewSet, basename='technique')
 router.register('reference-sams', StampingReferenceSamViewSet, basename='reference-sam')
 router.register('additional-times', AdditionalStampingTimeViewSet, basename='additional-time')
 router.register('stamping-orders', OPStampingDetailViewSet, basename='stamping-order')
+router.register('stamping-records', StampingRecordViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

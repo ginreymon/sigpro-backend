@@ -8,3 +8,4 @@ from .stamping_fabric_type_serializer import StampingFabricTypeSerializer
 from .stamping_technique_serializer import StampingTechniqueSerializer
 from .stamping_reference_sam_serializer import StampingReferenceSamSerializer
 from .additional_stamping_time_serializer import AdditionalStampingTimeSerializer
+from .stamping_record_serializer import StampingRecordSerializer
