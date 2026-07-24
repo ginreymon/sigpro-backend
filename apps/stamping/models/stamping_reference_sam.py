@@ -18,12 +18,7 @@ class StampingReferenceSam(AuditModel):
     location = models.ForeignKey(StampingLocation, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     stamp_type_description = models.ForeignKey(StampingStampTypeDescription, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     technique = models.ForeignKey(StampingTechnique, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
-    garment_type = models.CharField(max_length=100, null=True, blank=True)
     fabric_type = models.ForeignKey(StampingFabricType, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
-    line = models.CharField(max_length=100, null=True, blank=True)
-    brand = models.CharField(max_length=100, null=True, blank=True)
-    collection = models.CharField(max_length=100, null=True, blank=True)
-    process = models.CharField(max_length=255, null=True, blank=True)
     frames = models.IntegerField(null=True, blank=True)
     inks = models.IntegerField(null=True, blank=True)
     prints = models.IntegerField(null=True, blank=True)
@@ -38,4 +33,4 @@ class StampingReferenceSam(AuditModel):
         ordering = ["identification"]
 
     def __str__(self):
-        return f"{self.identification} - {self.process}"
+        return self.identification
