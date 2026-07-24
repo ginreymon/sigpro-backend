@@ -4,6 +4,7 @@ from apps.stamping.serializers import StampingProcessSerializer
 
 
 class StampingProcessViewSet(BaseModelViewSet):
-    queryset = StampingProcess.objects.all()
+    queryset = StampingProcess.objects.select_related('machine').all()
     serializer_class = StampingProcessSerializer
-    search_fields = ['name']
+    search_fields = ['name', 'machine__name']
+    filterset_fields = ['name', 'machine', 'is_active', 'created_by', 'updated_by']
