@@ -4,7 +4,9 @@ from apps.production.serializers import ModuleSerializer
 
 
 class ModuleViewSet(AuditModelViewSet):
-    queryset = Module.objects.select_related("work_center", "location").all()
+    queryset = Module.objects.select_related(
+        "work_center", "location", "stamping_machine_assignment", "stamping_machine_assignment__machine"
+    ).all()
     serializer_class = ModuleSerializer
 
     search_fields = [
