@@ -9,3 +9,4 @@ from .stamping_technique_serializer import StampingTechniqueSerializer
 from .stamping_reference_sam_serializer import StampingReferenceSamSerializer
 from .additional_stamping_time_serializer import AdditionalStampingTimeSerializer
 from .stamping_record_serializer import StampingRecordSerializer
+from .stamping_module_machine_serializer import StampingModuleMachineSerializer
