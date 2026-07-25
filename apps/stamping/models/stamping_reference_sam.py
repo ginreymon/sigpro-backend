@@ -1,6 +1,5 @@
 from django.db import models
 from core.models import AuditModel
-from .stamping_machine import StampingMachine
 from .stamping_machine_type import StampingMachineType
 from .stamping_piece import StampingPiece
 from .stamping_location import StampingLocation
@@ -12,7 +11,6 @@ from .stamping_technique import StampingTechnique
 class StampingReferenceSam(AuditModel):
     rowid_item = models.BigIntegerField(db_index=True, null=True, blank=True)  # production_skuitemlocal.rowid_item
     identification = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
-    machine = models.ForeignKey(StampingMachine, on_delete=models.PROTECT, related_name='reference_sams')
     machine_type = models.ForeignKey(StampingMachineType, on_delete=models.PROTECT, related_name='reference_sams')
     people_count = models.IntegerField()
     piece = models.ForeignKey(StampingPiece, on_delete=models.PROTECT, related_name='reference_sams')
@@ -33,11 +31,6 @@ class StampingReferenceSam(AuditModel):
 
     class Meta:
         ordering = ["identification"]
-
-    def save(self, *args, **kwargs):
-        # machine_type es siempre el de machine — nunca se elige de forma independiente.
-        self.machine_type_id = self.machine.machine_type_id
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.identification

@@ -7,7 +7,6 @@ from apps.stamping.models import StampingReferenceSam
 class StampingReferenceSamSerializer(AuditSerializer):
 
     reference = serializers.SerializerMethodField()
-    machine_name = serializers.SerializerMethodField()
     machine_type_name = serializers.SerializerMethodField()
     piece_name = serializers.SerializerMethodField()
     location_name = serializers.SerializerMethodField()
@@ -18,15 +17,11 @@ class StampingReferenceSamSerializer(AuditSerializer):
     class Meta:
         model = StampingReferenceSam
         fields = '__all__'
-        extra_kwargs = {'machine_type': {'read_only': True}}
 
     def get_reference(self, obj):
         sku_map = self.context.get('sku_map') or {}
         sku = sku_map.get(obj.rowid_item)
         return SkuItemReferenceDetailSerializer(sku).data if sku else None
-
-    def get_machine_name(self, obj):
-        return obj.machine.name if obj.machine else None
 
     def get_machine_type_name(self, obj):
         return obj.machine_type.name if obj.machine_type else None
