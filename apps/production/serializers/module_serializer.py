@@ -56,7 +56,11 @@ class ModuleSerializer(AuditSerializer):
         assignment = getattr(obj, "stamping_machine_assignment", None)
         if not assignment:
             return None
-        return {"id": assignment.machine_id, "name": assignment.machine.name}
+        return {
+            "id": assignment.machine_id,
+            "name": assignment.machine.name,
+            "machine_type_id": assignment.machine.machine_type_id,
+        }
 
     def create(self, validated_data):
         machine_provided = "machine_id" in validated_data
