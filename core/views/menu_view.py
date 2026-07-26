@@ -46,6 +46,7 @@ class MenuViewSet(viewsets.ViewSet):
                         "order": option.order,
                         "description": option.description,
                         "visible": option.visible,
+                        "is_home_target": option.is_home_target,
                     }
                 )
 
