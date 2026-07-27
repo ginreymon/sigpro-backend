@@ -9,4 +9,5 @@ from .additional_stamping_time import AdditionalStampingTime
 from .stamping_reference_sam import StampingReferenceSam
 from .stamping_process import StampingProcess
 from .stamping_record import StampingRecord
+from .stamping_record_additional_time import StampingRecordAdditionalTime
 from .stamping_module_machine import StampingModuleMachine

@@ -3,13 +3,15 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.db import transaction
 from apps.stamping.models.stamping_record import StampingRecord
+from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
+from apps.stamping.models.stamping_record_additional_time import StampingRecordAdditionalTime
 from apps.stamping.repositories.op_stamping_repository import OPStampingRepository
 from core.serializers.audit_serializer import AuditSerializer
 
 
 class AdditionalTimeSelectionSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    count = serializers.IntegerField()
+    id = serializers.PrimaryKeyRelatedField(queryset=AdditionalStampingTime.objects.all())
+    count = serializers.IntegerField(min_value=1, default=1)
 
 
 class StampingRecordSerializer(AuditSerializer):
@@ -26,7 +28,6 @@ class StampingRecordSerializer(AuditSerializer):
     @transaction.atomic
     def create(self, validated_data):
         additional_times = validated_data.pop("additional_times", [])
-        print(f"additional_times recibidos: {additional_times}")
 
         missing = [f for f in ("op_number", "op_type") if not validated_data.get(f)]
         if missing:
@@ -52,5 +53,16 @@ class StampingRecordSerializer(AuditSerializer):
         instance = super().create(validated_data)
         instance.end_time = instance.start_time
         instance.save(update_fields=["end_time"])
+
+        StampingRecordAdditionalTime.objects.bulk_create([
+            StampingRecordAdditionalTime(
+                stamping_record=instance,
+                additional_stamping_time=item["id"],
+                count=item["count"],
+                created_by=validated_data.get("created_by"),
+                updated_by=validated_data.get("updated_by"),
+            )
+            for item in additional_times
+        ])
 
         return instance
