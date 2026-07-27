@@ -33,31 +33,47 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
 
     # POST /work-session-activities/{id}/pause/
     # Payload: { "work_break": <id> }  OR  { "custom_reason": "texto" }
+    #   OR (stamping) { "custom_reason": "texto", "work_break_minutes": <int> }
     @action(detail=True, methods=["post"], url_path="pause")
     @transaction.atomic
     def pause(self, request, pk=None):
         activity = self.get_object()
 
         if not activity.is_active:
-            return Response({"detail": "Activity is not active."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "La actividad no está activa."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.work_session.is_closed:
-            return Response({"detail": "Work session is closed."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "La sesión está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.is_paused:
             return Response(
-                {"detail": "Activity is already paused."},
+                {"detail": "La actividad ya está pausada."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         work_break_id = request.data.get("work_break")
         custom_reason = request.data.get("custom_reason")
+        work_break_minutes = request.data.get("work_break_minutes")
 
         if not work_break_id and not custom_reason:
             return Response(
-                {"detail": "Provide work_break or custom_reason."},
+                {"detail": "Debe indicar un tipo de pausa o un motivo personalizado."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        if work_break_minutes is not None:
+            try:
+                work_break_minutes = int(work_break_minutes)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "Los minutos deben ser un número entero."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if work_break_minutes < 1:
+                return Response(
+                    {"detail": "Los minutos deben ser mayores a 0."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         now = timezone.now()
         break_kwargs = {
@@ -72,7 +88,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
                 work_break = WorkBreak.objects.get(pk=work_break_id)
             except WorkBreak.DoesNotExist:
                 return Response(
-                    {"detail": "WorkBreak not found."},
+                    {"detail": "El tipo de pausa no existe."},
                     status=status.HTTP_404_NOT_FOUND,
                 )
             break_kwargs["work_break"] = work_break
@@ -80,6 +96,10 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             break_kwargs["custom_reason"] = custom_reason.strip()
 
         record = WorkBreakRecord(**break_kwargs)
+
+        if work_break_minutes is not None and not work_break_id:
+            record.end_time = now + timezone.timedelta(minutes=work_break_minutes)
+
         record.save()
 
         return Response(
@@ -93,16 +113,16 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
         activity = self.get_object()
 
         if not activity.is_active:
-            return Response({"detail": "Activity is not active."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "La actividad no está activa."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.work_session.is_closed:
-            return Response({"detail": "Work session is closed."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "La sesión está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
 
         active_break = activity.active_break
 
         if not active_break:
             return Response(
-                {"detail": "Activity is not paused."},
+                {"detail": "La actividad no está pausada."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
