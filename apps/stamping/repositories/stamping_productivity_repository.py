@@ -1,0 +1,16 @@
+from django.db import connection
+from apps.production.mappers.recursive_mapper import translate_keys
+
+
+class StampingProductivityRepository:
+
+    @staticmethod
+    def get_efficiency_period(start_date, end_date, module_id=None, shift_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_eficiencia_periodo_estampacion %s, %s, %s, %s",
+                [start_date, end_date, module_id, shift_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+            return translate_keys([dict(zip(columns, row))])[0] if row else {}
