@@ -6,6 +6,7 @@ from .stamping_stamp_type_description import StampingStampTypeDescription
 from .stamping_fabric_type import StampingFabricType
 from .stamping_technique import StampingTechnique
 from .additional_stamping_time import AdditionalStampingTime
+from .additional_stamping_time_step import AdditionalStampingTimeStep
 from .stamping_reference_sam import StampingReferenceSam
 from .stamping_process import StampingProcess
 from .stamping_record import StampingRecord
