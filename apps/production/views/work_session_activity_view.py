@@ -1,3 +1,4 @@
+import math
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -21,6 +22,21 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
         "is_active": ["exact"],
     }
 
+    def _already_paused_response(self, activity):
+        detail = "La actividad ya está pausada. Debes reanudarla para continuar."
+        active_break = activity.active_break
+
+        if active_break and active_break.end_time:
+            remaining_minutes = math.ceil(
+                (active_break.end_time - timezone.now()).total_seconds() / 60
+            )
+            if remaining_minutes > 0:
+                detail = f"La actividad está pausada. Faltan {remaining_minutes} minuto(s) para reanudar."
+            else:
+                detail = "El tiempo de pausa ya terminó. Reanuda la actividad para continuar."
+
+        return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
+
     def get_queryset(self):
         return (
             WorkSessionActivity.objects.all()
@@ -31,14 +47,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             )
         )
 
-    # POST /work-session-activities/{id}/pause/
-    # Payload: { "work_break": <id> }  OR  { "custom_reason": "texto" }
-    #   OR (stamping) { "custom_reason": "texto", "work_break_minutes": <int> }
-    @action(detail=True, methods=["post"], url_path="pause")
-    @transaction.atomic
-    def pause(self, request, pk=None):
-        activity = self.get_object()
-
+    def _handle_pause(self, request, activity, *, auto_resume):
         if not activity.is_active:
             return Response({"detail": "La actividad no está activa."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -46,10 +55,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             return Response({"detail": "La sesión está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.is_paused:
-            return Response(
-                {"detail": "La actividad ya está pausada."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return self._already_paused_response(activity)
 
         work_break_id = request.data.get("work_break")
         custom_reason = request.data.get("custom_reason")
@@ -58,6 +64,12 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
         if not work_break_id and not custom_reason:
             return Response(
                 {"detail": "Debe indicar un tipo de pausa o un motivo personalizado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if auto_resume and not work_break_id and work_break_minutes is None:
+            return Response(
+                {"detail": "Debe indicar work_break_minutes para calcular el auto-resume del motivo personalizado."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -102,10 +114,33 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
 
         record.save()
 
+        if auto_resume:
+            record.resumed_at = record.end_time
+            record.save()
+
         return Response(
             WorkBreakRecordSerializer(record).data,
             status=status.HTTP_201_CREATED,
         )
+
+    # POST /work-session-activities/{id}/pause/
+    # Payload: { "work_break": <id> }  OR  { "custom_reason": "texto" }
+    #   OR (stamping) { "custom_reason": "texto", "work_break_minutes": <int> }
+    @action(detail=True, methods=["post"], url_path="pause")
+    @transaction.atomic
+    def pause(self, request, pk=None):
+        activity = self.get_object()
+        return self._handle_pause(request, activity, auto_resume=False)
+
+    # POST /work-session-activities/{id}/pause-autoresume/
+    # Espejo de /pause/: registra la pausa ya resuelta, calculando end_time y
+    # resumed_at en el momento de la creación en vez de esperar un /resume/.
+    # Payload: { "work_break": <id> }  OR  { "custom_reason": "texto", "work_break_minutes": <int> }
+    @action(detail=True, methods=["post"], url_path="pause-autoresume")
+    @transaction.atomic
+    def pause_autoresume(self, request, pk=None):
+        activity = self.get_object()
+        return self._handle_pause(request, activity, auto_resume=True)
 
     # POST /work-session-activities/{id}/resume/
     @action(detail=True, methods=["post"], url_path="resume")
