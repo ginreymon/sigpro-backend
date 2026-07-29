@@ -34,7 +34,7 @@ class ProductionRecordSerializer(AuditSerializer):
         module/session, and copy the employee snapshot. Returns the new activity.
         """
         if activity.work_session.is_closed:
-            raise ValidationError("La sesión de trabajo está cerrada.")
+            raise ValidationError("La jornada (sesión) de trabajo está cerrada.")
 
         user = self.context["request"].user
 
@@ -76,7 +76,7 @@ class ProductionRecordSerializer(AuditSerializer):
             raise ValidationError("La actividad no está activa.")
 
         if activity.work_session.is_closed:
-            raise ValidationError("La sesión de trabajo está cerrada.")
+            raise ValidationError("La jornada (sesión) de trabajo está cerrada.")
 
         last_record = activity.production_records.order_by("-start_time").first()
 

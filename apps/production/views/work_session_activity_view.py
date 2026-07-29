@@ -52,7 +52,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             return Response({"detail": "La actividad no está activa."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.work_session.is_closed:
-            return Response({"detail": "La sesión está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "La jornada (sesión) está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.is_paused:
             return self._already_paused_response(activity)
@@ -151,7 +151,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
             return Response({"detail": "La actividad no está activa."}, status=status.HTTP_400_BAD_REQUEST)
 
         if activity.work_session.is_closed:
-            return Response({"detail": "La sesión está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "La jornada (sesión) está cerrada."}, status=status.HTTP_400_BAD_REQUEST)
 
         active_break = activity.active_break
 

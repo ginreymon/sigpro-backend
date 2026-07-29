@@ -74,9 +74,21 @@ class WorkSessionViewSet(AuditModelViewSet):
                         else None
                     )
                     if str(session_core_module_id(active)) != str(target_core_module_id):
-                        raise ValidationError(
-                            "Ya tienes una sesión activa en otro proceso. Ciérrala antes de iniciar una nueva."
+                        active_activity = active.get_active_activity()
+                        active_module_name = (
+                            active_activity.module.name if active_activity else None
                         )
+                        if active_module_name:
+                            message = (
+                                f'Ya tienes una jornada (sesión) activa en el módulo "{active_module_name}". '
+                                "Ciérrala antes de iniciar una nueva."
+                            )
+                        else:
+                            message = (
+                                "Ya tienes una jornada (sesión) activa en otro proceso. "
+                                "Ciérrala antes de iniciar una nueva."
+                            )
+                        raise ValidationError(message)
                 active.close_session()
             serializer.save(user=user, created_by=user, updated_by=user)
 
@@ -123,14 +135,14 @@ class WorkSessionViewSet(AuditModelViewSet):
         session = WorkSession.objects.select_for_update().select_related("work_shift").get(pk=pk)
 
         if session.is_closed:
-            return Response({"detail": "La sesión está cerrada."}, status=400)
+            return Response({"detail": "La jornada (sesión) está cerrada."}, status=400)
 
         grace_hours = get_grace_hours()
         expires_at = session_expires_at(session, grace_hours)
 
         if timezone.now() >= expires_at:
             force_close(session, expires_at)
-            return Response(["La sesión ha expirado."], status=400)
+            return Response(["La jornada (sesión) ha expirado."], status=400)
 
         input_serializer = ContinueInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
