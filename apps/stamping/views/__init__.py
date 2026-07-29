@@ -12,3 +12,4 @@ from .op_stamping_detail_view import OPStampingDetailViewSet
 from .stamping_record_view import StampingRecordViewSet
 from .stamping_module_machine_view import StampingModuleMachineViewSet
 from .stamping_productivity_view import StampingProductivityViewSet
+from .audit_record_view import AuditRecordViewSet
