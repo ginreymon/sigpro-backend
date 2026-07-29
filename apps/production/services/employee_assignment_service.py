@@ -26,14 +26,24 @@ def validate_module_conflict(module, current_session=None):
         is_active=True,
         ended_at__isnull=True,
         work_session__is_closed=False,
-    )
+    ).select_related("work_session__user__employee_link__employee_local")
     if current_session is not None:
         qs = qs.exclude(work_session=current_session)
 
-    if qs.exists():
+    conflict = qs.first()
+    if conflict:
         raise ValidationError(
-            f"El módulo '{module.name}' ya está activo en otra sesión."
+            f"El módulo '{module.name}' ya está en uso por {_holder_name(conflict.work_session.user)}. "
+            "Espera a que finalice su jornada o elige otro módulo."
         )
+
+
+def _holder_name(user):
+    employee_link = getattr(user, "employee_link", None)
+    if employee_link:
+        employee = employee_link.employee_local
+        return f"{employee.first_name} {employee.last_name1}"
+    return user.get_full_name() or user.username
 
 
 def validate_employee_conflicts(employee_ids, current_activity):
