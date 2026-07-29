@@ -25,7 +25,7 @@ class StampingReferenceSam(AuditModel):
     pieces_per_board = models.IntegerField(null=True, blank=True)
     layout_form = models.CharField(max_length=100, null=True, blank=True)
     pre_dried = models.IntegerField(null=True, blank=True)
-    sam_single_person = models.DecimalField(max_digits=10, decimal_places=4)  
+    sam = models.DecimalField(max_digits=10, decimal_places=4)
     tasks_per_hour = models.IntegerField()
   
 
