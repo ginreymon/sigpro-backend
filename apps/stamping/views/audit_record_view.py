@@ -1,4 +1,6 @@
 import django_filters as filters
+from django.db.models import CharField
+from django.db.models.functions import Cast
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
@@ -109,13 +111,56 @@ class AuditRecordViewSet(AuditModelViewSet):
         output_serializer = AuditRecordSerializer(details, many=True, context=self.get_serializer_context())
         return Response(output_serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='status')
+    def status_for_op(self, request):
+        """Estado de auditoría de una OP por docType/docNumber (?docType=OP&docNumber=40346),
+        sin traer el detalle por color — para saber al buscar una OP si ya
+        fue auditada."""
+        doc_type = request.query_params.get('docType')
+        doc_number = request.query_params.get('docNumber')
+
+        missing = [f for f, v in (('docType', doc_type), ('docNumber', doc_number)) if not v]
+        if missing:
+            raise ValidationError({f: "Este parámetro es obligatorio." for f in missing})
+
+        try:
+            doc_number = int(doc_number)
+        except (TypeError, ValueError):
+            raise ValidationError({"docNumber": "Debe ser un número entero."})
+
+        audit_record = AuditRecord.objects.filter(op_type=doc_type, op_number=doc_number).first()
+
+        if not audit_record:
+            return Response({
+                "exists": False,
+                "is_audited": False,
+                "total_ordered_quantity": None,
+                "total_audited_quantity": None,
+                "matches_total": None,
+            })
+
+        return Response({
+            "exists": True,
+            "is_audited": audit_record.is_audited,
+            "total_ordered_quantity": audit_record.total_ordered_quantity,
+            "total_audited_quantity": audit_record.total_audited_quantity,
+            "matches_total": audit_record.matches_total,
+        })
+
     @action(detail=False, methods=['get'], url_path='audited-ops')
     def audited_ops(self, request):
         """Una fila por OP ya confirmada (is_audited=True), de la más
-        reciente a la más antigua en ser auditada."""
+        reciente a la más antigua en ser auditada. Búsqueda por op_number
+        (parcial, ej. "404" encuentra la OP 40436)."""
         queryset = AuditRecord.objects.filter(is_audited=True).select_related(
             'created_by', 'updated_by',
         ).order_by('-updated_at')
+
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.annotate(
+                op_number_str=Cast('op_number', output_field=CharField()),
+            ).filter(op_number_str__icontains=search)
 
         page = self.paginate_queryset(queryset)
         serializer = AuditedOpSummarySerializer(page, many=True, context=self.get_serializer_context())
