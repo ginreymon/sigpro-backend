@@ -12,6 +12,7 @@ class AuditRecordSerializer(serializers.ModelSerializer):
     op_rowid = serializers.IntegerField(source='audit_record.op_rowid', read_only=True)
     op_type = serializers.CharField(source='audit_record.op_type', read_only=True)
     total_ordered_quantity = serializers.IntegerField(source='audit_record.total_ordered_quantity', read_only=True)
+    is_audited = serializers.BooleanField(source='audit_record.is_audited', read_only=True)
 
     created_at = serializers.DateTimeField(source='audit_record.created_at', read_only=True)
     updated_at = serializers.DateTimeField(source='audit_record.updated_at', read_only=True)
@@ -28,7 +29,7 @@ class AuditRecordSerializer(serializers.ModelSerializer):
         model = AuditRecordDetail
         fields = [
             'id',
-            'op_number', 'op_rowid', 'op_type', 'total_ordered_quantity',
+            'op_number', 'op_rowid', 'op_type', 'total_ordered_quantity', 'is_audited',
             'color', 'sku_rowids', 'ordered_quantity', 'audited_quantity',
             'total_audited_quantity', 'matches_total', 'quantities_match',
             'created_at', 'updated_at',
@@ -44,6 +45,32 @@ class AuditRecordSerializer(serializers.ModelSerializer):
 
     def get_quantities_match(self, obj):
         return obj.quantities_match
+
+
+class AuditedOpSummarySerializer(serializers.ModelSerializer):
+    """Una fila por OP auditada (no por color) — alimenta el listado global
+    de OPs auditadas en la tab 'Auditoría'."""
+
+    total_audited_quantity = serializers.SerializerMethodField()
+    matches_total = serializers.SerializerMethodField()
+    updated_by_username = serializers.CharField(source='updated_by.username', read_only=True, default=None)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True, default=None)
+
+    class Meta:
+        model = AuditRecord
+        fields = [
+            'id', 'op_number', 'op_rowid', 'op_type', 'total_ordered_quantity',
+            'total_audited_quantity', 'matches_total', 'is_audited',
+            'created_at', 'updated_at',
+            'created_by', 'created_by_username',
+            'updated_by', 'updated_by_username',
+        ]
+
+    def get_total_audited_quantity(self, obj):
+        return obj.total_audited_quantity
+
+    def get_matches_total(self, obj):
+        return obj.matches_total
 
 
 class ColorAuditSerializer(serializers.Serializer):

@@ -1,4 +1,5 @@
 import django_filters as filters
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
@@ -6,7 +7,11 @@ from rest_framework.response import Response
 from core.views.audit_model_view import AuditModelViewSet
 from apps.stamping.models.audit_record import AuditRecord
 from apps.stamping.models.audit_record_detail import AuditRecordDetail
-from apps.stamping.serializers import AuditRecordSerializer, AuditRecordBulkCreateSerializer
+from apps.stamping.serializers import (
+    AuditRecordSerializer,
+    AuditRecordBulkCreateSerializer,
+    AuditedOpSummarySerializer,
+)
 
 
 class AuditRecordDetailFilterSet(filters.FilterSet):
@@ -71,6 +76,50 @@ class AuditRecordViewSet(AuditModelViewSet):
         if request.method == 'PUT':
             return self._bulk_update(request)
         return self._bulk_delete(request)
+
+    @action(detail=False, methods=['post'], url_path='bulk/confirm')
+    def confirm(self, request):
+        op_number = request.query_params.get('op_number')
+        op_rowid = request.query_params.get('op_rowid')
+        op_type = request.query_params.get('op_type')
+
+        missing = [f for f, v in (('op_number', op_number), ('op_rowid', op_rowid), ('op_type', op_type)) if not v]
+        if missing:
+            raise ValidationError({f: "Este parámetro es obligatorio." for f in missing})
+
+        # QuerySet.update() bypasses save(), so auto_now on updated_at won't
+        # fire on its own — stamp it explicitly, it's what "most recently
+        # audited" ordering in the audited-ops list sorts by.
+        updated = AuditRecord.objects.filter(
+            op_number=op_number, op_rowid=op_rowid, op_type=op_type,
+        ).update(is_audited=True, updated_at=timezone.now(), updated_by=request.user)
+
+        if not updated:
+            return Response(
+                {"detail": "No existe un bloque de auditoría para esta OP."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        details = AuditRecordDetail.objects.filter(
+            audit_record__op_number=op_number,
+            audit_record__op_rowid=op_rowid,
+            audit_record__op_type=op_type,
+        ).select_related('audit_record', 'audit_record__created_by', 'audit_record__updated_by')
+
+        output_serializer = AuditRecordSerializer(details, many=True, context=self.get_serializer_context())
+        return Response(output_serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='audited-ops')
+    def audited_ops(self, request):
+        """Una fila por OP ya confirmada (is_audited=True), de la más
+        reciente a la más antigua en ser auditada."""
+        queryset = AuditRecord.objects.filter(is_audited=True).select_related(
+            'created_by', 'updated_by',
+        ).order_by('-updated_at')
+
+        page = self.paginate_queryset(queryset)
+        serializer = AuditedOpSummarySerializer(page, many=True, context=self.get_serializer_context())
+        return self.get_paginated_response(serializer.data)
 
     def _bulk_update(self, request):
         input_serializer = AuditRecordBulkCreateSerializer(data=request.data, context={"request": request})

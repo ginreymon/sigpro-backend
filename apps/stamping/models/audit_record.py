@@ -9,6 +9,7 @@ class AuditRecord(TimeAuditModel, UserAuditModel):
     op_rowid = models.BigIntegerField(null=True, blank=True)
     op_type = models.CharField(max_length=10, null=True, blank=True)
     total_ordered_quantity = models.PositiveIntegerField()
+    is_audited = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
