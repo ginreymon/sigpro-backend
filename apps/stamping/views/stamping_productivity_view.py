@@ -24,3 +24,24 @@ class StampingProductivityViewSet(viewsets.ViewSet):
             shift_id=shift_id,
         )
         return Response(data, status=status.HTTP_200_OK)
+
+    # GET /stamping/productivity/module-shift-summary/[?core_module_id=N]
+    @action(detail=False, methods=["get"], url_path="module-shift-summary")
+    def module_shift_summary(self, request):
+        core_module_id = _parse_optional_int(request.query_params, "core_module_id")
+        data = StampingProductivityService.get_module_shift_summary(core_module_id)
+        return Response(data, status=status.HTTP_200_OK)
+
+    # GET /stamping/productivity/module-efficiency/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD[&module_id=N]
+    @action(detail=False, methods=["get"], url_path="module-efficiency")
+    def module_efficiency(self, request):
+        start_date = request.query_params.get("start_date")
+        end_date   = request.query_params.get("end_date")
+
+        if not start_date or not end_date:
+            return Response({"error": "start_date and end_date are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        module_id = _parse_optional_int(request.query_params, "module_id")
+
+        data = StampingProductivityService.get_module_efficiency(start_date, end_date, module_id)
+        return Response(data, status=status.HTTP_200_OK)

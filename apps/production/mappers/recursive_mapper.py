@@ -73,6 +73,10 @@
     "eficiencia":                   "efficiency",
     "modulo_id":                    "module_id",
     "turno_id":                     "shift_id",
+    "ultima_fecha_trabajada":       "last_worked_date",
+    "ultima_total_completada":      "last_worked_total_completed",
+    "ultima_eficiencia":            "last_worked_efficiency",
+    "ultima_productividad":         "last_worked_productivity",
     # fn_eficiencia_detallada / sp_reporte_eficiencia_detallada
     "cantidad_pausas":              "pause_count",
     "work_shift_start_utc":         "shift_start_utc",
