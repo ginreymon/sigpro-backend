@@ -33,8 +33,16 @@ class ProductivityService:
         return ProductivityRepository.get_module_efficiency(start_date, end_date, module_id)
 
     @staticmethod
-    def get_efficiency_report(start_date: str, end_date: str, module_id=None, shift_id=None, employee_id=None):
-        return ProductivityRepository.get_efficiency_report(start_date, end_date, module_id, shift_id, employee_id)
+    def get_efficiency_report(start_date: str, end_date: str, module_id=None, shift_id=None, employee_id=None, core_module_id=None):
+        data = ProductivityRepository.get_efficiency_report(start_date, end_date, module_id, shift_id, employee_id)
+
+        if core_module_id is None:
+            return data
+
+        core_module_by_id = dict(
+            Module.objects.values_list("id", "location__core_module_id")
+        )
+        return [row for row in data if core_module_by_id.get(row.get("module_id")) == core_module_id]
 
     @staticmethod
     def get_shift_summary(start_date, end_date, client_now, shift_id, module_id, employee_id=None):

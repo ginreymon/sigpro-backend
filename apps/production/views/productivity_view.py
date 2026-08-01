@@ -109,19 +109,21 @@ class ProductivityViewSet(viewsets.ViewSet):
         if not start_date or not end_date:
             return Response({"error": "start_date and end_date are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        module_id   = _parse_optional_int(request.query_params, "module_id")
-        shift_id    = _parse_optional_int(request.query_params, "shift_id")
-        employee_id = _parse_optional_int(request.query_params, "employee_id")
+        module_id       = _parse_optional_int(request.query_params, "module_id")
+        shift_id        = _parse_optional_int(request.query_params, "shift_id")
+        employee_id     = _parse_optional_int(request.query_params, "employee_id")
+        core_module_id  = _parse_optional_int(request.query_params, "core_module_id")
 
         data = ProductivityService.get_efficiency_report(
             start_date, end_date,
             module_id=module_id,
             shift_id=shift_id,
             employee_id=employee_id,
+            core_module_id=core_module_id,
         )
         return Response(data, status=status.HTTP_200_OK)
 
-    # GET /productivity/efficiency-report/export/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD[&module_id=N&shift_id=N&employee_id=N]
+    # GET /productivity/efficiency-report/export/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD[&module_id=N&shift_id=N&employee_id=N&core_module_id=N]
     @action(detail=False, methods=["get"], url_path="efficiency-report/export")
     def efficiency_report_export(self, request):
         start_date = request.query_params.get("start_date")
@@ -130,15 +132,17 @@ class ProductivityViewSet(viewsets.ViewSet):
         if not start_date or not end_date:
             return Response({"error": "start_date and end_date are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        module_id   = _parse_optional_int(request.query_params, "module_id")
-        shift_id    = _parse_optional_int(request.query_params, "shift_id")
-        employee_id = _parse_optional_int(request.query_params, "employee_id")
+        module_id       = _parse_optional_int(request.query_params, "module_id")
+        shift_id        = _parse_optional_int(request.query_params, "shift_id")
+        employee_id     = _parse_optional_int(request.query_params, "employee_id")
+        core_module_id  = _parse_optional_int(request.query_params, "core_module_id")
 
         data = ProductivityService.get_efficiency_report(
             start_date, end_date,
             module_id=module_id,
             shift_id=shift_id,
             employee_id=employee_id,
+            core_module_id=core_module_id,
         )
 
         xlsx = build_efficiency_report_excel(data, has_employee=employee_id is not None)
