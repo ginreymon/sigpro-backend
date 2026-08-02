@@ -10,3 +10,4 @@ class StampingRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
 
     recent_records_user_filter = 'work_session_activity__work_session__user'
     recent_records_select_related = ('work_session_activity',)
+    recent_records_dedup_field = 'op_rowid'
