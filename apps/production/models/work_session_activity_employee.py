@@ -14,6 +14,7 @@ class WorkSessionActivityEmployee(AuditModel):
     is_apprentice = models.BooleanField(default=False, db_default=False)
 
     class Meta:
+        db_table = "production_work_session_activity_employee"
         unique_together = ("work_session_activity", "employee")
         indexes = [
             models.Index(fields=["work_session_activity", "employee"]),

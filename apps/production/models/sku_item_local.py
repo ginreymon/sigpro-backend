@@ -56,6 +56,7 @@ class SkuItemLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
     pieces_per_set = models.CharField(max_length=100, blank=True, null=True)  # plan UND
 
     class Meta:
+        db_table = "production_sku_item_local"
         ordering = ["rowid", "rowid_item", "reference", "size", "color"]
 
     def __str__(self):

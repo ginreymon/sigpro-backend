@@ -16,6 +16,7 @@ class ProductionArea(AuditModel):
     cost_centers = models.JSONField(null=True, blank=True)
 
     class Meta:
+        db_table = "production_production_area"
         ordering = ["name"]
 
     def __str__(self):

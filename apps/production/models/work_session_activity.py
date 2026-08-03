@@ -21,6 +21,7 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
     ended_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        db_table = "production_work_session_activity"
         ordering = ["started_at"]
         indexes = [
             models.Index(fields=["started_at"]),

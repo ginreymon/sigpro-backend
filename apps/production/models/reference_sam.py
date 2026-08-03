@@ -13,6 +13,7 @@ class ReferenceSam(AuditModel):
     sam = models.DecimalField(max_digits=10, decimal_places=4)
 
     class Meta:
+        db_table = "production_reference_sam"
         ordering = ["rowid_item"]
 
     def __str__(self):

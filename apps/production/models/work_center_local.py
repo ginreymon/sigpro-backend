@@ -12,6 +12,7 @@ class WorkCenterLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
     short_description = models.CharField(max_length=255)
 
     class Meta:
+        db_table = "production_work_center_local"
         ordering = ["rowid"]
 
     def __str__(self):

@@ -26,10 +26,11 @@ class WorkSession(TimeAuditModel, UserAuditModel):
     editing_finalized = models.BooleanField(default=False)
 
     class Meta:
+        db_table = "production_work_session"
         ordering = ["started_at"]
         indexes = [
             models.Index(fields=["started_at"]),
-            models.Index(fields=["user", "is_closed"]),          
+            models.Index(fields=["user", "is_closed"]),
         ]
         constraints = [
             models.UniqueConstraint(

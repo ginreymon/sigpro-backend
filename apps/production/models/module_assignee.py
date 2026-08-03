@@ -10,6 +10,7 @@ class ModuleAssignee(TimeAuditModel, UserAuditModel):
     employee = models.ForeignKey(EmployeeLocal, on_delete=models.CASCADE)
 
     class Meta:
+        db_table = "production_module_assignee"
         unique_together = ("module", "employee")
         ordering = ["module"]
 

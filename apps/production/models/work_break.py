@@ -9,6 +9,7 @@ class WorkBreak(AuditModel):
     duration = models.DurationField()
 
     class Meta:
+        db_table = "production_work_break"
         ordering = ["name"]
 
     def __str__(self):

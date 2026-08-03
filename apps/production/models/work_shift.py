@@ -16,6 +16,7 @@ class WorkShift(AuditModel):
     )
 
     class Meta:
+        db_table = "production_work_shift"
         ordering = ["name"]
 
     def __str__(self):

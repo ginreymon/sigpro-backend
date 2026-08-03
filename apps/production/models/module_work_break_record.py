@@ -28,6 +28,7 @@ class ModuleWorkBreakRecord(TimeAuditModel, UserAuditModel):
     resumed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        db_table = "production_module_work_break_record"
         ordering = ["start_time", "end_time"]
         constraints = [
             CheckConstraint(

@@ -45,6 +45,7 @@ class EmployeeLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
         return []
 
     class Meta:
+        db_table = "production_employee_local"
         ordering = ["rowid"]
 
     def __str__(self):
