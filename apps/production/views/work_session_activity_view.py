@@ -164,10 +164,7 @@ class WorkSessionActivityViewSet(AuditModelViewSet):
         now = timezone.now()
         active_break.resumed_at = now
 
-        if active_break.work_break_id:
-            if not active_break.end_time or active_break.end_time > now:
-                active_break.end_time = now
-        else:
+        if not active_break.work_break_id:
             active_break.end_time = now
 
         active_break.save()
