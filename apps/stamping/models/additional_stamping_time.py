@@ -13,6 +13,7 @@ class AdditionalStampingTime(AuditModel):
     standard_time = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
 
     class Meta:
+        db_table = "stamping_additional_stamping_time"
         ordering = ["engineering_code", "code_number", "machine__name"]
         constraints = [
             models.UniqueConstraint(

@@ -10,6 +10,7 @@ class StampingProcess(AuditModel):
     )
 
     class Meta:
+        db_table = "stamping_stamping_process"
         ordering = ['name']
 
     def __str__(self):

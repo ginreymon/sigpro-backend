@@ -6,6 +6,7 @@ class StampingFabricType(AuditModel):
     name = models.CharField(max_length=100, unique=True)
 
     class Meta:
+        db_table = "stamping_stamping_fabric_type"
         ordering = ['name']
 
     def __str__(self):

@@ -12,6 +12,7 @@ class AdditionalStampingTimeStep(AuditModel):
     standard_time = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
 
     class Meta:
+        db_table = "stamping_additional_stamping_time_step"
         ordering = ["additional_stamping_time", "order"]
 
     def __str__(self):

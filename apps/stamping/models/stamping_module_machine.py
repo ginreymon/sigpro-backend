@@ -13,6 +13,7 @@ class StampingModuleMachine(AuditModel):
     )
 
     class Meta:
+        db_table = "stamping_stamping_module_machine"
         ordering = ['module__number']
 
     def __str__(self):

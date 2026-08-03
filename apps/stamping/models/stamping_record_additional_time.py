@@ -17,6 +17,7 @@ class StampingRecordAdditionalTime(TimeAuditModel, UserAuditModel):
     count = models.PositiveIntegerField(default=1)
 
     class Meta:
+        db_table = "stamping_stamping_record_additional_time"
         constraints = [
             models.UniqueConstraint(
                 fields=["stamping_record", "additional_stamping_time"],

@@ -28,6 +28,7 @@ class StampingRecord(TimeAuditModel, UserAuditModel):
     end_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        db_table = "stamping_stamping_record"
         ordering = [
             "start_time",
             "end_time",

@@ -30,6 +30,7 @@ class StampingReferenceSam(AuditModel):
   
 
     class Meta:
+        db_table = "stamping_stamping_reference_sam"
         ordering = ["identification"]
 
     def __str__(self):

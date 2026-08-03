@@ -12,6 +12,7 @@ class AuditRecord(TimeAuditModel, UserAuditModel):
     is_audited = models.BooleanField(default=False)
 
     class Meta:
+        db_table = "stamping_audit_record"
         ordering = ["-created_at"]
 
     def __str__(self):

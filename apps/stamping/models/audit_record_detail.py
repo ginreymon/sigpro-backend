@@ -10,6 +10,9 @@ class AuditRecordDetail(models.Model):
     ordered_quantity = models.PositiveIntegerField()
     audited_quantity = models.PositiveIntegerField()
 
+    class Meta:
+        db_table = "stamping_audit_record_detail"
+
     def __str__(self):
         return f"{self.color} | ordenada {self.ordered_quantity} | auditada {self.audited_quantity}"
 
