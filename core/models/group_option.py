@@ -8,6 +8,7 @@ class GroupOption(models.Model):
     option = models.ForeignKey(Option, on_delete=models.CASCADE, related_name="group_options")
 
     class Meta:
+        db_table = "core_group_option"
         unique_together = ("group", "option")
 
     def __str__(self):
