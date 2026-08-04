@@ -7,7 +7,7 @@ class EmployeeDirectoryViewSet(BaseModelViewSet):
     """Directorio de empleados sin filtro de centro de costo, para administración de cuentas."""
 
     queryset = (
-        EmployeeLocal.objects.filter(is_deleted=False).select_related("user_link__django_user")
+        EmployeeLocal.objects.filter(is_deleted=False).select_related("user_link__auth_user")
     )
     serializer_class = EmployeeLocalSerializer
     http_method_names = ["get", "head", "options"]
@@ -17,5 +17,5 @@ class EmployeeDirectoryViewSet(BaseModelViewSet):
         "last_name1",
         "last_name2",
         "id_number",
-        "user_link__django_user__username",
+        "user_link__auth_user__username",
     ]

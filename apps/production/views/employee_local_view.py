@@ -5,7 +5,7 @@ from .local_base_model_view import LocalBaseModelViewSet
 
 class EmployeeLocalViewSet(LocalBaseModelViewSet):
     queryset = EmployeeLocal.objects.filter(is_deleted=False).select_related(
-        "user_link__django_user"
+        "user_link__auth_user"
     )
     serializer_class = EmployeeLocalSerializer
 
@@ -14,7 +14,7 @@ class EmployeeLocalViewSet(LocalBaseModelViewSet):
         "last_name1",
         "last_name2",
         "id_number",
-        "user_link__django_user__username"
+        "user_link__auth_user__username"
     ]
 
     def get_queryset(self):

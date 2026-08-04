@@ -23,25 +23,25 @@ class EmployeeLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
     @property
     def username(self):
         if self.has_account:
-            return self.user_link.django_user.username
+            return self.user_link.auth_user.username
         return None
 
     @property
     def user_id(self):
         if self.has_account:
-            return self.user_link.django_user.id
+            return self.user_link.auth_user.id
         return None
 
     @property
     def is_account_active(self):
         if self.has_account:
-            return self.user_link.django_user.is_active
+            return self.user_link.auth_user.is_active
         return False
 
     @property
     def groups(self):
         if self.has_account:
-            return list(self.user_link.django_user.groups.values("id", "name"))
+            return list(self.user_link.auth_user.groups.values("id", "name"))
         return []
 
     class Meta:

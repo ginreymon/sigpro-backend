@@ -11,5 +11,8 @@ class PasswordResetToken(models.Model):
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
 
+    class Meta:
+        db_table = 'password_reset_token'
+
     def is_valid(self):
         return not self.is_used and self.expires_at > timezone.now()

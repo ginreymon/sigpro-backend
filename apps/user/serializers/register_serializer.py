@@ -65,6 +65,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user.groups.add(group)
 
-        UserEmployeeLink.objects.create(django_user=user, employee_local=employee)
+        UserEmployeeLink.objects.create(auth_user=user, employee_local=employee)
 
         return user

@@ -157,7 +157,7 @@ class AuthViewSet(viewsets.ViewSet):
         try:
             employee = EmployeeLocal.objects.get(id_number=id_number)
             link = UserEmployeeLink.objects.get(employee_local=employee)
-            user = link.django_user        
+            user = link.auth_user
 
             if user.username != username:
                 raise EmployeeLocal.DoesNotExist()
