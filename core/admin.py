@@ -1,10 +1,11 @@
 from django.contrib import admin
 
-from core.models import Module, Option, GroupOption, AppSetting
+from core.models import Module, Option, GroupOption, AppSetting, AppSettingDataType
 
 admin.site.register(Module)
 admin.site.register(Option)
 admin.site.register(GroupOption)
+admin.site.register(AppSettingDataType)
 
 
 @admin.register(AppSetting)

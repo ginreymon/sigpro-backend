@@ -1,24 +1,18 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from .audit_model import AuditModel
+from .app_setting_data_type import AppSettingDataType
 
 
 class AppSetting(AuditModel):
 
-    class DataType(models.TextChoices):
-        STRING = "STRING", "String"
-        INTEGER = "INTEGER", "Integer"
-        DECIMAL = "DECIMAL", "Decimal"
-        BOOLEAN = "BOOLEAN", "Boolean"
-        JSON = "JSON", "JSON"
-
     name = models.CharField(max_length=100, unique=True)
     key = models.CharField(max_length=100, unique=True, blank=True, null=True)
     value = models.CharField(max_length=2000)
-    data_type = models.CharField(
-        max_length=10,
-        choices=DataType.choices,
-        default=DataType.STRING,
+    data_type = models.ForeignKey(
+        AppSettingDataType,
+        on_delete=models.PROTECT,
+        related_name="app_settings",
     )
     description = models.TextField(blank=True, null=True)
 
