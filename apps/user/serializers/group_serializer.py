@@ -9,7 +9,7 @@ from django.db import transaction
 class GroupSerializer(serializers.ModelSerializer):
     permissions = PermissionSerializer(many=True, read_only=True)
     options = serializers.SerializerMethodField()
-    has_users = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
     option_ids = serializers.ListField(
         child=serializers.IntegerField(), write_only=True, required=False
     )
@@ -22,11 +22,11 @@ class GroupSerializer(serializers.ModelSerializer):
         options = [go.option for go in obj.group_options.all()]
         return OptionSerializer(options, many=True).data
 
-    def get_has_users(self, obj):
-        user_count = getattr(obj, "user_count", None)
-        if user_count is not None:
-            return user_count > 0
-        return obj.user_set.exists()
+    def get_user_count(self, obj):
+        annotated = getattr(obj, "user_count", None)
+        if annotated is not None:
+            return annotated
+        return obj.user_set.count()
 
     @transaction.atomic
     def create(self, validated_data):
