@@ -1,4 +1,4 @@
-from .module_serializer import ModuleSerializer
+from .module_serializer import ModuleSerializer, ModuleWithOptionsSerializer
 from .option_serializer import OptionSerializer
 from .group_option_serializer import GroupOptionSerializer
 from .audit_serializer import AuditSerializer
