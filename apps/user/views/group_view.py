@@ -1,12 +1,15 @@
 from core.views.base_model_view import BaseModelViewSet
 from django.contrib.auth.models import Group
+from django.db.models import Count
 from apps.user.serializers.group_serializer import GroupSerializer
 from rest_framework.response import Response
 from rest_framework import status
 
 
 class GroupViewSet(BaseModelViewSet):
-    queryset = Group.objects.prefetch_related("permissions", "group_options__option").all()
+    queryset = Group.objects.prefetch_related(
+        "permissions", "group_options__option"
+    ).annotate(user_count=Count("user", distinct=True))
     serializer_class = GroupSerializer
 
     search_fields = [
