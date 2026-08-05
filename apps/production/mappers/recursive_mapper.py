@@ -10,6 +10,7 @@
     "Fecha_Creacion": "createdAt",
     "Destino": "destination",
     "Estado": "status",
+    "Estado_Nombre": "statusName",
     "Id_Doc": "documentId",
     "Id_Plan": "planId",
     # nested
