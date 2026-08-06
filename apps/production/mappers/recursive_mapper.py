@@ -11,6 +11,8 @@
     "Destino": "destination",
     "Estado": "status",
     "Estado_Nombre": "statusName",
+    "Estado_Doc": "docStatus",
+    "Nombre_Estado_Doc": "docStatusName",
     "Id_Doc": "documentId",
     "Id_Plan": "planId",
     # nested

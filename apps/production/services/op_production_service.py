@@ -28,10 +28,7 @@ class OPProductionService:
 
     @staticmethod
     def get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan="300"):
-        data = OPProductionRepository.get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan)
-        if data:
-            data["statusInfo"] = {"state": data.get("status"), "name": data.pop("statusName", None)}
-        return data
+        return OPProductionRepository.get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan)
 
     @staticmethod
     def get_sku_detail(tipo_docto, consec_docto, id_plan, sku_rowid):
