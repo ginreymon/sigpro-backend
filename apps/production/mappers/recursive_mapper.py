@@ -16,7 +16,7 @@
     # nested
     "Centro_Operaciones": "operationCenters",
     "Componentes": "components",
-    "Colores": "colors",
+    "ColorRows": "colorRows",
     # centro operaciones
     "operacion": "operation",
     "centro_id": "centerId",

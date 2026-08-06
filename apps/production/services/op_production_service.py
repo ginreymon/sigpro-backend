@@ -41,7 +41,7 @@ class OPProductionService:
 
         op_rowid = data.get("rowId")
 
-        for color in data.get("colors", []):
+        for color in data.get("colorRows", []):
             for size in color.get("sizes", []):
                 if size.get("skuRowId") == sku_rowid:
 
