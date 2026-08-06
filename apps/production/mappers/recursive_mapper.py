@@ -17,6 +17,7 @@
     "Centro_Operaciones": "operationCenters",
     "Componentes": "components",
     "ColorRows": "colorRows",
+    "Colores": "colors",
     # centro operaciones
     "operacion": "operation",
     "centro_id": "centerId",
@@ -31,6 +32,7 @@
     "Color": "color",
     "Totales": "totals",
     "Tallas": "sizes",
+    "SKUS": "skus",
     # tallas / totales
     "Talla": "size",
     "SKU_RowID": "skuRowId",

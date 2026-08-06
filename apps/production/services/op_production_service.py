@@ -42,7 +42,7 @@ class OPProductionService:
         op_rowid = data.get("rowId")
 
         for color in data.get("colorRows", []):
-            for size in color.get("sizes", []):
+            for size in color.get("skus", []):
                 if size.get("skuRowId") == sku_rowid:
 
                     records = ProductionRecord.objects.filter(

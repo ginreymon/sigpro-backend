@@ -64,13 +64,12 @@ class OPProductionDetailSerializer(serializers.Serializer):
             if not data:
                 return {}
 
-            t = data[0]
             return {
-                "orderedQty": t.get("Cant_Ordenada"),
-                "plannedQty": t.get("Cant_Planeada"),
-                "completedQty": t.get("Cant_Completada"),
-                "wasteQty": t.get("Cant_Desechos"),
-                "rejectedQty": t.get("Cant_Rechazos"),
+                "orderedQty": data.get("Cant_Ordenada"),
+                "plannedQty": data.get("Cant_Planeada"),
+                "completedQty": data.get("Cant_Completada"),
+                "wasteQty": data.get("Cant_Desechos"),
+                "rejectedQty": data.get("Cant_Rechazos"),
             }
         except Exception:
             return {}
