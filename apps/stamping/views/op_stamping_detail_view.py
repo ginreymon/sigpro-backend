@@ -7,8 +7,8 @@ from apps.stamping.services.op_stamping_service import OPStampingService
 
 class OPStampingDetailViewSet(viewsets.ViewSet):
 
-    @action(detail=False, methods=["get"], url_path="flat")
-    def json_format(self, request):
+    @action(detail=False, methods=["get"], url_path="detail")
+    def detail(self, request):
         doc_type = request.query_params.get("type")
         doc_number = request.query_params.get("number")
 
