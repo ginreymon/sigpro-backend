@@ -14,6 +14,9 @@ class RecentRecordsMixin:
     deduplicated by that field first — the last N *distinct* values, each
     represented by its most recently updated record — instead of the last N
     raw rows (which could all belong to the same OP).
+
+    The client may override N per-request with `?limit=`; falls back to
+    `recent_records_limit` when absent or invalid.
     """
 
     recent_records_limit = 3
@@ -23,6 +26,8 @@ class RecentRecordsMixin:
 
     @action(detail=False, methods=['get'], url_path='recent')
     def recent(self, request):
+        limit = self._recent_records_limit(request)
+
         queryset = self.get_queryset().filter(**{
             self.recent_records_user_filter: request.user,
         })
@@ -31,14 +36,26 @@ class RecentRecordsMixin:
             queryset = queryset.select_related(*self.recent_records_select_related)
 
         if self.recent_records_dedup_field:
-            records = self._recent_distinct(queryset)
+            records = self._recent_distinct(queryset, limit)
         else:
-            records = list(queryset.order_by('-updated_at')[:self.recent_records_limit])
+            records = list(queryset.order_by('-updated_at')[:limit])
 
         serializer = self.get_serializer(records, many=True)
         return Response(serializer.data)
 
-    def _recent_distinct(self, queryset):
+    def _recent_records_limit(self, request) -> int:
+        raw_limit = request.query_params.get('limit')
+        if raw_limit is None:
+            return self.recent_records_limit
+
+        try:
+            limit = int(raw_limit)
+        except ValueError:
+            return self.recent_records_limit
+
+        return limit if limit > 0 else self.recent_records_limit
+
+    def _recent_distinct(self, queryset, limit: int):
         field = self.recent_records_dedup_field
 
         latest_per_key = (
@@ -46,7 +63,7 @@ class RecentRecordsMixin:
             .exclude(**{f'{field}__isnull': True})
             .values(field)
             .annotate(latest=Max('updated_at'))
-            .order_by('-latest')[:self.recent_records_limit]
+            .order_by('-latest')[:limit]
         )
         keys = [row[field] for row in latest_per_key]
         if not keys:
@@ -62,6 +79,6 @@ class RecentRecordsMixin:
                 continue
             seen.add(key)
             records.append(row)
-            if len(records) >= self.recent_records_limit:
+            if len(records) >= limit:
                 break
         return records
