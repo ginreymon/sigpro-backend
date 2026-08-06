@@ -22,3 +22,20 @@ class OPStampingRepository:
             # centro_nombre); el resto del JSON ya sale en camelCase desde el
             # SP y pasa sin cambios (fallback en translate_keys).
             return translate_keys(json.loads(row[0]))
+
+    @staticmethod
+    def get_trazabilidad_op_json(consec_docto: int, tipo_docto: str = None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_trazabilidad_op_json %s, %s",
+                [consec_docto, tipo_docto],
+            )
+
+            row = cursor.fetchone()
+
+            if not row or not row[0]:
+                return None
+
+            # SP ya devuelve todo en camelCase; translate_keys solo aplica el
+            # fallback de tz-aware en Fecha_Creacion -> createdAt.
+            return translate_keys(json.loads(row[0]))

@@ -26,3 +26,23 @@ class OPStampingDetailViewSet(viewsets.ViewSet):
             )
 
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="traceability")
+    def traceability(self, request):
+        doc_number = request.query_params.get("number")
+        doc_type = request.query_params.get("type")
+
+        if not doc_number:
+            return Response(
+                {"error": "number is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = OPStampingService.get_trazabilidad_op_json(int(doc_number), doc_type)
+
+        if not data:
+            return Response(
+                {"error": "No data found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(data, status=status.HTTP_200_OK)
