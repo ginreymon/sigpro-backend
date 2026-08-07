@@ -58,7 +58,7 @@ class ProductivityRepository:
         with connection.cursor() as cursor:
             cursor.execute(
                 "EXEC sp_resumen_produccion_turno %s, %s, %s, %s, %s",
-                [start_date, end_date, shift_id, module_id, employee_id],
+                [start_date, end_date, module_id, shift_id, employee_id],
             )
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
