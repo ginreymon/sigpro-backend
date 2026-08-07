@@ -39,7 +39,16 @@ class StampingRecordSerializer(AuditSerializer):
             order_detail = OPStampingRepository.get_detalle_estampacion_op_json(
                 validated_data["op_type"], validated_data["op_number"]
             )
-            pending = Decimal(str(order_detail["pendingQty"])) if order_detail else Decimal("0")
+
+            pending = Decimal("0")
+            sam = validated_data.get("stamping_reference_sam")
+            if order_detail and sam:
+                sam_detail = next(
+                    (s for s in order_detail.get("referenceSams") or [] if s.get("id") == sam.id),
+                    None,
+                )
+                if sam_detail:
+                    pending = Decimal(str(sam_detail["pending_qty"]))
 
             if completed > pending:
                 raise ValidationError({
