@@ -42,6 +42,14 @@ class StampingProductivityService:
         return [row for row in data if row["core_module_id"] == core_module_id]
 
     @staticmethod
+    def get_shift_summary(start_date, end_date, client_now, module_id, shift_id, employee_id=None):
+        corrected_start = apply_client_offset(start_date, client_now)
+        corrected_end   = apply_client_offset(end_date,   client_now)
+        return StampingProductivityRepository.get_shift_summary(
+            corrected_start, corrected_end, module_id, shift_id, employee_id
+        )
+
+    @staticmethod
     def get_module_efficiency(start_date: str, end_date: str, module_id: int | None = None) -> list[dict]:
         data = StampingProductivityRepository.get_module_efficiency(start_date, end_date, module_id)
         stamping_ids = StampingProductivityService._stamping_module_ids()

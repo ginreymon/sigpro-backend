@@ -25,6 +25,29 @@ class StampingProductivityViewSet(viewsets.ViewSet):
         )
         return Response(data, status=status.HTTP_200_OK)
 
+    # GET /stamping/productivity/shift-summary/
+    @action(detail=False, methods=["get"], url_path="shift-summary")
+    def shift_summary(self, request):
+        start_date, end_date, client_now, error = _parse_required_dates(request.query_params)
+        if error:
+            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        shift_id  = _parse_optional_int(request.query_params, "shift_id")
+        module_id = _parse_optional_int(request.query_params, "module_id")
+
+        if shift_id is None or module_id is None:
+            return Response({"error": "shift_id and module_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        employee_id = _parse_optional_int(request.query_params, "employee_id")
+
+        data = StampingProductivityService.get_shift_summary(
+            start_date, end_date, client_now,
+            shift_id=shift_id,
+            module_id=module_id,
+            employee_id=employee_id,
+        )
+        return Response(data, status=status.HTTP_200_OK)
+
     # GET /stamping/productivity/module-shift-summary/[?core_module_id=N]
     @action(detail=False, methods=["get"], url_path="module-shift-summary")
     def module_shift_summary(self, request):

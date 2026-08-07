@@ -27,6 +27,23 @@ class StampingProductivityRepository:
             return translate_keys(json.loads(json_str))
 
     @staticmethod
+    def get_shift_summary(start_date, end_date, module_id, shift_id, employee_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_resumen_estampacion_turno %s, %s, %s, %s, %s",
+                [start_date, end_date, module_id, shift_id, employee_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                if isinstance(record.get("records_detail"), str):
+                    record["records_detail"] = json.loads(record["records_detail"])
+                result.append(record)
+            return result
+
+    @staticmethod
     def get_module_efficiency(start_date: str, end_date: str, module_id: int | None = None) -> list[dict]:
         with connection.cursor() as cursor:
             cursor.execute("EXEC sp_eficiencia_modulos_estampacion %s, %s", [start_date, end_date])
