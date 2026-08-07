@@ -5,6 +5,7 @@ from .stamping_location import StampingLocation
 from .stamping_stamp_type_description import StampingStampTypeDescription
 from .stamping_fabric_type import StampingFabricType
 from .stamping_technique import StampingTechnique
+from .stamping_layout_form import StampingLayoutForm
 from .additional_stamping_time import AdditionalStampingTime
 from .additional_stamping_time_step import AdditionalStampingTimeStep
 from .stamping_reference_sam import StampingReferenceSam

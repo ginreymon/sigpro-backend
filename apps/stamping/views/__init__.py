@@ -6,6 +6,7 @@ from .stamping_location_view import StampingLocationViewSet
 from .stamping_stamp_type_description_view import StampingStampTypeDescriptionViewSet
 from .stamping_fabric_type_view import StampingFabricTypeViewSet
 from .stamping_technique_view import StampingTechniqueViewSet
+from .stamping_layout_form_view import StampingLayoutFormViewSet
 from .stamping_reference_sam_view import StampingReferenceSamViewSet
 from .additional_stamping_time_view import AdditionalStampingTimeViewSet
 from .op_stamping_detail_view import OPStampingDetailViewSet

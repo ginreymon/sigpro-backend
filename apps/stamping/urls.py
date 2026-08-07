@@ -9,6 +9,7 @@ from apps.stamping.views import (
     StampingStampTypeDescriptionViewSet,
     StampingFabricTypeViewSet,
     StampingTechniqueViewSet,
+    StampingLayoutFormViewSet,
     StampingReferenceSamViewSet,
     AdditionalStampingTimeViewSet,
     OPStampingDetailViewSet,
@@ -27,6 +28,7 @@ router.register('locations', StampingLocationViewSet, basename='location')
 router.register('stamp-type-descriptions', StampingStampTypeDescriptionViewSet, basename='stamp-type-description')
 router.register('fabric-types', StampingFabricTypeViewSet, basename='fabric-type')
 router.register('techniques', StampingTechniqueViewSet, basename='technique')
+router.register('layout-forms', StampingLayoutFormViewSet, basename='layout-form')
 router.register('reference-sams', StampingReferenceSamViewSet, basename='reference-sam')
 router.register('additional-times', AdditionalStampingTimeViewSet, basename='additional-time')
 router.register('stamping-orders', OPStampingDetailViewSet, basename='stamping-order')

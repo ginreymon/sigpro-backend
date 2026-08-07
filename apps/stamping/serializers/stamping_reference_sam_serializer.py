@@ -7,12 +7,14 @@ from apps.stamping.models import StampingReferenceSam
 class StampingReferenceSamSerializer(AuditSerializer):
 
     reference = serializers.SerializerMethodField()
+    tasks_per_hour = serializers.ReadOnlyField()
     machine_type_name = serializers.SerializerMethodField()
     piece_name = serializers.SerializerMethodField()
     location_name = serializers.SerializerMethodField()
     stamp_type_description_name = serializers.SerializerMethodField()
     fabric_type_name = serializers.SerializerMethodField()
     technique_name = serializers.SerializerMethodField()
+    layout_form_name = serializers.SerializerMethodField()
 
     class Meta:
         model = StampingReferenceSam
@@ -40,3 +42,6 @@ class StampingReferenceSamSerializer(AuditSerializer):
 
     def get_technique_name(self, obj):
         return obj.technique.name if obj.technique else None
+
+    def get_layout_form_name(self, obj):
+        return obj.layout_form.name if obj.layout_form else None

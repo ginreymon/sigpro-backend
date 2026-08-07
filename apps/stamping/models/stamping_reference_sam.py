@@ -1,3 +1,4 @@
+from decimal import ROUND_HALF_UP, Decimal
 from django.db import models
 from core.models import AuditModel
 from .stamping_machine_type import StampingMachineType
@@ -6,6 +7,7 @@ from .stamping_location import StampingLocation
 from .stamping_stamp_type_description import StampingStampTypeDescription
 from .stamping_fabric_type import StampingFabricType
 from .stamping_technique import StampingTechnique
+from .stamping_layout_form import StampingLayoutForm
 
 
 class StampingReferenceSam(AuditModel):
@@ -23,11 +25,9 @@ class StampingReferenceSam(AuditModel):
     inks = models.IntegerField(null=True, blank=True)
     prints = models.IntegerField(null=True, blank=True)
     pieces_per_board = models.IntegerField(null=True, blank=True)
-    layout_form = models.CharField(max_length=100, null=True, blank=True)
+    layout_form = models.ForeignKey(StampingLayoutForm, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     pre_dried = models.IntegerField(null=True, blank=True)
     sam = models.DecimalField(max_digits=10, decimal_places=4)
-    tasks_per_hour = models.IntegerField()
-  
 
     class Meta:
         db_table = "stamping_stamping_reference_sam"
@@ -35,3 +35,9 @@ class StampingReferenceSam(AuditModel):
 
     def __str__(self):
         return self.identification
+
+    @property
+    def tasks_per_hour(self):
+        if not self.sam:
+            return None
+        return int((Decimal("60") / self.sam).to_integral_value(rounding=ROUND_HALF_UP))
