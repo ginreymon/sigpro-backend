@@ -13,11 +13,13 @@ class ProductionArea(AuditModel):
         blank=True,
         related_name="production_area",
     )
-    cost_centers = models.JSONField(null=True, blank=True)
-
     class Meta:
         db_table = "production_production_area"
         ordering = ["name"]
+
+    @property
+    def cost_centers(self):
+        return list(self.cost_center_links.values_list("cost_center_rowid", flat=True))
 
     def __str__(self):
         return self.name
