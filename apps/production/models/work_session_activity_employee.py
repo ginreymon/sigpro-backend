@@ -12,6 +12,8 @@ class WorkSessionActivityEmployee(AuditModel):
 
     employee = models.ForeignKey(EmployeeLocal, on_delete=models.PROTECT)
     is_apprentice = models.BooleanField(default=False, db_default=False)
+    
+    worked_minutes_per_hour = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
 
     class Meta:
         db_table = "production_work_session_activity_employee"
