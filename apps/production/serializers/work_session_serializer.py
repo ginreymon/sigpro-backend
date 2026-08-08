@@ -5,6 +5,7 @@ from apps.production.models.module import Module
 from apps.production.serializers.module_serializer import ModuleSerializer
 from apps.production.serializers.work_shift_serializer import WorkShiftSerializer
 from apps.production.models import WorkSession, EmployeeLocal
+from apps.production.models.work_shift_snapshot import WorkShiftSnapshot
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 from apps.production.services.employee_assignment_service import validate_employee_conflicts, validate_employees_active, sync_module_assignees, validate_module_conflict
@@ -142,6 +143,30 @@ class WorkSessionSerializer(AuditSerializer):
         self._sync_activity_employees(activity, employee_ids, apprentice_ids, created_by)
         sync_module_assignees(activity.module, created_by)
 
+    def _sync_shift_snapshot(self, work_session, work_shift, audit_user):
+        # Congela hora/ubicación del turno al momento de abrir la jornada (sesión) o de
+        # cambiar de turno — si WorkShift cambia después, este registro histórico no
+        # debe verse afectado. Se actualiza (no se crea otro) si ya existe uno.
+        snapshot = WorkShiftSnapshot.objects.filter(work_session=work_session).first()
+
+        if snapshot:
+            snapshot.work_shift = work_shift
+            snapshot.location = work_shift.location
+            snapshot.start_time = work_shift.start_time
+            snapshot.end_time = work_shift.end_time
+            snapshot.updated_by = audit_user
+            snapshot.save(update_fields=["work_shift", "location", "start_time", "end_time", "updated_by"])
+        else:
+            WorkShiftSnapshot.objects.create(
+                work_session=work_session,
+                work_shift=work_shift,
+                location=work_shift.location,
+                start_time=work_shift.start_time,
+                end_time=work_shift.end_time,
+                created_by=audit_user,
+                updated_by=audit_user,
+            )
+
     @transaction.atomic
     def create(self, validated_data):
         employee_ids = validated_data.pop("employee_ids", [])
@@ -149,6 +174,10 @@ class WorkSessionSerializer(AuditSerializer):
         module = validated_data.pop("module_id", None)
 
         work_session = super().create(validated_data)
+
+        self._sync_shift_snapshot(
+            work_session, work_session.work_shift, validated_data.get("created_by")
+        )
 
         activity = None
 
@@ -190,6 +219,9 @@ class WorkSessionSerializer(AuditSerializer):
         any_field_changed = module_changed or work_shift_changed or employees_changed or apprentice_changed
 
         instance = super().update(instance, validated_data)
+
+        if work_shift_changed:
+            self._sync_shift_snapshot(instance, new_work_shift, validated_data.get("updated_by"))
 
         if any_field_changed:
             target_module = module or current_module
