@@ -12,5 +12,6 @@ from .module_work_break_record import ModuleWorkBreakRecord
 from .work_session_activity import WorkSessionActivity
 from .work_session_activity_employee import WorkSessionActivityEmployee
 from .work_session import WorkSession
+from .work_shift_snapshot import WorkShiftSnapshot
 from .sku_item_local import SkuItemLocal
 from .reference_sam import ReferenceSam
