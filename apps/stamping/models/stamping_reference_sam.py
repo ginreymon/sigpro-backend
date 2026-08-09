@@ -16,7 +16,7 @@ class StampingReferenceSam(AuditModel):
     machine_type = models.ForeignKey(StampingMachineType, on_delete=models.PROTECT, related_name='reference_sams')
     people_count = models.IntegerField()
     piece = models.ForeignKey(StampingPiece, on_delete=models.PROTECT, related_name='reference_sams')
-    stamped_pieces = models.IntegerField()
+    stamped_pieces = models.IntegerField(null=True, blank=True)
     location = models.ForeignKey(StampingLocation, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     stamp_type_description = models.ForeignKey(StampingStampTypeDescription, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
     technique = models.ForeignKey(StampingTechnique, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
