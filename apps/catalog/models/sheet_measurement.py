@@ -13,6 +13,7 @@ class SheetMeasurement(SheetMeasurementBase):
     tolerance = models.TextField(null=True, blank=True)         # MedidasPrendas.Tolerancia
 
     class Meta:
+        db_table = "catalog_sheet_measurement"
         ordering = ["sheet_id"]
 
     def __str__(self):

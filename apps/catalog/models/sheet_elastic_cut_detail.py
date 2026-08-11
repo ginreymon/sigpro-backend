@@ -13,6 +13,7 @@ class SheetElasticCutDetail(SheetMeasurementDetailBase):
     sheet_elastic_cut_id = models.IntegerField()     # DetalleCorteElastico.CorteElasticoID → SheetElasticCut.rowid
 
     class Meta(SheetMeasurementDetailBase.Meta):
+        db_table = "catalog_sheet_elastic_cut_detail"
         ordering = ["sheet_elastic_cut_id", "size"]
 
     def __str__(self):

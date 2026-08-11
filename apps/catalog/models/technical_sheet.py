@@ -35,6 +35,7 @@ class TechnicalSheet(AuditModel, LocalBaseModel):
     fabric_warehouse = models.TextField(null=True, blank=True)
 
     class Meta:
+        db_table = "catalog_technical_sheet"
         ordering = ["rowid_item"]
 
     def __str__(self):

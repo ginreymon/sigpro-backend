@@ -12,6 +12,7 @@ class TechnicalSheetPieceImage(AuditModel, LocalBaseModel):
     file_path = models.TextField()
 
     class Meta:
+        db_table = "catalog_technical_sheet_piece_image"
         ordering = ["sheet_id"]
 
     def __str__(self):

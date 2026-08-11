@@ -15,6 +15,7 @@ class SheetElasticCut(SheetMeasurementBase):
     # order → CorteElastico.Orden    
 
     class Meta(SheetMeasurementBase.Meta):
+        db_table = "catalog_sheet_elastic_cut"
         ordering = ["sheet_id"]
 
     def __str__(self):

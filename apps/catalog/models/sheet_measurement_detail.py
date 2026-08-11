@@ -13,6 +13,7 @@ class SheetMeasurementDetail(SheetMeasurementDetailBase):
     sheet_measurement_id = models.IntegerField()     # DetalleMedidasPrendas.MedidasPrendasID → SheetMeasurement.rowid
 
     class Meta(SheetMeasurementDetailBase.Meta):
+        db_table = "catalog_sheet_measurement_detail"
         ordering = ["sheet_measurement_id", "size"]
 
     def __str__(self):
