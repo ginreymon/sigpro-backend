@@ -3,3 +3,5 @@ from .option_serializer import OptionSerializer
 from .group_option_serializer import GroupOptionSerializer
 from .audit_serializer import AuditSerializer
 from .app_setting_serializer import AppSettingSerializer
+from .home_view_serializer import HomeViewSerializer
+from .role_home_view_serializer import RoleHomeViewSerializer

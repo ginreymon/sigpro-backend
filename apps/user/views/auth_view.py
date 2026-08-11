@@ -1,4 +1,3 @@
-import json
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -13,9 +12,7 @@ from apps.user.serializers import RegisterSerializer, ChangePasswordSerializer
 from apps.production.models import EmployeeLocal
 from apps.user.models import PasswordResetToken, UserEmployeeLink
 from core.models.option import Option
-from core.models.app_setting import AppSetting
-
-HOME_CUSTOM_VIEW_SETTING = 'HOME_ROLE_BASED_VIEWS'
+from core.models.role_home_view import RoleHomeView
 
 
 class AuthViewSet(viewsets.ViewSet):
@@ -23,19 +20,10 @@ class AuthViewSet(viewsets.ViewSet):
     def _resolve_home_view(self, group_ids: list) -> str:
         if not group_ids:
             return ''
-        try:
-            qs = AppSetting.objects.filter(key=HOME_CUSTOM_VIEW_SETTING, is_active=True)
-            if not qs.exists():
-                qs = AppSetting.objects.filter(name=HOME_CUSTOM_VIEW_SETTING, is_active=True)
-            raw = qs.values_list('value', flat=True).first()
-            if raw:
-                mapping = json.loads(raw)  # { "ComponentKey": [id1, id2, ...] }
-                for component_key, allowed_ids in mapping.items():
-                    if any(gid in allowed_ids for gid in group_ids):
-                        return component_key
-        except (ValueError, TypeError):
-            pass
-        return ''
+        link = RoleHomeView.objects.filter(
+            group_id__in=group_ids, is_active=True, home_view__is_active=True
+        ).select_related('home_view').first()
+        return link.home_view.key if link else ''
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path='register')
     def register(self, request):
