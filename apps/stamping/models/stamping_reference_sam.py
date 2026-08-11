@@ -14,7 +14,7 @@ class StampingReferenceSam(AuditModel):
     rowid_item = models.BigIntegerField(db_index=True, null=True, blank=True)  # production_skuitemlocal.rowid_item
     identification = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
     machine_type = models.ForeignKey(StampingMachineType, on_delete=models.PROTECT, related_name='reference_sams')
-    people_count = models.IntegerField()
+    task_people_count = models.IntegerField()
     piece = models.ForeignKey(StampingPiece, on_delete=models.PROTECT, related_name='reference_sams')
     stamped_pieces = models.IntegerField(null=True, blank=True)
     location = models.ForeignKey(StampingLocation, on_delete=models.PROTECT, null=True, blank=True, related_name='reference_sams')
@@ -38,6 +38,11 @@ class StampingReferenceSam(AuditModel):
 
     @property
     def tasks_per_hour(self):
-        if not self.sam:
+        if not self.sam or not self.task_people_count:
             return None
-        return int((Decimal("60") / self.sam).to_integral_value(rounding=ROUND_HALF_UP))
+
+        return int(
+            (
+                Decimal("60") * self.task_people_count / self.sam
+            ).to_integral_value(rounding=ROUND_HALF_UP)
+        )
