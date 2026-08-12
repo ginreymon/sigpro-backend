@@ -2,6 +2,7 @@ from rest_framework import serializers
 from apps.user.serializers.permission_serializer import PermissionSerializer
 from core.serializers.option_serializer import OptionSerializer
 from core.models.group_option import GroupOption
+from core.models.role_home_view import RoleHomeView
 from django.contrib.auth.models import Group
 from django.db import transaction
 
@@ -13,6 +14,9 @@ class GroupSerializer(serializers.ModelSerializer):
     option_ids = serializers.ListField(
         child=serializers.IntegerField(), write_only=True, required=False
     )
+    home_view = serializers.SerializerMethodField()
+    home_view_label = serializers.SerializerMethodField()
+    home_view_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Group
@@ -28,9 +32,18 @@ class GroupSerializer(serializers.ModelSerializer):
             return annotated
         return obj.user_set.count()
 
+    def get_home_view(self, obj):
+        link = getattr(obj, "home_view_link", None)
+        return link.home_view_id if link else None
+
+    def get_home_view_label(self, obj):
+        link = getattr(obj, "home_view_link", None)
+        return link.home_view.label if link else None
+
     @transaction.atomic
     def create(self, validated_data):
         option_ids = validated_data.pop("option_ids", [])
+        home_view_id = validated_data.pop("home_view_id", None)
 
         group = Group.objects.create(**validated_data)
 
@@ -41,11 +54,15 @@ class GroupSerializer(serializers.ModelSerializer):
             ]
             GroupOption.objects.bulk_create(group_options)
 
+        if home_view_id:
+            RoleHomeView.objects.create(group=group, home_view_id=home_view_id)
+
         return group
 
     @transaction.atomic
     def update(self, instance, validated_data):
         option_ids = validated_data.pop("option_ids", None)
+        home_view_id = validated_data.pop("home_view_id", serializers.empty)
 
         instance.name = validated_data.get("name", instance.name)
         instance.save()
@@ -58,5 +75,10 @@ class GroupSerializer(serializers.ModelSerializer):
                 for option_id in option_ids
             ]
             GroupOption.objects.bulk_create(group_options)
+
+        if home_view_id is not serializers.empty:
+            RoleHomeView.objects.filter(group=instance).delete()
+            if home_view_id:
+                RoleHomeView.objects.create(group=instance, home_view_id=home_view_id)
 
         return instance

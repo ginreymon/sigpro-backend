@@ -9,6 +9,8 @@ from rest_framework import status
 class GroupViewSet(BaseModelViewSet):
     queryset = Group.objects.prefetch_related(
         "permissions", "group_options__option"
+    ).select_related(
+        "home_view_link__home_view"
     ).annotate(user_count=Count("user", distinct=True))
     serializer_class = GroupSerializer
 
