@@ -12,7 +12,7 @@ from .stamping_layout_form import StampingLayoutForm
 
 class StampingReferenceSam(AuditModel):
     rowid_item = models.BigIntegerField(db_index=True, null=True, blank=True)  # production_skuitemlocal.rowid_item
-    identification = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
+    reference_code = models.CharField(max_length=50, unique=True)  # excel col A (REFERENCIA)
     machine_type = models.ForeignKey(StampingMachineType, on_delete=models.PROTECT, related_name='reference_sams')
     task_people_count = models.IntegerField()
     piece = models.ForeignKey(StampingPiece, on_delete=models.PROTECT, related_name='reference_sams')
@@ -31,10 +31,10 @@ class StampingReferenceSam(AuditModel):
 
     class Meta:
         db_table = "stamping_stamping_reference_sam"
-        ordering = ["identification"]
+        ordering = ["reference_code"]
 
     def __str__(self):
-        return self.identification
+        return self.reference_code
 
     @property
     def tasks_per_hour(self):

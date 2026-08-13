@@ -41,7 +41,7 @@ class StampingRecord(TimeAuditModel, UserAuditModel):
         self.save(update_fields=["end_time"])
 
     def __str__(self):
-        reference = self.stamping_reference_sam.identification if self.stamping_reference_sam else "N/A"
+        reference = self.stamping_reference_sam.reference_code if self.stamping_reference_sam else "N/A"
         return (
             f"{reference} | "
             f"Session {self.work_session_activity.created_at} | "

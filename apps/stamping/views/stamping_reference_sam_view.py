@@ -17,7 +17,7 @@ class StampingReferenceSamViewSet(BaseModelViewSet):
         ),
     )
     serializer_class = StampingReferenceSamSerializer
-    search_fields = ["identification", "reference"]
+    search_fields = ["reference_code", "reference"]
 
     def _serializer_context_with_skus(self, objs):
         rowid_items = {obj.rowid_item for obj in objs}
