@@ -11,4 +11,5 @@ class EmployeeContinuousWorkLimitViewSet(AuditModelViewSet):
         "employee__first_name",
         "employee__last_name1",
         "employee__last_name2",
+        "employee__id_number",
     ]
