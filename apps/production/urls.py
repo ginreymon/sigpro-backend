@@ -12,6 +12,7 @@ from .views.work_shift_view import WorkShiftViewSet
 from .views.work_session_view import WorkSessionViewSet
 from .views.work_session_activity_view import WorkSessionActivityViewSet
 from .views.employee_local_view import EmployeeLocalViewSet
+from .views.employee_continuous_work_limit_view import EmployeeContinuousWorkLimitViewSet
 from .views.work_center_local_view import WorkCenterLocalViewSet
 from .views.sku_item_local_view import SkuItemLocalViewSet
 from .views.reference_sam_view import ReferenceSamViewSet
@@ -30,6 +31,7 @@ router.register(r'work-shifts', WorkShiftViewSet)
 router.register(r'work-sessions', WorkSessionViewSet)
 router.register(r'work-session-activities', WorkSessionActivityViewSet)
 router.register(r'employees', EmployeeLocalViewSet)
+router.register(r'employee-continuous-work-limits', EmployeeContinuousWorkLimitViewSet)
 router.register(r'work-centers', WorkCenterLocalViewSet)
 router.register(r'sku-items', SkuItemLocalViewSet)
 router.register(r'reference-sam', ReferenceSamViewSet)
