@@ -13,3 +13,6 @@ class EmployeeContinuousWorkLimitViewSet(AuditModelViewSet):
         "employee__last_name2",
         "employee__id_number",
     ]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(employee__is_deleted=False)
