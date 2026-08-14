@@ -8,7 +8,7 @@ from apps.production.models import WorkSession, EmployeeLocal
 from apps.production.models.work_shift_snapshot import WorkShiftSnapshot
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
-from apps.production.services.employee_assignment_service import validate_employee_conflicts, validate_employees_active, sync_module_assignees, validate_module_conflict
+from apps.production.services.employee_assignment_service import validate_employee_conflicts, validate_employees_active, sync_module_assignees, validate_module_conflict, get_continuous_work_minutes_map
 from django.db import transaction
 from core.serializers.audit_serializer import AuditSerializer
 
@@ -117,6 +117,7 @@ class WorkSessionSerializer(AuditSerializer):
     def _sync_activity_employees(self, activity, employee_ids, apprentice_ids, created_by):
         employees = EmployeeLocal.objects.filter(id__in=employee_ids)
         apprentice_set = set(apprentice_ids or [])
+        continuous_minutes_map = get_continuous_work_minutes_map(employee_ids)
 
         WorkSessionActivityEmployee.objects.filter(work_session_activity=activity).delete()
         WorkSessionActivityEmployee.objects.bulk_create([
@@ -124,6 +125,7 @@ class WorkSessionSerializer(AuditSerializer):
                 work_session_activity=activity,
                 employee=emp,
                 is_apprentice=emp.id in apprentice_set,
+                worked_minutes_per_hour=continuous_minutes_map.get(emp.id),
                 created_by=created_by,
             )
             for emp in employees

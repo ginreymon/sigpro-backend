@@ -1,5 +1,5 @@
 from rest_framework.exceptions import ValidationError
-from apps.production.models import ModuleAssignee, WorkSessionActivity, EmployeeLocal
+from apps.production.models import ModuleAssignee, WorkSessionActivity, EmployeeLocal, EmployeeContinuousWorkLimit
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 
 
@@ -67,6 +67,14 @@ def validate_employee_conflicts(employee_ids, current_activity):
         for c in conflicts
     ]
     raise ValidationError(errors)
+
+
+def get_continuous_work_minutes_map(employee_ids):
+    return dict(
+        EmployeeContinuousWorkLimit.objects.filter(
+            employee_id__in=employee_ids, is_active=True
+        ).values_list("employee_id", "continuous_work_minutes")
+    )
 
 
 def sync_module_assignees(module, created_by):

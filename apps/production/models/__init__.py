@@ -5,6 +5,7 @@ from .module import Module
 from .work_break import WorkBreak
 from .work_shift import WorkShift
 from .employee_local import EmployeeLocal
+from .employee_continuous_work_limit import EmployeeContinuousWorkLimit
 from .work_center_local import WorkCenterLocal
 from .production_record import ProductionRecord
 from .work_break_record import WorkBreakRecord
