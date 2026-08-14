@@ -78,6 +78,7 @@ class WorkSessionSerializer(AuditSerializer):
                 "last_name1": rel.employee.last_name1,
                 "last_name2": rel.employee.last_name2,
                 "is_apprentice": rel.is_apprentice,
+                "worked_minutes_per_hour": rel.worked_minutes_per_hour,
             }
             for rel in activity.employee_snapshots.all()
         ]
