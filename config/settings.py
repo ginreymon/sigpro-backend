@@ -141,8 +141,12 @@ DATABASES = {
         "PORT": "1433",
         "OPTIONS": {
             "driver": "ODBC Driver 17 for SQL Server",
-            "TrustServerCertificate": "yes",
-        },
+            "TrustServerCertificate": "yes",          
+            "MARS_Connection": False,
+            "connection_timeout": 30,
+        },       
+        "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,
     },
 }
 
