@@ -2,6 +2,7 @@ from .module_assignee import ModuleAssignee
 from .production_area import ProductionArea
 from .production_area_cost_center import ProductionAreaCostCenter
 from .module import Module
+from .module_user_account import ModuleUserAccount
 from .work_break import WorkBreak
 from .work_shift import WorkShift
 from .employee_local import EmployeeLocal
