@@ -28,7 +28,7 @@ class ModuleViewSet(AuditModelViewSet):
         for_day_operation = self.request.query_params.get("for_day_operation")
         if for_day_operation:
             assigned_module = getattr(self.request.user, "assigned_module", None)
-            if assigned_module:
-                queryset = queryset.filter(assigned_users__user=self.request.user)
+            if assigned_module and queryset.filter(pk=assigned_module.module_id).exists():
+                queryset = queryset.filter(pk=assigned_module.module_id)
 
         return queryset

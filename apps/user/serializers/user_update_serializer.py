@@ -23,7 +23,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "group_id", "is_active", "employee", "groups",]
+        fields = ["id", "username", "email", "password", "group_id", "is_active", "employee", "groups",]
 
     def validate(self, attrs):
 
