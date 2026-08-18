@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db.models import Max
 from rest_framework import serializers
 from apps.production.models.module import Module
 from apps.production.models.module_user_account import ModuleUserAccount
@@ -11,6 +12,8 @@ from core.serializers.audit_serializer import AuditSerializer
 
 
 class ModuleSerializer(AuditSerializer):
+    number = serializers.IntegerField(required=False, allow_null=True)
+
     work_center = WorkCenterLocalSerializer(read_only=True)
 
     work_center_id = serializers.PrimaryKeyRelatedField(
@@ -78,6 +81,8 @@ class ModuleSerializer(AuditSerializer):
         return [{"id": link.user.id, "username": link.user.username} for link in links]
 
     def create(self, validated_data):
+        if not validated_data.get("number"):
+            validated_data["number"] = self._next_number()
         machine_provided = "machine_id" in validated_data
         machine = validated_data.pop("machine_id", None)
         users_provided = "assigned_user_ids" in validated_data
@@ -90,6 +95,8 @@ class ModuleSerializer(AuditSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        if "number" in validated_data and not validated_data.get("number"):
+            validated_data["number"] = self._next_number()
         machine_provided = "machine_id" in validated_data
         machine = validated_data.pop("machine_id", None)
         users_provided = "assigned_user_ids" in validated_data
@@ -100,6 +107,10 @@ class ModuleSerializer(AuditSerializer):
         if users_provided:
             self._sync_users(instance, users)
         return instance
+
+    def _next_number(self):
+        last_number = Module.objects.aggregate(max_number=Max("number"))["max_number"]
+        return (last_number or 0) + 1
 
     def _sync_machine(self, module, machine):
         existing = StampingModuleMachine.objects.filter(module=module).first()
