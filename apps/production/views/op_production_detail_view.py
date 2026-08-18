@@ -38,7 +38,7 @@ class OPProductionDetailViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        data = OPProductionService.get_detalle_produccion_op_json(
+        data = OPProductionService.get_detalle_produccion_op_json_with_tracking(
             doc_type, int(doc_number), int(id_plan)
         )
 

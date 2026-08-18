@@ -2,6 +2,9 @@ from apps.production.repositories.op_production_repository import OPProductionRe
 from apps.production.models.production_record import ProductionRecord
 from apps.production.models.sku_item_local import SkuItemLocal
 from apps.production.models.reference_sam import ReferenceSam
+from apps.stamping.repositories.op_stamping_repository import OPStampingRepository
+
+CUT_WORK_CENTER_CODE = "CR001"
 
 
 class OPProductionService:
@@ -29,6 +32,34 @@ class OPProductionService:
     @staticmethod
     def get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan="300"):
         return OPProductionRepository.get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan)
+
+    @staticmethod
+    def get_detalle_produccion_op_json_with_tracking(tipo_docto, consec_docto, id_plan="300"):
+        data = OPProductionService.get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan)
+        if not data:
+            return data
+
+        traz_list = OPStampingRepository.get_trazabilidad_op_json(consec_docto, tipo_docto) or []
+        op_traz = next(
+            (
+                t for t in traz_list
+                if t.get("documentType") == tipo_docto and t.get("documentNumber") == consec_docto
+            ),
+            traz_list[0] if traz_list else None,
+        )
+        if not op_traz:
+            return data
+
+        data["stampingAudit"] = op_traz.get("stampingAudit")
+
+        cut_tracking = [
+            entry for entry in (op_traz.get("tracking") or [])
+            if entry.get("workCenterCode") == CUT_WORK_CENTER_CODE
+        ]
+        if cut_tracking:
+            data["tracking"] = cut_tracking
+
+        return data
 
     @staticmethod
     def get_sku_detail(tipo_docto, consec_docto, id_plan, sku_rowid):
