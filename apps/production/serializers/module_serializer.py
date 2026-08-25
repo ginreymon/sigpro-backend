@@ -74,6 +74,7 @@ class ModuleSerializer(AuditSerializer):
             "id": assignment.machine_id,
             "name": assignment.machine.name,
             "machine_type_id": assignment.machine.machine_type_id,
+            "uses_processes_search": assignment.uses_processes_search,
         }
 
     def get_assigned_users(self, obj):

@@ -11,6 +11,10 @@ class StampingModuleMachine(AuditModel):
     machine = models.OneToOneField(
         StampingMachine, on_delete=models.PROTECT, related_name='module_assignment'
     )
+    # Módulos con esta máquina buscan OP vía
+    # /stamping/production-orders/processes/ (sp_ordenes_produccion_proceso_json)
+    # en vez del endpoint genérico de production-orders/detail.
+    uses_processes_search = models.BooleanField(default=False)
 
     class Meta:
         db_table = "stamping_stamping_module_machine"
