@@ -1,5 +1,5 @@
 from apps.stamping.repositories.op_stamping_repository import OPStampingRepository
-from apps.production.repositories.op_production_repository import OPProductionRepository
+from apps.production.services.op_production_service import OPProductionService
 
 
 class OPStampingService:
@@ -11,10 +11,16 @@ class OPStampingService:
             return stamping_data
 
         # El SP de estampación solo trae header + orderedQty + referenceSams;
-        # el resto (colorRows, docStatus, classification, sam, planId...) ya
-        # lo calcula sp_detalle_produccion_op_json, así que se reusa ese
-        # repositorio en vez de duplicar esa lógica en un segundo SP.
-        production_data = OPProductionRepository.get_detalle_produccion_op_json(tipo_docto, consec_docto) or {}
+        # el resto (colorRows, docStatus, classification, sam, stampingAudit,
+        # tracking...) ya lo calcula op_production_service, así que se reusa
+        # ese servicio (mismo que usa production-orders/detail) en vez de
+        # duplicar esa lógica en un segundo SP. Reusar la variante
+        # "_with_tracking" (no el repositorio plano) para que este endpoint
+        # sea un superset completo de production-orders/detail y las páginas
+        # de estampación puedan dejar de llamar a ese último.
+        production_data = OPProductionService.get_detalle_produccion_op_json_with_tracking(
+            tipo_docto, consec_docto
+        ) or {}
 
         return {
             **production_data,
