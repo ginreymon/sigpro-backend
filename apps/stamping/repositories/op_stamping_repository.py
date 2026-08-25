@@ -24,6 +24,21 @@ class OPStampingRepository:
             return translate_keys(json.loads(row[0]))
 
     @staticmethod
+    def get_ordenes_produccion_proceso_json(tipo_docto: str, consec_docto: int, id_plan: str = "300"):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "EXEC sp_ordenes_produccion_proceso_json %s, %s, %s",
+                [tipo_docto, consec_docto, id_plan],
+            )
+
+            row = cursor.fetchone()
+
+            if not row or not row[0]:
+                return None
+
+            return translate_keys(json.loads(row[0]))
+
+    @staticmethod
     def get_trazabilidad_op_json(consec_docto: int, tipo_docto: str = None):
         with connection.cursor() as cursor:
             cursor.execute(

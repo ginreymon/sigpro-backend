@@ -31,3 +31,7 @@ class OPStampingService:
     @staticmethod
     def get_trazabilidad_op_json(consec_docto, tipo_docto=None):
         return OPStampingRepository.get_trazabilidad_op_json(consec_docto, tipo_docto)
+
+    @staticmethod
+    def get_ordenes_produccion_proceso_json(tipo_docto, consec_docto, id_plan="300"):
+        return OPStampingRepository.get_ordenes_produccion_proceso_json(tipo_docto, consec_docto, id_plan)

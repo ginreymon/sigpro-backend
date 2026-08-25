@@ -13,6 +13,7 @@ from apps.stamping.views import (
     StampingReferenceSamViewSet,
     AdditionalStampingTimeViewSet,
     OPStampingDetailViewSet,
+    ProductionOrderProcessesViewSet,
     StampingRecordViewSet,
     StampingModuleMachineViewSet,
     StampingProductivityViewSet,
@@ -32,6 +33,7 @@ router.register('layout-forms', StampingLayoutFormViewSet, basename='layout-form
 router.register('reference-sams', StampingReferenceSamViewSet, basename='reference-sam')
 router.register('additional-times', AdditionalStampingTimeViewSet, basename='additional-time')
 router.register('stamping-orders', OPStampingDetailViewSet, basename='stamping-order')
+router.register('production-orders', ProductionOrderProcessesViewSet, basename='production-order-process')
 router.register('stamping-records', StampingRecordViewSet)
 router.register('module-machines', StampingModuleMachineViewSet, basename='module-machine')
 router.register('productivity', StampingProductivityViewSet, basename='stamping-productivity')
