@@ -39,6 +39,8 @@ class ModuleSerializer(AuditSerializer):
         allow_null=True,
     )
 
+    uses_processes_search = serializers.BooleanField(write_only=True, required=False, default=False)
+
     assigned_users = serializers.SerializerMethodField()
 
     assigned_user_ids = serializers.PrimaryKeyRelatedField(
@@ -86,11 +88,12 @@ class ModuleSerializer(AuditSerializer):
             validated_data["number"] = self._next_number()
         machine_provided = "machine_id" in validated_data
         machine = validated_data.pop("machine_id", None)
+        uses_processes_search = validated_data.pop("uses_processes_search", False)
         users_provided = "assigned_user_ids" in validated_data
         users = validated_data.pop("assigned_user_ids", None)
         instance = super().create(validated_data)
         if machine_provided:
-            self._sync_machine(instance, machine)
+            self._sync_machine(instance, machine, uses_processes_search)
         if users_provided:
             self._sync_users(instance, users)
         return instance
@@ -100,11 +103,12 @@ class ModuleSerializer(AuditSerializer):
             validated_data["number"] = self._next_number()
         machine_provided = "machine_id" in validated_data
         machine = validated_data.pop("machine_id", None)
+        uses_processes_search = validated_data.pop("uses_processes_search", False)
         users_provided = "assigned_user_ids" in validated_data
         users = validated_data.pop("assigned_user_ids", None)
         instance = super().update(instance, validated_data)
         if machine_provided:
-            self._sync_machine(instance, machine)
+            self._sync_machine(instance, machine, uses_processes_search)
         if users_provided:
             self._sync_users(instance, users)
         return instance
@@ -113,7 +117,7 @@ class ModuleSerializer(AuditSerializer):
         last_number = Module.objects.aggregate(max_number=Max("number"))["max_number"]
         return (last_number or 0) + 1
 
-    def _sync_machine(self, module, machine):
+    def _sync_machine(self, module, machine, uses_processes_search=False):
         existing = StampingModuleMachine.objects.filter(module=module).first()
 
         if machine is None:
@@ -129,12 +133,14 @@ class ModuleSerializer(AuditSerializer):
 
         if existing:
             existing.machine = machine
+            existing.uses_processes_search = uses_processes_search
             existing.updated_by = module.updated_by
-            existing.save(update_fields=["machine", "updated_by"])
+            existing.save(update_fields=["machine", "uses_processes_search", "updated_by"])
         else:
             StampingModuleMachine.objects.create(
                 module=module,
                 machine=machine,
+                uses_processes_search=uses_processes_search,
                 created_by=module.created_by,
                 updated_by=module.updated_by,
             )
