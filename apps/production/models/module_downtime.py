@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from core.models.audit_model import TimeAuditModel, UserAuditModel
 from apps.production.models.work_break import WorkBreak
 from apps.production.models.module import Module
+from apps.production.models.production_record import ProductionRecord
 
 
 class ModuleDowntime(TimeAuditModel, UserAuditModel):
@@ -15,6 +16,27 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
     work_break = models.ForeignKey(
         WorkBreak,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="module_downtimes",
+    )
+
+    # Paro auto-generado al registrar producción/estampación con hora inicial/
+    # final manual (cubre el hueco previo a ese registro) — NULL para paros
+    # reales de máquina, registrados de forma independiente. A lo sumo uno de
+    # los dos puede estar seteado (ver constraint más abajo); nunca los dos,
+    # porque un módulo es de producción o de estampación, no ambos.
+    production_record = models.ForeignKey(
+        ProductionRecord,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="module_downtimes",
+    )
+
+    stamping_record = models.ForeignKey(
+        "stamping.StampingRecord",
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="module_downtimes",
@@ -41,7 +63,14 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
                         & ~Q(custom_reason="")
                     )
                 ),
-            )
+            ),
+            CheckConstraint(
+                name="module_downtime_single_record_link",
+                condition=~(
+                    Q(production_record__isnull=False)
+                    & Q(stamping_record__isnull=False)
+                ),
+            ),
         ]
 
     def clean(self):
