@@ -6,10 +6,10 @@ from apps.production.models.work_break import WorkBreak
 from apps.production.models.module import Module
 
 
-class ModuleWorkBreakRecord(TimeAuditModel, UserAuditModel):
+class ModuleDowntime(TimeAuditModel, UserAuditModel):
 
     module = models.ForeignKey(
-        Module, on_delete=models.CASCADE, related_name="module_work_break_records"
+        Module, on_delete=models.CASCADE, related_name="module_downtimes"
     )
 
     work_break = models.ForeignKey(
@@ -17,7 +17,7 @@ class ModuleWorkBreakRecord(TimeAuditModel, UserAuditModel):
         on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name="module_work_break_records",
+        related_name="module_downtimes",
     )
 
     name = models.CharField(max_length=255, null=True, blank=True)
@@ -28,7 +28,7 @@ class ModuleWorkBreakRecord(TimeAuditModel, UserAuditModel):
     resumed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = "production_module_work_break_record"
+        db_table = "production_module_downtime"
         ordering = ["start_time", "end_time"]
         constraints = [
             CheckConstraint(
