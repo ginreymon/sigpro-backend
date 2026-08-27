@@ -17,6 +17,7 @@ from .sku_item_local_serializer import (
 )
 from .reference_sam_serializer import ReferenceSamSerializer
 from .production_record_serializer import ProductionRecordSerializer
+from .production_record_manual_serializer import ProductionRecordManualDurationSerializer
 from .work_break_record_serializer import WorkBreakRecordSerializer
 from .module_downtime_serializer import ModuleDowntimeSerializer
 from .work_session_activity_serializer import WorkSessionActivitySerializer
