@@ -10,7 +10,6 @@ from .stamping_layout_form_serializer import StampingLayoutFormSerializer
 from .stamping_reference_sam_serializer import StampingReferenceSamSerializer
 from .additional_stamping_time_serializer import AdditionalStampingTimeSerializer
 from .stamping_record_serializer import StampingRecordSerializer
-from .stamping_record_manual_serializer import StampingRecordManualDurationSerializer
 from .stamping_module_machine_serializer import StampingModuleMachineSerializer
 from .audit_record_serializer import (
     AuditRecordSerializer,
