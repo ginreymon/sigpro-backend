@@ -26,6 +26,11 @@ class Module(AuditModel):
         blank=True,
     )
 
+    # Habilita/deshabilita el registro de producción/estampación con
+    # duración manual (POST .../manual-duration/) para este módulo. Apagado
+    # por defecto: es una función nueva, opcional por módulo.
+    allows_manual_duration_entry = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["number"]
 

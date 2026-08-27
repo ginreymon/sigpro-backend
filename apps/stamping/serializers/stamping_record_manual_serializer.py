@@ -1,7 +1,10 @@
 from rest_framework import serializers
 
 from apps.stamping.serializers.stamping_record_serializer import StampingRecordSerializer
-from apps.production.services.module_downtime_gap_service import apply_manual_duration
+from apps.production.services.module_downtime_gap_service import (
+    apply_manual_duration,
+    assert_manual_duration_allowed,
+)
 
 
 class StampingRecordManualDurationSerializer(StampingRecordSerializer):
@@ -11,6 +14,9 @@ class StampingRecordManualDurationSerializer(StampingRecordSerializer):
     calcula start_time = now - duración / end_time = now, generando el
     ModuleDowntime que cubre el hueco previo si corresponde.
 
+    Solo funciona si el módulo de la actividad tiene
+    `allows_manual_duration_entry = True`.
+
     No reemplaza ni modifica StampingRecordSerializer — el endpoint y el
     flujo de creación normal (POST /stamping-records/) siguen intactos.
     """
@@ -18,6 +24,9 @@ class StampingRecordManualDurationSerializer(StampingRecordSerializer):
 
     def create(self, validated_data):
         duration_seconds = validated_data.pop("duration_seconds")
+
+        activity = validated_data["work_session_activity"]
+        assert_manual_duration_allowed(activity.module)
 
         # Reutiliza el create() existente (additional_times, validación de
         # cantidad pendiente, etc.) — no se duplica esa lógica.

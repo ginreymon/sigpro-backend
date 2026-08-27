@@ -1,7 +1,10 @@
 from rest_framework import serializers
 
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
-from apps.production.services.module_downtime_gap_service import apply_manual_duration
+from apps.production.services.module_downtime_gap_service import (
+    apply_manual_duration,
+    assert_manual_duration_allowed,
+)
 
 
 class ProductionRecordManualDurationSerializer(ProductionRecordSerializer):
@@ -11,6 +14,9 @@ class ProductionRecordManualDurationSerializer(ProductionRecordSerializer):
     calcula start_time = now - duración / end_time = now, generando el
     ModuleDowntime que cubre el hueco previo si corresponde.
 
+    Solo funciona si el módulo de la actividad tiene
+    `allows_manual_duration_entry = True`.
+
     No reemplaza ni modifica ProductionRecordSerializer — el endpoint y el
     flujo de creación normal (POST /production-records/) siguen intactos.
     """
@@ -18,6 +24,9 @@ class ProductionRecordManualDurationSerializer(ProductionRecordSerializer):
 
     def create(self, validated_data):
         duration_seconds = validated_data.pop("duration_seconds")
+
+        activity = validated_data["work_session_activity"]
+        assert_manual_duration_allowed(activity.module)
 
         # Reutiliza el create() existente (validaciones de cantidades, manejo
         # de actividad, etc.) — no se duplica esa lógica.
