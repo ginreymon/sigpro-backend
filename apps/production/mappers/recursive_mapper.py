@@ -85,6 +85,11 @@
     # fn_eficiencia_detallada / sp_reporte_eficiencia_detallada
     "cantidad_pausas":              "pause_count",
     "work_shift_start_utc":         "shift_start_utc",
+    # sp_tiempos_operacion_modulo (indicadores)
+    "tiempo_transcurrido_maximo_segundos": "elapsed_time_max_seconds",
+    "work_break_segundos":                 "work_break_seconds",
+    "module_downtime_segundos":             "module_downtime_seconds",
+    "sin_registros":                        "has_no_records",
     # materials sp columns
     "Referencias":                  "references",
     "Materiales":                   "materials",

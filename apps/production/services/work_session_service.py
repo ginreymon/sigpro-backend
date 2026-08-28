@@ -43,6 +43,33 @@ def session_expires_at(session, grace_hours: int) -> datetime:
     return shift_end_local + timedelta(hours=grace_hours)
 
 
+def shift_start_utc(session, shift_start_time, shift_end_time) -> datetime:
+    """
+    Local (Colombia) shift start for `session`, using its own start date.
+
+    Overnight shift only (end_time <= start_time, crosses midnight): if the
+    session started in the early-morning tail of the shift (before
+    start_time), the shift actually began the day before, so the date rolls
+    back by one day.
+
+    A same-day shift never rolls back, even if the session started a few
+    minutes before start_time (early clock-in) — otherwise that would wrongly
+    push the shift start a full day earlier.
+
+    Returns a UTC-aware datetime.
+    """
+    started_local = session.started_at.astimezone(COLOMBIA_TZ)
+    session_date = started_local.date()
+
+    shift_start_local = datetime.combine(session_date, shift_start_time, tzinfo=COLOMBIA_TZ)
+
+    is_overnight_shift = shift_end_time <= shift_start_time
+    if is_overnight_shift and shift_start_local > started_local:
+        shift_start_local -= timedelta(days=1)
+
+    return shift_start_local
+
+
 def session_core_module_id(session):
     """core_module_id (process) of the session's active activity, or None if it has none/unassigned location."""
     activity = session.get_active_activity()
