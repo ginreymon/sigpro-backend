@@ -9,7 +9,10 @@ from core.views.recent_records_view import RecentRecordsMixin
 from apps.production.models import ProductionRecord, WorkSession, WorkShiftSnapshot
 from apps.production.repositories.productivity_repository import ProductivityRepository
 from apps.production.serializers import ProductionRecordSerializer
-from apps.production.services.production_record_service import validate_manual_duration_budget
+from apps.production.services.production_record_service import (
+    create_manual_duration_batch_downtime,
+    validate_manual_duration_budget,
+)
 from apps.production.services.work_session_service import shift_start_utc
 
 
@@ -77,9 +80,12 @@ class ProductionRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
         duration_seconds cubre el lote entero (no cada registro individual):
         se valida una sola vez contra el turno y luego se guarda cada registro
         exactamente como POST /production-records/ (mismo create() del
-        serializer, todo-o-nada dentro de una transacción). La respuesta es
-        la lista de todos los registros guardados (mismo serializer.data que
-        un create() normal), cada uno con el duration_seconds del lote.
+        serializer, todo-o-nada dentro de una transacción). Además crea un
+        único ModuleDowntime que cubre esa duración, enlazado al primer
+        registro del lote (ver create_manual_duration_batch_downtime). La
+        respuesta es la lista de todos los registros guardados (mismo
+        serializer.data que un create() normal), cada uno con el
+        duration_seconds del lote.
         """
         records = request.data.get('records')
         if not records or not isinstance(records, list):
@@ -106,6 +112,8 @@ class ProductionRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
             # lote (cambio de SKU, ver _open_new_activity), los siguientes
             # registros siguen esa rotación.
             current_activity_id = activity.id if activity else None
+            first_instance = None
+            record_ids = []
             for record in records:
                 if current_activity_id is not None:
                     record = {**record, 'work_session_activity': current_activity_id}
@@ -114,9 +122,19 @@ class ProductionRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
                 serializer.is_valid(raise_exception=True)
                 self.perform_create(serializer)
                 current_activity_id = serializer.instance.work_session_activity_id
+                if first_instance is None:
+                    first_instance = serializer.instance
+                record_ids.append(serializer.instance.id)
 
                 data = dict(serializer.data)
                 data['duration_seconds'] = duration_seconds
                 created.append(data)
+
+            create_manual_duration_batch_downtime(
+                record=first_instance,
+                record_ids=record_ids,
+                duration_seconds=float(duration_seconds),
+                user=request.user,
+            )
 
         return Response(created, status=201)

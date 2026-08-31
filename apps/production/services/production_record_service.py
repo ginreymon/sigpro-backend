@@ -1,5 +1,43 @@
+import json
+from datetime import timedelta
+
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+
+
+def create_manual_duration_batch_downtime(*, record, record_ids, duration_seconds: float, user):
+    """
+    Crea el ModuleDowntime que cubre la duración manual de todo un lote
+    (manual-duration-batch): por lote hay un solo downtime, enlazado
+    únicamente al primer registro creado (production_record o
+    stamping_record, según el tipo de `record`). custom_reason guarda el
+    arreglo de ids de TODOS los registros del lote (serializado a JSON), no
+    solo el del registro enlazado — ModuleDowntime.save() deriva `name` de
+    custom_reason automáticamente.
+
+    start_time = record.end_time - duration_seconds
+    end_time   = record.end_time
+    resumed_at = None
+
+    Reutilizable por producción y estampación — el link FK correcto de
+    ModuleDowntime (production_record/stamping_record) se resuelve según
+    el tipo de `record`.
+    """
+    from apps.production.models.module_downtime import ModuleDowntime
+    from apps.production.models.production_record import ProductionRecord
+
+    link_field = "production_record" if isinstance(record, ProductionRecord) else "stamping_record"
+
+    return ModuleDowntime.objects.create(
+        module=record.work_session_activity.module,
+        custom_reason=json.dumps(record_ids),
+        start_time=record.end_time - timedelta(seconds=duration_seconds),
+        end_time=record.end_time,
+        resumed_at=None,
+        created_by=user,
+        updated_by=user,
+        **{link_field: record},
+    )
 
 
 def validate_manual_duration_budget(indicators: dict, duration_seconds: float) -> None:
