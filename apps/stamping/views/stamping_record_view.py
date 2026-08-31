@@ -1,10 +1,12 @@
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 
 from core.utils.date_utils import to_utc_naive
 from core.views.audit_model_view import AuditModelViewSet
 from core.views.recent_records_view import RecentRecordsMixin
 from apps.production.models import WorkSession, WorkShiftSnapshot
 from apps.production.repositories.productivity_repository import ProductivityRepository
+from apps.production.services.production_record_service import validate_manual_duration_budget
 from apps.production.services.work_session_service import shift_start_utc
 from apps.stamping.models.stamping_record import StampingRecord
 from apps.stamping.serializers import StampingRecordSerializer
@@ -59,6 +61,12 @@ class StampingRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
                     work_session.work_shift_id,
                     tipo_modulo='stamping',
                 )
+
+        if indicators:
+            duration_seconds = request.data.get('duration_seconds')
+            if duration_seconds is None:
+                raise ValidationError({'duration_seconds': 'Este campo es requerido.'})
+            validate_manual_duration_budget(indicators, float(duration_seconds))
 
         response = self.create(request, *args, **kwargs)
         if indicators is not None:
