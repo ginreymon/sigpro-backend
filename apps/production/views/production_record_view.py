@@ -11,7 +11,6 @@ from apps.production.repositories.productivity_repository import ProductivityRep
 from apps.production.serializers import ProductionRecordSerializer
 from apps.production.services.production_record_service import (
     create_manual_duration_batch_downtime,
-    validate_manual_duration_budget,
 )
 from apps.production.services.work_session_service import shift_start_utc
 
@@ -97,8 +96,8 @@ class ProductionRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
 
         work_session, activity = _active_work_session_and_activity(request)
         indicators = _manual_duration_indicators(work_session, activity)
-        if indicators:
-            validate_manual_duration_budget(indicators, float(duration_seconds))
+        if not indicators:
+            raise ValidationError({'duration_seconds': 'No hay una jornada (sesión) activa.'})
 
         with transaction.atomic():
             created = []
@@ -133,6 +132,7 @@ class ProductionRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
             create_manual_duration_batch_downtime(
                 record=first_instance,
                 record_ids=record_ids,
+                indicators=indicators,
                 duration_seconds=float(duration_seconds),
                 user=request.user,
             )
