@@ -4,6 +4,8 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'PRODUCTION RECORD DOWNTIME'
+
 
 def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dict, duration_seconds: float, user):
     """
@@ -69,6 +71,7 @@ def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dic
 
     return ModuleDowntime.objects.create(
         module=record.work_session_activity.module,
+        name=MANUAL_DURATION_BATCH_DOWNTIME_NAME,
         custom_reason=json.dumps({'record_ids': record_ids}),
         start_time=start_time,
         end_time=end_time,

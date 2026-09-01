@@ -88,7 +88,11 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
                 self.end_time = self.start_time + self.work_break.duration
 
         else:
-            self.name = self.custom_reason.strip()
+            # Permite fijar `name` explícitamente en create() (ej. el downtime
+            # de manual-duration-batch, que quiere un nombre fijo distinto
+            # del contenido de custom_reason) sin afectar el resto de
+            # downtimes con custom_reason, que siguen derivando `name` de él.
+            self.name = self.name or self.custom_reason.strip()
 
         super().save(*args, **kwargs)
 
