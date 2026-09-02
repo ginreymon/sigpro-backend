@@ -172,8 +172,8 @@ def create_manual_duration_batch_downtime(
 
     has_no_records=False:
         se valida (now - period_start) - elapsed_time_max_seconds - total_duration >= 0
-        end_time   = record.end_time
-        start_time = record.end_time - total_duration
+        start_time = period_start + elapsed_time_max_seconds (fin del registro anterior)
+        end_time   = record.end_time - total_duration
 
     Si la validación correspondiente falla, lanza ValidationError.
 
@@ -210,8 +210,8 @@ def create_manual_duration_batch_downtime(
                 'duration_seconds': 'La duración excede el tiempo disponible del turno.'
             })
 
-        end_time = record.end_time
-        start_time = record.end_time - timedelta(seconds=total_duration)
+        end_time = record.end_time - timedelta(seconds=total_duration)
+        start_time = indicators['period_start'] + timedelta(seconds=indicators['elapsed_time_max_seconds'])
 
     link_field = "production_record" if isinstance(record, ProductionRecord) else "stamping_record"
 
