@@ -63,7 +63,7 @@ def manual_duration_indicators(work_session, activity, tipo_modulo: str):
     )
 
 
-def perform_manual_duration_batch(view, request, tipo_modulo: str):
+def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_available_seconds: float = 0):
     """
     Cuerpo compartido de POST .../manual-duration-batch/ para
     ProductionRecordViewSet y StampingRecordViewSet.
@@ -79,6 +79,13 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str):
     create_manual_duration_batch_downtime). La respuesta es la lista de
     todos los registros guardados (mismo serializer.data que un create()
     normal), cada uno con el duration_seconds del lote.
+
+    extra_available_seconds: tiempo adicional que el llamador ya calculó
+    fuera de esta función y que debe sumarse a duration_seconds solo para
+    la validación de presupuesto del turno (no afecta start_time/end_time
+    del downtime). Producción no lo usa (0 por defecto); estampación lo
+    usa para el tiempo estándar de additional_times del lote (ver
+    StampingRecordViewSet.manual_duration_batch).
     """
     records = request.data.get('records')
     if not records or not isinstance(records, list):
@@ -128,12 +135,15 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str):
             indicators=indicators,
             duration_seconds=float(duration_seconds),
             user=request.user,
+            extra_seconds=extra_available_seconds,
         )
 
     return Response(created, status=201)
 
 
-def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dict, duration_seconds: float, user):
+def create_manual_duration_batch_downtime(
+    *, record, record_ids, indicators: dict, duration_seconds: float, user, extra_seconds: float = 0,
+):
     """
     Crea el ModuleDowntime que cubre la duración manual de todo un lote
     (manual-duration-batch): por lote hay un solo downtime, enlazado
@@ -143,16 +153,22 @@ def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dic
     (serializado a JSON), no solo el del registro enlazado —
     ModuleDowntime.save() deriva `name` de custom_reason automáticamente.
 
+    extra_seconds: tiempo adicional que se suma a duration_seconds solo
+    para la validación de presupuesto del turno — no afecta start_time/
+    end_time del downtime, que siguen dependiendo únicamente de
+    duration_seconds. Producción siempre pasa 0; estampación pasa el
+    tiempo estándar de additional_times del lote (ver perform_manual_duration_batch).
+
     Los tiempos start_time/end_time dependen de `indicators`
     (ver manual_duration_indicators):
 
     has_no_records=True:
-        se valida (now - period_start) - work_break_seconds - module_downtime_seconds - duration_seconds >= 0
+        se valida (now - period_start) - work_break_seconds - module_downtime_seconds - duration_seconds - extra_seconds >= 0
         start_time = hora de inicio del turno con la fecha actual (hoy)
         end_time   = record.end_time - duration_seconds
 
     has_no_records=False:
-        se valida (now - period_start) - elapsed_time_max_seconds - duration_seconds >= 0
+        se valida (now - period_start) - elapsed_time_max_seconds - duration_seconds - extra_seconds >= 0
         end_time   = record.end_time
         start_time = record.end_time - duration_seconds
 
@@ -174,6 +190,7 @@ def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dic
             - indicators['work_break_seconds']
             - indicators['module_downtime_seconds']
             - duration_seconds
+            - extra_seconds
         )
         if available_seconds < 0:
             raise ValidationError({
@@ -184,7 +201,9 @@ def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dic
         start_time = shift_start.replace(year=now.year, month=now.month, day=now.day)
         end_time = record.end_time - timedelta(seconds=duration_seconds)
     else:
-        available_seconds = elapsed_real_seconds - indicators['elapsed_time_max_seconds'] - duration_seconds
+        available_seconds = (
+            elapsed_real_seconds - indicators['elapsed_time_max_seconds'] - duration_seconds - extra_seconds
+        )
         if available_seconds < 0:
             raise ValidationError({
                 'duration_seconds': 'La duración excede el tiempo disponible del turno.'
