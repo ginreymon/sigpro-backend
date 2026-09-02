@@ -59,11 +59,13 @@ class StampingRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
         POST /stamping-records/manual-duration-batch/
 
         Homólogo a production-records/manual-duration-batch/ (ver
-        perform_manual_duration_batch), con una validación adicional
-        propia de estampación: el tiempo estándar de los additional_times
-        de todo el lote se suma a duration_seconds antes de comparar
-        contra el tiempo disponible del turno (ver
-        _additional_times_extra_seconds) — producción no la aplica.
+        perform_manual_duration_batch), con un ajuste adicional propio de
+        estampación: el tiempo estándar de los additional_times de todo
+        el lote (ver _additional_times_extra_seconds) se suma a
+        duration_seconds tanto para validar contra el tiempo disponible
+        del turno como para el span del ModuleDowntime creado — ese
+        tiempo también ocupó turno. Producción no tiene additional_times
+        y no se ve afectada.
         """
         records = request.data.get('records')
         extra_seconds = _additional_times_extra_seconds(records) if isinstance(records, list) else 0.0
