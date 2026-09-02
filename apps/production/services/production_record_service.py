@@ -1,10 +1,136 @@
 import json
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+
+from core.utils.date_utils import to_utc_naive
 
 MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'PRODUCTION RECORD DOWNTIME'
+
+
+def active_work_session_and_activity(request):
+    """
+    Resuelve la jornada (sesión) abierta del usuario y su actividad activa
+    actual (o (None, None) si no hay ninguna). Es la fuente de verdad del
+    servidor — nunca hay que confiar en un work_session_activity que venga
+    ya armado desde el frontend, porque puede haberse cerrado/rotado desde
+    que se armó ese payload. Compartido por producción y estampación.
+    """
+    from apps.production.models import WorkSession
+
+    work_session = WorkSession.objects.filter(user=request.user, is_closed=False).first()
+    if not work_session:
+        return None, None
+
+    activity = work_session.get_active_activity()
+    return work_session, activity
+
+
+def manual_duration_indicators(work_session, activity, tipo_modulo: str):
+    """
+    Indicadores de tiempo del turno para `activity`, usados para validar
+    duration_seconds contra el turno. None si no hay jornada/actividad activa.
+    tipo_modulo: 'production' o 'stamping' (ver ProductivityRepository).
+    """
+    from apps.production.models import WorkShiftSnapshot
+    from apps.production.repositories.productivity_repository import ProductivityRepository
+    from apps.production.services.work_session_service import shift_start_utc
+
+    if not work_session or not activity:
+        return None
+
+    shift_snapshot = (
+        WorkShiftSnapshot.objects.filter(work_session=work_session)
+        .order_by("-id")
+        .first()
+    )
+    shift_start_time = (
+        shift_snapshot.start_time if shift_snapshot else work_session.work_shift.start_time
+    )
+    shift_end_time = (
+        shift_snapshot.end_time if shift_snapshot else work_session.work_shift.end_time
+    )
+
+    fecha_inicio = to_utc_naive(shift_start_utc(work_session, shift_start_time, shift_end_time))
+    return ProductivityRepository.get_tiempos_operacion_modulo(
+        fecha_inicio,
+        activity.module_id,
+        work_session.work_shift_id,
+        tipo_modulo=tipo_modulo,
+    )
+
+
+def perform_manual_duration_batch(view, request, tipo_modulo: str):
+    """
+    Cuerpo compartido de POST .../manual-duration-batch/ para
+    ProductionRecordViewSet y StampingRecordViewSet.
+
+    Payload: { "records": [<mismo shape que POST del create() normal>, ...],
+                "duration_seconds": <segundos del lote completo, uno o más registros> }
+
+    duration_seconds cubre el lote entero (no cada registro individual): se
+    valida una sola vez contra el turno y luego se guarda cada registro
+    exactamente como el create() normal del serializer del view (todo-o-nada
+    dentro de una transacción). Además crea un único ModuleDowntime que
+    cubre esa duración, enlazado al primer registro del lote (ver
+    create_manual_duration_batch_downtime). La respuesta es la lista de
+    todos los registros guardados (mismo serializer.data que un create()
+    normal), cada uno con el duration_seconds del lote.
+    """
+    records = request.data.get('records')
+    if not records or not isinstance(records, list):
+        raise ValidationError({'records': 'Debe incluir al menos un registro.'})
+
+    duration_seconds = request.data.get('duration_seconds')
+    if duration_seconds is None:
+        raise ValidationError({'duration_seconds': 'Este campo es requerido.'})
+
+    work_session, activity = active_work_session_and_activity(request)
+    indicators = manual_duration_indicators(work_session, activity, tipo_modulo)
+    if not indicators:
+        raise ValidationError({'duration_seconds': 'No hay una jornada (sesión) activa.'})
+
+    with transaction.atomic():
+        created = []
+        # El work_session_activity que trae cada registro del lote se
+        # capturó en el frontend al encolarse (store en memoria), que puede
+        # llevar rato abierto — para cuando se confirma el lote esa
+        # actividad puede ya estar cerrada (rotación de actividad, fin de
+        # turno, etc). El servidor es la fuente de verdad: todos los
+        # registros se fuerzan a la actividad realmente activa ahora, y si
+        # el serializer.create() la rota a mitad de lote (cambio de SKU),
+        # los siguientes registros siguen esa rotación.
+        current_activity_id = activity.id if activity else None
+        first_instance = None
+        record_ids = []
+        for record in records:
+            if current_activity_id is not None:
+                record = {**record, 'work_session_activity': current_activity_id}
+
+            serializer = view.get_serializer(data=record)
+            serializer.is_valid(raise_exception=True)
+            view.perform_create(serializer)
+            current_activity_id = serializer.instance.work_session_activity_id
+            if first_instance is None:
+                first_instance = serializer.instance
+            record_ids.append(serializer.instance.id)
+
+            data = dict(serializer.data)
+            data['duration_seconds'] = duration_seconds
+            created.append(data)
+
+        create_manual_duration_batch_downtime(
+            record=first_instance,
+            record_ids=record_ids,
+            indicators=indicators,
+            duration_seconds=float(duration_seconds),
+            user=request.user,
+        )
+
+    return Response(created, status=201)
 
 
 def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dict, duration_seconds: float, user):
@@ -18,7 +144,7 @@ def create_manual_duration_batch_downtime(*, record, record_ids, indicators: dic
     ModuleDowntime.save() deriva `name` de custom_reason automáticamente.
 
     Los tiempos start_time/end_time dependen de `indicators`
-    (ver _manual_duration_indicators):
+    (ver manual_duration_indicators):
 
     has_no_records=True:
         se valida (now - period_start) - work_break_seconds - module_downtime_seconds - duration_seconds >= 0
