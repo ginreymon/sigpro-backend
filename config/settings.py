@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.production',
     'apps.stamping',
     'apps.catalog',
+    'apps.integration'
 ]
 
 REST_FRAMEWORK = {
@@ -208,6 +209,16 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_COERCE_PATH_PK_SUFFIX": True,
 }
 
+# SIESA UNO EE WSUNOEE webservice (ImportarXML) — used by
+# apps.integration.services.siesa_webservice_client. Empty by default:
+# whoever doesn't configure these variables in .env simply can't use that
+# service (fails with SiesaWebserviceConfigError when invoked, not at Django startup).
+SIESA_WSUNOEE_WSDL_URL = env('SIESA_WSUNOEE_WSDL_URL', default='')
+SIESA_WSUNOEE_CONNECTION_NAME = env('SIESA_WSUNOEE_CONNECTION_NAME', default='')
+SIESA_WSUNOEE_COMPANY_ID = env('SIESA_WSUNOEE_COMPANY_ID', default='')
+SIESA_WSUNOEE_USERNAME = env('SIESA_WSUNOEE_USERNAME', default='')
+SIESA_WSUNOEE_PASSWORD = env('SIESA_WSUNOEE_PASSWORD', default='')
+
 # runserver's autoreload spawns a child process (RUN_MAIN=true); the pre-fork
 # parent never serves requests but would otherwise open the same log file too,
 # causing PermissionError on rotation when the child rotates it.
@@ -248,6 +259,11 @@ LOGGING = {
             "propagate": False,
         },
         "production": {
+            "handlers": _LOG_HANDLERS,
+            "level": "INFO",
+            "propagate": False,
+        },
+        "integration": {
             "handlers": _LOG_HANDLERS,
             "level": "INFO",
             "propagate": False,
