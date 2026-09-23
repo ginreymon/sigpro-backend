@@ -22,6 +22,7 @@ def enqueue_document(
     op_number: int | None = None,
     work_center_code: str | None = None,
     work_center_rowid: int | None = None,
+    location_id: int | None = None,
 ) -> SiesaOutboundDocument:
     """Encola un documento para enviar a SIESA. Idempotente: si ya existe un
     registro con esta `idempotency_key`, lo devuelve tal cual (no lo
@@ -29,10 +30,11 @@ def enqueue_document(
     lado (ej. intentó encolar la misma OP/turno dos veces) o simplemente no
     hace nada más.
 
-    `op_rowid`/`op_number`/`work_center_code`/`work_center_rowid` son
-    metadata de trazabilidad opcional (de dónde salió este documento) —
-    no afectan el envío, solo permiten filtrar/inspeccionar el outbox sin
-    decodificar `flat_file_lines`."""
+    `op_rowid`/`op_number`/`work_center_code`/`work_center_rowid`/
+    `location_id` (PK de `ProductionArea`) son metadata de trazabilidad
+    opcional (de dónde salió este documento) — no afectan el envío, solo
+    permiten filtrar/inspeccionar el outbox sin decodificar
+    `flat_file_lines`."""
     existing = SiesaOutboundDocument.objects.filter(idempotency_key=idempotency_key).first()
     if existing is not None:
         return existing
@@ -46,4 +48,5 @@ def enqueue_document(
         op_number=op_number,
         work_center_code=work_center_code,
         work_center_rowid=work_center_rowid,
+        location_id=location_id,
     )

@@ -30,14 +30,11 @@ class SiesaOutboundDocument(TimeAuditModel):
     idempotency_key = models.CharField(max_length=255, unique=True)
     flat_file_lines = models.JSONField()
 
-    # Trazabilidad hacia la OP/centro de trabajo de origen — igual
-    # convención que ProductionRecord.op_rowid/op_number. Opcionales: son
-    # metadata para poder filtrar/inspeccionar el outbox sin decodificar
-    # flat_file_lines, no hacen falta para que el envío funcione.
     op_rowid = models.BigIntegerField(null=True, blank=True)
     op_number = models.IntegerField(null=True, blank=True)
     work_center_code = models.CharField(max_length=50, null=True, blank=True)
-    work_center_rowid = models.BigIntegerField(null=True, blank=True)
+    work_center_rowid = models.BigIntegerField(null=True, blank=True)   
+    location_id = models.BigIntegerField(null=True, blank=True)
 
     status = models.CharField(
         max_length=20,
