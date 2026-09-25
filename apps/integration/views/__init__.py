@@ -1,1 +1,2 @@
 from .siesa_outbound_document_view import SiesaOutboundDocumentViewSet
+from .siesa_tep_view import SiesaTepViewSet

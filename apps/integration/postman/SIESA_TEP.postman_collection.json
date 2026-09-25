@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "SIESA TEP",
+    "description": "Collection for the SIESA TEP (Trabajo En Proceso) endpoint. Login first to obtain a JWT access token (stored automatically in the `access_token` collection variable), then run \"TEP - Send\" to build and send a TEP document to SIESA's WSUNOEE webservice and inspect the real SIESA response.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"your_username\",\n  \"password\": \"your_password\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login",
+            ""
+          ]
+        },
+        "description": "Obtains a SimpleJWT access/refresh token pair. Replace the username/password placeholders with valid SGIPRO credentials before running. The test script below extracts the `access` field from the response and stores it in the `access_token` collection variable for use by the TEP request."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Login succeeded and access token present\", function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(jsonData.access).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "if (jsonData.access) {",
+              "    pm.collectionVariables.set(\"access_token\", jsonData.access);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "TEP - Send",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"header\": {\n    \"cia\": 1,\n    \"id_co\": \"001\",\n    \"id_tipo_docto\": \"TPW\",\n    \"consec_docto\": 999999,\n    \"fecha\": \"2026-09-25\",\n    \"id_clase_docto\": \"731\",\n    \"id_centro_trabajo\": \"CF005\",\n    \"turno\": 1,\n    \"notas\": \"PRUEBA POSTMAN - TEP\"\n  },\n  \"details\": [\n    {\n      \"id_tipo_docto_op\": \"OP\",\n      \"consec_docto_op\": 40478,\n      \"numero_operacion\": 30,\n      \"id_ctrabajo\": \"CF005\",\n      \"cant_completa_base\": 0.088,\n      \"horas\": 6.36\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/integration/tep/send/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "integration",
+            "tep",
+            "send",
+            ""
+          ]
+        },
+        "description": "## What this does\n\nBuilds a SIESA TEP (Trabajo En Proceso) document from the JSON payload below and sends it **synchronously** to SIESA's WSUNOEE webservice, returning SIESA's real response in the same HTTP response.\n\nThis call blocks the request for up to ~30s while it waits on SIESA. Fine for on-demand sends; if this endpoint starts handling real production volume (not just occasional sends), the async outbox flow (`enqueue_document` + `dispatch_siesa_outbox`) is the architecturally correct path instead.\n\nThe example payload above uses known-safe demo values (same as `apps/integration/management/commands/test_siesa_webservice.py`): `consec_docto = 999999` is a reserved/easy-to-identify document number in SIESA, and `notas` marks the document as a test — replace with real data for an actual send.\n\n## Response status codes\n\n- **200 OK** — `{\"ok\": true, \"error_type\": null, \"error_detail_xml\": null, \"flat_file_lines\": [...]}`. SIESA accepted the document.\n- **422 Unprocessable Entity** — same shape but `\"ok\": false`, with `error_type` and `error_detail_xml` populated. This means SIESA itself reported a business error while processing the document (e.g. invalid OP, invalid work center, duplicate document). This is an expected/normal response shape, not a bug in this endpoint.\n- **400 Bad Request** — `{\"error\": \"...\"}`. The request body sent to this endpoint was invalid (missing/malformed fields).\n- **503 Service Unavailable** — `{\"error\": \"...\"}`. The SIESA webservice integration is not configured (missing environment variables on this server).\n- **502 Bad Gateway** — `{\"error\": \"...\"}`. The SOAP/network call to SIESA failed (timeout, connectivity, unexpected SOAP fault, etc.).\n\n## Full field reference\n\nFor the complete TEP header/detail field layout (including optional fields such as `id_empleado`, `id_item`, `referencia_item`, `cant_retrabajo_base`, `cant_rechazo_base` + `id_motivo_rechazo`, `hora_inicial` / `hora_final`, `id_motivo_paro`, `numero_operarios`, `notas`), see `apps/integration/builders/tep.py` (`HEADER_LAYOUT` and `DETAIL_LAYOUT`)."
+      },
+      "response": []
+    }
+  ]
+}

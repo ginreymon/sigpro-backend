@@ -132,8 +132,20 @@ def _parse_result(soap_response: Any) -> SiesaWebserviceResult:
 
     error_detail_xml = None
     if value is not None:
-        from lxml import etree
-        error_detail_xml = etree.tostring(value, pretty_print=True).decode("utf-8")
+        from lxml.etree import _Element
+
+        if isinstance(value, _Element):
+            from lxml import etree
+            error_detail_xml = etree.tostring(value, pretty_print=True).decode("utf-8")
+        else:
+            # Cuando hay error de negocio (ej. documento duplicado), WSUNOEE
+            # devuelve un dataset tipado (ej. "NewDataSet" con filas de error)
+            # que zeep deserializa a un objeto Python en vez de dejarlo como
+            # XML crudo -- no hay `tostring` posible sobre eso, así que se
+            # serializa a JSON con los datos tal cual para no perder el detalle.
+            import json
+            from zeep.helpers import serialize_object
+            error_detail_xml = json.dumps(serialize_object(value), default=str, ensure_ascii=False)
 
     error_type = getattr(soap_response, "printTipoError", None)
     return SiesaWebserviceResult(
