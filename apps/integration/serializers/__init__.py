@@ -1,1 +1,2 @@
 from .siesa_outbound_document_serializer import SiesaOutboundDocumentSerializer
+from .order_to_be_outbound_serializer import OrderToBeOutboundSerializer
