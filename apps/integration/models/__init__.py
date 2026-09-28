@@ -1,1 +1,2 @@
 from .siesa_outbound_document import SiesaOutboundDocument, SiesaOutboundDocumentStatus
+from .work_center_production_area import WorkCenterProductionArea
