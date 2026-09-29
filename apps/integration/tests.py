@@ -17,7 +17,7 @@ from apps.integration.services.siesa_outbox_service import enqueue_document
 # repo de backend (no está versionado), así que el test sigue siendo
 # reproducible en cualquier clon/CI.
 REAL_HEADER_LINE = '0000002045002010011001TPW000000022026092210                                                                                                                                                                                                                                                               731                              CF005          1'
-REAL_DETAIL_LINE = '000000408800003001001TPW000000020000000001OP 000404780000000                                                                                                              0030CF005          0                              0000000000000000008800000000000000000000000000000000000000000  000000000000006.36                                                                                                                                                                                                                                                                 0001'
+REAL_DETAIL_LINE = '000000408800003001001TPW000000020000000001OP 000404780000000                                                                                                              0030CF005          0                              0000000000000000.0880000000000000000.0000000000000000000.0000  000000000000006.36                                                                                                                                                                                                                                                                 0001'
 
 
 class TepBuilderByteAccuracyTests(SimpleTestCase):

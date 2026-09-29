@@ -58,10 +58,11 @@ def _format_numeric(value, width: int) -> str:
 
 
 def _format_quantity(value, width: int, decimals: int) -> str:
-    """Dígitos puros (sin punto): los últimos `decimals` dígitos son la
-    parte decimal — confirmado contra `cant_completa_base` en `MovInv 3.TXT`."""
-    integer_value = round(float(value or 0) * (10**decimals))
-    return str(integer_value).zfill(width)[-width:]
+    """Punto decimal literal (igual que `_format_time`): 15 enteros + '.' +
+    4 decimales = 20 caracteres. SIESA NO aplica decimales implicitos a este
+    campo: enviar `1143` como digitos escalados (11430000) lo cargaba como
+    11.430.000,0000."""
+    return f"{float(value or 0):0{width}.{decimals}f}"[-width:]
 
 
 def _format_time(value, width: int, decimals: int) -> str:
