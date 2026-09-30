@@ -7,10 +7,10 @@ hojas "Encabezado"/"Detalle"), verificado byte a byte contra
 `assets/MovInv 3.TXT`. Anchos totales confirmados: encabezado 347,
 detalle 562.
 
-Los nombres de campo se dejan en español, idénticos a como SIESA los nombra
-en su propio plano (`f350_id_co`, `f880_cant_rechazo_base`, etc., sin el
-prefijo `fNNN_`) — igual que el resto del proyecto usa `tipo_docto`/
-`consec_docto` tal cual los nombra el ERP en vez de traducirlos.
+Los `FieldSpec` conservan el nombre en español de SIESA en su propio plano
+(`f350_id_co`, `f880_cant_rechazo_base`, etc., sin el prefijo `fNNN_`) para
+poder cotejarlos contra el plano oficial. La API pública usa nombres en
+inglés; `HEADER_API_TO_SIESA`/`DETAIL_API_TO_SIESA` los traducen al entrar.
 """
 
 from __future__ import annotations
@@ -84,21 +84,83 @@ assert DETAIL_LAYOUT.total_width == 562
 EMPLOYEE_DOCUMENT_CLASS = "730"
 WORK_CENTER_DOCUMENT_CLASS = "731"
 
+# Nombres publicos (API, en ingles) -> nombre del campo en el layout de SIESA.
+# Solo se traducen en la frontera (`build_tep_document`): los layouts y el
+# archivo plano resultante no cambian.
+HEADER_API_TO_SIESA = {
+    "company_id": "cia",
+    "auto_consecutive": "consec_auto_reg",
+    "operation_center_id": "id_co",
+    "document_type_id": "id_tipo_docto",
+    "document_number": "consec_docto",
+    "date": "fecha",
+    "status": "ind_estado",
+    "printed": "ind_impresion",
+    "notes": "notas",
+    "document_class_id": "id_clase_docto",
+    "alternate_document": "docto_alterno",
+    "employee_id": "id_empleado",
+    "work_center_id": "id_centro_trabajo",
+    "shift": "turno",
+}
+
+DETAIL_API_TO_SIESA = {
+    "company_id": "cia",
+    "operation_center_id": "id_co",
+    "tep_document_type_id": "id_tipo_docto_tep",
+    "tep_document_number": "consec_docto_tep",
+    "record_number": "nro_registro",
+    "op_document_type_id": "id_tipo_docto_op",
+    "op_document_number": "consec_docto_op",
+    "item_id": "id_item",
+    "item_reference": "referencia_item",
+    "barcode": "codigo_barras",
+    "extension1_id": "id_ext1",
+    "extension2_id": "id_ext2",
+    "operation_number": "numero_operacion",
+    "operation_work_center_id": "id_ctrabajo",
+    "hour_type": "ind_tipo_hora",
+    "labor_id": "id_labor",
+    "machine_id": "id_maquina",
+    "operation_completed": "ind_operacion_completa",
+    "completed_quantity": "cant_completa_base",
+    "rework_quantity": "cant_retrabajo_base",
+    "rejected_quantity": "cant_rechazo_base",
+    "rejection_reason_id": "id_motivo_rechazo",
+    "start_time": "hora_inicial",
+    "end_time": "hora_final",
+    "hours": "horas",
+    "stop_reason_id": "id_motivo_paro",
+    "notes": "notas",
+    "operator_count": "numero_operarios",
+}
+
 _HEADER_INHERITED_FIELDS = {
     "id_tipo_docto_tep": "id_tipo_docto",
     "consec_docto_tep": "consec_docto",
 }
 
 
+def _to_siesa_names(values: dict, mapping: dict[str, str], record: str) -> dict:
+    """Traduce las llaves de la API a los nombres del layout. Rechaza llaves
+    desconocidas (incluidos los nombres viejos en español) en vez de
+    ignorarlas en silencio: un campo ignorado saldría con su valor por defecto."""
+    unknown = sorted(set(values) - set(mapping))
+    if unknown:
+        raise ValueError(f"Campos desconocidos en {record}: {', '.join(unknown)}")
+    return {mapping[key]: value for key, value in values.items()}
+
+
 def validate_header(values: dict) -> list[str]:
     """Regla de negocio propia de TEP (no es un campo por-ancho, es una
-    dependencia cruzada entre `id_clase_docto` y `id_empleado`/`id_centro_trabajo`)."""
+    dependencia cruzada entre `document_class_id` y `employee_id`/`work_center_id`).
+    Recibe el encabezado con nombres de la API."""
     missing = []
-    document_class = values.get("id_clase_docto", WORK_CENTER_DOCUMENT_CLASS)
-    if document_class == EMPLOYEE_DOCUMENT_CLASS and not values.get("id_empleado"):
-        missing.append("id_empleado (obligatorio si id_clase_docto=730)")
-    if document_class == WORK_CENTER_DOCUMENT_CLASS and not values.get("id_centro_trabajo"):
-        missing.append("id_centro_trabajo (obligatorio si id_clase_docto=731)")
+    document_class = values.get("document_class_id", WORK_CENTER_DOCUMENT_CLASS)
+    if document_class == EMPLOYEE_DOCUMENT_CLASS and not values.get("employee_id"):
+        missing.append("employee_id (obligatorio si document_class_id=730)")
+    if document_class == WORK_CENTER_DOCUMENT_CLASS and not values.get("work_center_id"):
+        missing.append("work_center_id (obligatorio si document_class_id=731)")
     return missing
 
 
@@ -122,12 +184,14 @@ def build_tep_document(
             "Faltan datos obligatorios en el encabezado TEP: " + ", ".join(missing)
         )
 
+    header = _to_siesa_names(header, HEADER_API_TO_SIESA, "header")
+
     sequence = starting_sequence
     lines = [build_line(HEADER_LAYOUT, sequence, header)]
     sequence += 1
 
     for i, detail in enumerate(details, start=1):
-        detail_values = dict(detail)
+        detail_values = _to_siesa_names(detail, DETAIL_API_TO_SIESA, "details")
         detail_values.setdefault("cia", header.get("cia"))
         detail_values.setdefault("id_co", header.get("id_co"))
         for local_field, header_field in _HEADER_INHERITED_FIELDS.items():

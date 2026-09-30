@@ -40,13 +40,13 @@ class SiesaTepViewSet(viewsets.ViewSet):
             return Response({"error": "'details' es requerido (lista no vacia)"}, status=status.HTTP_400_BAD_REQUEST)
 
         header = dict(header)
-        fecha = header.get("fecha")
-        if isinstance(fecha, str):
+        date = header.get("date")
+        if isinstance(date, str):
             try:
-                header["fecha"] = dt.date.fromisoformat(fecha)
+                header["date"] = dt.date.fromisoformat(date)
             except ValueError:
                 return Response(
-                    {"error": "'header.fecha' debe tener formato AAAA-MM-DD"},
+                    {"error": "'header.date' debe tener formato AAAA-MM-DD"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

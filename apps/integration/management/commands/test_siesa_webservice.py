@@ -30,13 +30,13 @@ from apps.integration.services.siesa_webservice_client import (
 )
 
 _DEMO_HEADER = dict(
-    cia=1, id_co="001", id_tipo_docto="TPW", consec_docto=999999,
-    fecha=dt.date.today(), id_clase_docto="731", id_centro_trabajo="CF005",
-    turno=1, notas="PRUEBA CLAUDE CODE - TEP",
+    company_id=1, operation_center_id="001", document_type_id="TPW",
+    document_number=999999, date=dt.date.today(), document_class_id="731",
+    work_center_id="CF005", shift=1, notes="PRUEBA CLAUDE CODE - TEP",
 )
 _DEMO_DETAIL = dict(
-    id_tipo_docto_op="OP", consec_docto_op=40478, numero_operacion=30,
-    id_ctrabajo="CF005", cant_completa_base=0.088, horas=6.36,
+    op_document_type_id="OP", op_document_number=40478, operation_number=30,
+    operation_work_center_id="CF005", completed_quantity=0.088, hours=6.36,
 )
 
 
