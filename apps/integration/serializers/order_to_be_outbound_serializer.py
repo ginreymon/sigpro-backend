@@ -41,6 +41,7 @@ class OrderToBeOutboundSerializer(serializers.Serializer):
     record_date = serializers.CharField(allow_null=True)
 
     code = serializers.CharField()
+    description = serializers.CharField(allow_null=True)
     work_center_id = serializers.IntegerField()
     origin = serializers.CharField()
     origin_id = serializers.IntegerField()
