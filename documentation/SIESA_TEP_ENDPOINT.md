@@ -69,6 +69,32 @@ SIESA_WSUNOEE_PASSWORD=
 
 Campos completos (incluye opcionales no listados arriba: `employee_id`, `item_id`, `item_reference`, `barcode`, `rework_quantity`, `rejected_quantity` + `rejection_reason_id`, `start_time`/`end_time` en formato `HH.MM`, `stop_reason_id`, `operator_count`, `notes` del detalle, etc.) — ver [`apps/integration/builders/tep.py`](builders/tep.py): `HEADER_API_TO_SIESA`/`DETAIL_API_TO_SIESA` mapean cada llave de la API al campo del layout, y en `HEADER_LAYOUT`/`DETAIL_LAYOUT` cada `FieldSpec` (con el nombre SIESA original) documenta ancho, tipo, obligatoriedad y descripción, verificado byte a byte contra `assets/TP (Trabajo En Proceso).xlsm` y `assets/MovInv 3.TXT`.
 
+## Guardado y validación de registros (`register_ids`)
+
+Cada item de `details` puede (y desde Approval debe) traer, además de los campos de SIESA:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `register_ids` | lista de enteros | Ids de los registros que respaldan el item (`ProductionRecord` o `StampingRecord`) |
+| `origin_id` | 1 o 2 | 1 = producción, 2 = estampación; define en qué tabla se buscan los ids |
+
+Estas dos llaves no van al archivo plano de SIESA. Antes de enviar, el backend valida en una transacción (con los registros bloqueados) que, por item:
+
+1. `register_ids` sea una lista no vacía de enteros sin repetidos, y `origin_id` sea 1 o 2.
+2. Todos los ids existan.
+3. Pertenezcan a la OP del item (`op_document_number` y `op_document_type_id`).
+4. Estén cerrados (`end_time` no nulo).
+5. No hayan sido enviados antes con éxito (`tep_submission` de un envío `sent`).
+6. `completed_quantity` coincida (tolerancia 0.01) con la suma de `completed_quantity` de los registros dividida por las piezas (`stamped_pieces` del SAM en estampación, 1 en producción).
+
+Si alguna falla: `400` con `{"error": "register_ids invalidos", "details": ["details[0]: ..."]}` y no se guarda ni se envía nada.
+
+Si todo es válido se guarda el envío como `pending` (`TepSubmission` + `TepDetail` + `TepDetailRecord`), se marca cada registro con `tep_submission`, se envía a SIESA y se actualiza el estado a `sent` o `failed`. La respuesta incluye `submission_id`. Los envíos rechazados por SIESA (`422`) o con error de red (`502`) también quedan guardados como `failed`.
+
+### Valores fijos del encabezado
+
+Si `header` no los trae, el backend completa: `document_type_id="TPW"`, `document_class_id="731"`, `auto_consecutive=1`, `document_number=0`, y desde `backend/.env`: `company_id` (`SIESA_TEP_COMPANY_ID`, por defecto `SIESA_WSUNOEE_COMPANY_ID` si es numérico) y `operation_center_id` (`SIESA_TEP_OPERATION_CENTER_ID`, por defecto `001`). Si falta algún campo obligatorio del layout, el endpoint responde `400` indicando cuál (antes se enviaba en blanco y lo rechazaba SIESA). Lo que venga en `header` tiene prioridad.
+
 ## Cambio de nombres: antes (español) → ahora (inglés)
 
 Las llaves del request pasaron de los nombres en español del plano de SIESA a nombres en inglés. **El comportamiento no cambió**: mismas reglas de negocio, mismos valores por defecto, mismas respuestas y exactamente el mismo archivo plano enviado a SIESA (`flat_file_lines`). Solo cambia cómo se llama cada llave en el JSON.

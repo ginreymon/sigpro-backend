@@ -7,8 +7,11 @@ from rest_framework.response import Response
 
 from apps.integration.builders.tep import build_tep_document
 from apps.integration.services.tep_submission_service import (
-    create_pending_submission,
+    RecordValidationError,
     mark_submission_result,
+    register_submission,
+    split_record_references,
+    with_header_defaults,
 )
 from apps.integration.services.siesa_webservice_client import (
     SiesaWebserviceConfig,
@@ -43,7 +46,7 @@ class SiesaTepViewSet(viewsets.ViewSet):
         if not isinstance(details, list) or not details:
             return Response({"error": "'details' es requerido (lista no vacia)"}, status=status.HTTP_400_BAD_REQUEST)
 
-        header = dict(header)
+        header = with_header_defaults(dict(header))
         date = header.get("date")
         if isinstance(date, str):
             try:
@@ -53,6 +56,9 @@ class SiesaTepViewSet(viewsets.ViewSet):
                     {"error": "'header.date' debe tener formato AAAA-MM-DD"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+        # register_ids/origin_id no son de SIESA: se separan antes de armar el documento.
+        details, references = split_record_references(details)
 
         try:
             lines = build_tep_document(header, details)
@@ -64,8 +70,17 @@ class SiesaTepViewSet(viewsets.ViewSet):
         except SiesaWebserviceConfigError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        # Se guarda antes de llamar a SIESA: queda registro aunque falle el envío.
-        submission = create_pending_submission(header, details, lines, user=request.user)
+        # Valida los register_ids y guarda antes de llamar a SIESA: queda
+        # registro aunque falle el envío.
+        try:
+            submission = register_submission(
+                header, details, lines, user=request.user, references=references
+            )
+        except RecordValidationError as exc:
+            return Response(
+                {"error": "register_ids invalidos", "details": exc.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             result = send_flat_file_lines(lines, cfg=cfg)

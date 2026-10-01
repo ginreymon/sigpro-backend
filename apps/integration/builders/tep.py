@@ -151,6 +151,22 @@ def _to_siesa_names(values: dict, mapping: dict[str, str], record: str) -> dict:
     return {mapping[key]: value for key, value in values.items()}
 
 
+def _missing_required(values: dict, layout: RecordLayout, api_names: dict[str, str]) -> list[str]:
+    """Nombres (de la API) de los campos obligatorios del layout que no
+    tienen valor ni default. `build_line` no los exige: un campo vacío se
+    rellena con espacios y recién lo rechaza SIESA. Se omiten los de tipo
+    fecha (si falta se usa la de hoy) y los constantes."""
+    siesa_to_api = {siesa: api for api, siesa in api_names.items()}
+    missing = []
+    for field in layout.fields[1:]:
+        if field.required is not True or field.default is not None or field.type in ("const", "date"):
+            continue
+        value = values.get(field.name)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            missing.append(siesa_to_api.get(field.name, field.name))
+    return missing
+
+
 def validate_header(values: dict) -> list[str]:
     """Regla de negocio propia de TEP (no es un campo por-ancho, es una
     dependencia cruzada entre `document_class_id` y `employee_id`/`work_center_id`).
@@ -185,6 +201,9 @@ def build_tep_document(
         )
 
     header = _to_siesa_names(header, HEADER_API_TO_SIESA, "header")
+    missing = _missing_required(header, HEADER_LAYOUT, HEADER_API_TO_SIESA)
+    if missing:
+        raise ValueError("Faltan datos obligatorios en el encabezado TEP: " + ", ".join(missing))
 
     sequence = starting_sequence
     lines = [build_line(HEADER_LAYOUT, sequence, header)]
@@ -197,6 +216,9 @@ def build_tep_document(
         for local_field, header_field in _HEADER_INHERITED_FIELDS.items():
             detail_values.setdefault(local_field, header.get(header_field))
         detail_values.setdefault("nro_registro", i)
+        missing = _missing_required(detail_values, DETAIL_LAYOUT, DETAIL_API_TO_SIESA)
+        if missing:
+            raise ValueError(f"Faltan datos obligatorios en details[{i - 1}]: " + ", ".join(missing))
 
         lines.append(build_line(DETAIL_LAYOUT, sequence, detail_values))
         sequence += 1

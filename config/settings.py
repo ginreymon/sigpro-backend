@@ -219,6 +219,12 @@ SIESA_WSUNOEE_COMPANY_ID = env('SIESA_WSUNOEE_COMPANY_ID', default='')
 SIESA_WSUNOEE_USERNAME = env('SIESA_WSUNOEE_USERNAME', default='')
 SIESA_WSUNOEE_PASSWORD = env('SIESA_WSUNOEE_PASSWORD', default='')
 
+# Valores fijos del encabezado TEP (integration/tep/send/): el frontend no los
+# manda; el backend los completa si faltan. company_id (numérico) cae a
+# SIESA_WSUNOEE_COMPANY_ID si no se define.
+SIESA_TEP_COMPANY_ID = env('SIESA_TEP_COMPANY_ID', default=SIESA_WSUNOEE_COMPANY_ID)
+SIESA_TEP_OPERATION_CENTER_ID = env('SIESA_TEP_OPERATION_CENTER_ID', default='001')
+
 # runserver's autoreload spawns a child process (RUN_MAIN=true); the pre-fork
 # parent never serves requests but would otherwise open the same log file too,
 # causing PermissionError on rotation when the child rotates it.
