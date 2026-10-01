@@ -1,5 +1,6 @@
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 
 from apps.integration.serializers import OrderToBeOutboundSerializer
@@ -7,6 +8,9 @@ from apps.integration.services.op_totals_service import OPTotalsService
 
 SEARCH_FIELDS = ("origin", "code")
 DETAIL_SEARCH_FIELDS = ("op_number", "op_type")
+# Mismo tope que sp_totales_registrados_por_op_json (31 dias, ambos inclusive):
+# cada dia ejecuta fn_trazabilidad_op, costosa.
+MAX_RANGE_DAYS = 31
 
 
 class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
@@ -30,6 +34,8 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         date_from = parse_date(request.query_params.get("date_from") or "")
         date_to = parse_date(request.query_params.get("date_to") or "")
 
+        self._validate_date_range(date_from, date_to)
+
         data = OPTotalsService.get_totales_registrados_por_op(
             date_from,
             date_to,
@@ -43,6 +49,18 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         page = self.paginate_queryset(data)
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
+
+    @staticmethod
+    def _validate_date_range(date_from, date_to):
+        """El SP lanza error (-> 500) si el rango es invalido; se responde 400."""
+        if date_from is None or date_to is None:
+            return
+        if date_to < date_from:
+            raise ValidationError({"date_to": "date_to no puede ser menor que date_from."})
+        if (date_to - date_from).days + 1 > MAX_RANGE_DAYS:
+            raise ValidationError(
+                {"date_to": f"El rango maximo es de {MAX_RANGE_DAYS} dias."}
+            )
 
     @staticmethod
     def _matches(row, search):
