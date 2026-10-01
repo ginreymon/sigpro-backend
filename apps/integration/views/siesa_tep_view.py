@@ -6,6 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.integration.builders.tep import build_tep_document
+from apps.integration.services.tep_submission_service import (
+    create_pending_submission,
+    mark_submission_result,
+)
 from apps.integration.services.siesa_webservice_client import (
     SiesaWebserviceConfig,
     SiesaWebserviceConfigError,
@@ -60,13 +64,22 @@ class SiesaTepViewSet(viewsets.ViewSet):
         except SiesaWebserviceConfigError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
+        # Se guarda antes de llamar a SIESA: queda registro aunque falle el envío.
+        submission = create_pending_submission(header, details, lines, user=request.user)
+
         try:
             result = send_flat_file_lines(lines, cfg=cfg)
         except SiesaWebserviceError as exc:
+            mark_submission_result(submission, ok=False, error_detail=str(exc))
             return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        mark_submission_result(
+            submission, ok=result.ok, error_type=result.error_type, error_detail=result.error_detail_xml
+        )
 
         return Response(
             {
+                "submission_id": submission.id,
                 "ok": result.ok,
                 "error_type": result.error_type,
                 "error_detail_xml": result.error_detail_xml,
