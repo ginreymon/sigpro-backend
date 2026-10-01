@@ -15,8 +15,8 @@ class OPTotalsService:
         op_rowid: int | None = None,
     ):
         """Una fila por cada item de `work_centers` de sp_totales_registrados_por_op_json,
-        con `date` y las columnas del grupo (code, work_center_id, origin, first_start,
-        last_end, ...), `detail_count` (largo del array `detail`) y el propio `detail`.
+        con las columnas del grupo (day_number, record_date, code, work_center_id, origin,
+        first_start, last_end, ...), `detail_count` (largo del array `detail`) y el propio `detail`.
         Ordenadas por fecha, de la más reciente a la más antigua; el `detail` de
         cada grupo, por tipo y número de OP. `id` es
         secuencial dentro de la respuesta: no es una entidad, solo la llave
@@ -25,9 +25,9 @@ class OPTotalsService:
             date_from, date_to, op_rowid
         )
 
-        # Siempre del día más reciente al más antiguo (AAAA-MM-DD ordena como
-        # texto); el grupo sin fecha (consulta sin rango) queda al final.
-        groups_by_day = sorted(groups_by_day, key=lambda day: day["date"] or "", reverse=True)
+        # Siempre del día más reciente al más antiguo (day_number mayor primero);
+        # el grupo sin día (consulta sin rango) queda al final.
+        groups_by_day = sorted(groups_by_day, key=lambda day: day["day_number"] or 0, reverse=True)
 
         rows = []
         for day in groups_by_day:
@@ -35,7 +35,6 @@ class OPTotalsService:
                 detail = sorted(group[DETAIL_KEY], key=lambda item: (item["op_type"], item["op_number"]))
                 rows.append({
                     "id": len(rows) + 1,
-                    "date": day["date"],
                     **{**group, DETAIL_KEY: detail},
                     "detail_count": len(detail),
                 })

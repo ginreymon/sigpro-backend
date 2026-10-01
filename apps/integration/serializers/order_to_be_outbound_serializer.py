@@ -36,7 +36,6 @@ class OrderToBeOutboundSerializer(serializers.Serializer):
     # Secuencial dentro de la respuesta (lo asigna OPTotalsService): la fila
     # no tiene un id propio, solo encaja con el contrato BaseEntity de la tabla.
     id = serializers.IntegerField()
-    date = serializers.CharField(allow_null=True)
     # None cuando la consulta no trae rango de fechas.
     day_number = serializers.IntegerField(allow_null=True)
     record_date = serializers.CharField(allow_null=True)
