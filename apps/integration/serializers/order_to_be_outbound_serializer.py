@@ -1,33 +1,50 @@
 from rest_framework import serializers
 
 
-class OrderToBeOutboundSerializer(serializers.Serializer):
-    """Fila de dbo.fn_totales_registrados_por_op (via sp_totales_registrados_por_op):
-    una fila por combinacion op_rowid/op_number/op_type/origin_id. Contrato en
-    evolucion (ver docstring de la funcion SQL) — se espera que crezca con mas
-    columnas cuando se agregue el flujo de aprobacion/rechazo."""
+class OrderToBeOutboundDetailSerializer(serializers.Serializer):
+    """Una entrada de `detail` de sp_totales_registrados_por_op_json: las
+    columnas del SP que no son del grupo."""
 
-    # Sintetico: no existe en el SP. La fila no tiene un id propio (la llave
-    # natural es op_rowid + origin_id); se deriva solo para que la fila
-    # encaje en el contrato BaseEntity que espera la tabla del frontend.
-    # origin_id es 1 o 2 (ver fn_totales_registrados_por_op), por eso no
-    # colisiona con op_rowid * 10.
-    id = serializers.SerializerMethodField()
     op_rowid = serializers.IntegerField()
     op_number = serializers.IntegerField()
     op_type = serializers.CharField()
+    description = serializers.CharField(allow_null=True)
+    total_completed = serializers.FloatField()
+    total_scrap = serializers.FloatField()
+    total_rejected = serializers.FloatField()
+    total_recorded = serializers.FloatField()
+    total_records = serializers.IntegerField()
+    pieces = serializers.FloatField(allow_null=True)
+    times_on_route = serializers.IntegerField(allow_null=True)
+    operation_number = serializers.IntegerField(allow_null=True)
+    completed_operation = serializers.IntegerField(allow_null=True)
+    erp_planned_quantity = serializers.FloatField(allow_null=True)
+    erp_ordered_quantity = serializers.FloatField(allow_null=True)
+    erp_completed_quantity = serializers.FloatField(allow_null=True)
+    erp_rejected_quantity = serializers.FloatField(allow_null=True)
+    erp_scrap_quantity = serializers.FloatField(allow_null=True)
+    recorded_quantity_per_piece = serializers.FloatField(allow_null=True)
+    erp_quantity_difference = serializers.FloatField(allow_null=True)
+
+
+class OrderToBeOutboundSerializer(serializers.Serializer):
+    """Fila de la tabla de aprobación: un item de `work_centers` de
+    dbo.sp_totales_registrados_por_op_json (día + code/work_center_id), con el
+    largo de su `detail` y el `detail` mismo (ver OPTotalsService). Las
+    columnas deben coincidir con el JSON del SP."""
+
+    # Secuencial dentro de la respuesta (lo asigna OPTotalsService): la fila
+    # no tiene un id propio, solo encaja con el contrato BaseEntity de la tabla.
+    id = serializers.IntegerField()
+    date = serializers.CharField(allow_null=True)
+
+    code = serializers.CharField()
+    work_center_id = serializers.IntegerField()
     origin = serializers.CharField()
     origin_id = serializers.IntegerField()
-    ordered_quantity = serializers.IntegerField()
-    planned_quantity = serializers.IntegerField()
-    total_completed = serializers.IntegerField()
-    total_scrap = serializers.IntegerField()
-    total_rejected = serializers.IntegerField()
-    total_recorded = serializers.IntegerField()
-    pending_quantity = serializers.IntegerField()
-    total_records = serializers.IntegerField()
+    core_module_id = serializers.IntegerField(allow_null=True)
     first_start = serializers.DateTimeField(allow_null=True)
     last_end = serializers.DateTimeField(allow_null=True)
 
-    def get_id(self, obj):
-        return obj["op_rowid"] * 10 + obj["origin_id"]
+    detail_count = serializers.IntegerField()
+    detail = OrderToBeOutboundDetailSerializer(many=True)
