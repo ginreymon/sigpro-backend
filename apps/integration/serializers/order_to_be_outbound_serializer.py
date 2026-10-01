@@ -25,6 +25,8 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
     erp_scrap_quantity = serializers.FloatField(allow_null=True)
     recorded_quantity_per_piece = serializers.FloatField(allow_null=True)
     erp_quantity_difference = serializers.FloatField(allow_null=True)
+    # Ids de los registros agrupados (production/stamping record), arreglo JSON del SP.
+    register_ids = serializers.ListField(child=serializers.IntegerField())
 
 
 class OrderToBeOutboundSerializer(serializers.Serializer):
