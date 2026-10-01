@@ -21,6 +21,17 @@ class OpRecord(TimeAuditModel, UserAuditModel):
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
 
+    # Envío TEP (integration) al que quedó asociado el registro; null mientras
+    # no se haya enviado. Referencia por texto para no importar `integration`
+    # desde `production` (evita un ciclo de importaciones).
+    tep_submission = models.ForeignKey(
+        "integration.TepSubmission",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tep_%(class)ss",
+    )
+
     class Meta:
         abstract = True
 
