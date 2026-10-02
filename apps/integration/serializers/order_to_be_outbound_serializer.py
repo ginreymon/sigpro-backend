@@ -8,6 +8,8 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
     op_rowid = serializers.IntegerField()
     op_number = serializers.IntegerField()
     op_type = serializers.CharField()
+    reference = serializers.CharField(allow_null=True)
+    reference_rowid = serializers.IntegerField(allow_null=True)
     description = serializers.CharField(allow_null=True)
     total_completed = serializers.FloatField()
     total_scrap = serializers.FloatField()
