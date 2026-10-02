@@ -32,6 +32,8 @@ class OpRecord(TimeAuditModel, UserAuditModel):
         related_name="tep_%(class)ss",
     )
 
+    ## tep_processed this column has to be adde with the default value as False and has to change to True if the tep_sumission has a foreing key 
+ 
     class Meta:
         abstract = True
 
