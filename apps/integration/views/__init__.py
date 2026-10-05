@@ -1,3 +1,4 @@
 from .siesa_outbound_document_view import SiesaOutboundDocumentViewSet
 from .siesa_tep_view import SiesaTepViewSet
 from .orders_to_be_outbound_view import OrdersToBeOutboundViewSet
+from .tep_submission_view import TepSubmissionViewSet
