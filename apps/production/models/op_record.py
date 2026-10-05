@@ -32,8 +32,10 @@ class OpRecord(TimeAuditModel, UserAuditModel):
         related_name="tep_%(class)ss",
     )
 
-    ## tep_processed this column has to be adde with the default value as False and has to change to True if the tep_sumission has a foreing key 
- 
+    # Indica si el registro ya fue procesado en un envío TEP: pasa a True
+    # cuando se le asigna `tep_submission` (ver register_submission).
+    tep_processed = models.BooleanField(default=False)
+
     class Meta:
         abstract = True
 

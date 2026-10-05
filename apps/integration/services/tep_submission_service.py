@@ -180,7 +180,8 @@ def register_submission(
 ) -> TepSubmission:
     """Valida los `register_ids` y guarda el encabezado (con `date` ya como
     `datetime.date`), sus detalles y los registros que los respaldan, con
-    status `pending`. Marca cada registro con el envío (`tep_submission`).
+    status `pending`. Marca cada registro con el envío (`tep_submission`) y
+    como procesado (`tep_processed`).
 
     Lanza RecordValidationError (sin guardar nada) si algún id no es válido.
     """
@@ -209,7 +210,9 @@ def register_submission(
         TepDetailRecord.objects.bulk_create(
             [TepDetailRecord(detail=saved, origin_id=reference["origin_id"], record_id=i) for i in ids]
         )
-        RECORD_MODELS[reference["origin_id"]].objects.filter(id__in=ids).update(tep_submission=submission)
+        RECORD_MODELS[reference["origin_id"]].objects.filter(id__in=ids).update(
+            tep_submission=submission, tep_processed=True
+        )
     return submission
 
 
