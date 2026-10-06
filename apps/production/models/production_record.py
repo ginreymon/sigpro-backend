@@ -1,5 +1,5 @@
 from django.db import models
-from apps.production.models.op_record import OpRecord
+from apps.integration.models.op_record import OpRecord
 from apps.production.models.work_session_activity import WorkSessionActivity
 
 
