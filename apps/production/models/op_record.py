@@ -22,7 +22,7 @@ class OpRecord(TimeAuditModel, UserAuditModel):
     end_time = models.DateTimeField(null=True, blank=True)
 
     # Envío TEP (integration) al que quedó asociado el registro; null mientras
-    # no se haya enviado. Referencia por texto para no importar `integration`
+    # no se haya enviado (también vuelve a null en cada save()). Referencia por texto para no importar `integration`
     # desde `production` (evita un ciclo de importaciones).
     tep_submission = models.ForeignKey(
         "integration.TepSubmission",
@@ -33,11 +33,23 @@ class OpRecord(TimeAuditModel, UserAuditModel):
     )
 
     # Indica si el registro ya fue procesado en un envío TEP: pasa a True
-    # cuando se le asigna `tep_submission` (ver register_submission).
+    # cuando se le asigna `tep_submission` (ver register_submission) y vuelve a
+    # False en cada save() (alta o modificación).
     tep_processed = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        # Crear o modificar un registro lo deja pendiente de TEP: sin envío y sin
+        # procesar. register_submission los marca con QuerySet.update(), que no
+        # pasa por aquí.
+        self.tep_submission = None
+        self.tep_processed = False
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            kwargs["update_fields"] = {*update_fields, "tep_submission", "tep_processed"}
+        super().save(*args, **kwargs)
 
     def close(self):
         if self.end_time:
