@@ -47,7 +47,7 @@ class SiesaTepViewSet(viewsets.ViewSet):
             return Response({"error": "'details' es requerido (lista no vacia)"}, status=status.HTTP_400_BAD_REQUEST)
 
         header = with_header_defaults(dict(header))
-        date = header.get("date")
+        date = header["date"]
         if isinstance(date, str):
             try:
                 header["date"] = dt.date.fromisoformat(date)

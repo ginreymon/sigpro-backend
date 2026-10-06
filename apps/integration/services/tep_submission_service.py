@@ -12,6 +12,7 @@ resultado con `mark_submission_result`.
 from __future__ import annotations
 
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.db import transaction
@@ -25,6 +26,10 @@ from apps.integration.models import (
 )
 from apps.production.models import ProductionRecord
 from apps.stamping.models import StampingRecord
+
+# settings.TIME_ZONE es UTC: la fecha del documento se calcula en hora local
+# para que un envío en la noche no salga con la fecha del día siguiente.
+SUBMISSION_TIME_ZONE = ZoneInfo("America/Bogota")
 
 # El `status` del encabezado de SIESA (0/1/2) se guarda como `document_status`.
 _HEADER_FIELD_ALIASES = {"status": "document_status"}
@@ -54,8 +59,9 @@ class RecordValidationError(Exception):
 
 def with_header_defaults(header: dict) -> dict:
     """Completa los valores fijos del encabezado que el frontend no manda.
-    Lo que venga en `header` tiene prioridad. `company_id` y
-    `operation_center_id` salen de la configuración (si está definida)."""
+    Lo que venga en `header` tiene prioridad; si no trae `date` (o es null),
+    se usa el día en que se hace el envío. `company_id` y `operation_center_id` salen de la configuración (si está
+    definida)."""
     defaults: dict = {
         "document_type_id": "TPW",
         "document_class_id": "731",
@@ -68,7 +74,10 @@ def with_header_defaults(header: dict) -> dict:
     operation_center_id = getattr(settings, "SIESA_TEP_OPERATION_CENTER_ID", "")
     if operation_center_id:
         defaults["operation_center_id"] = operation_center_id
-    return {**defaults, **header}
+    merged = {**defaults, **header}
+    if not merged.get("date"):
+        merged["date"] = timezone.localtime(timezone.now(), SUBMISSION_TIME_ZONE).date()
+    return merged
 
 
 def _model_values(model, values: dict, aliases: dict | None = None) -> dict:

@@ -1,4 +1,5 @@
 import datetime as dt
+from unittest.mock import patch
 
 from django.test import SimpleTestCase, TestCase
 
@@ -10,6 +11,7 @@ from apps.integration.builders.tep import (
     validate_header,
 )
 from apps.integration.services.siesa_outbox_service import enqueue_document
+from apps.integration.services.tep_submission_service import with_header_defaults
 
 # Líneas reales tomadas de `assets/MovInv 3.TXT` (archivo generado por
 # TP.xlsm, plano oficial de SIESA) — no son datos inventados. Se embeben
@@ -95,6 +97,25 @@ class TepBuilderByteAccuracyTests(SimpleTestCase):
     def test_valid_header_has_no_missing_fields(self):
         errors = validate_header(self.api_header)
         self.assertEqual(errors, [])
+
+
+class TepHeaderDateTests(SimpleTestCase):
+    """Sin `date` en el encabezado se usa el día del envío (hora de Bogotá)."""
+
+    def test_keeps_client_date_when_sent(self):
+        header = with_header_defaults({"date": "2020-01-01", "work_center_id": "CF005"})
+        self.assertEqual(header["date"], "2020-01-01")
+
+    def test_defaults_to_today_when_missing_or_null(self):
+        for header in ({"work_center_id": "CF005"}, {"date": None, "work_center_id": "CF005"}):
+            self.assertIsInstance(with_header_defaults(header)["date"], dt.date)
+
+    def test_uses_bogota_day_not_utc(self):
+        # 2026-09-23 02:00 UTC = 2026-09-22 21:00 en Bogotá.
+        moment = dt.datetime(2026, 9, 23, 2, 0, tzinfo=dt.timezone.utc)
+        with patch("apps.integration.services.tep_submission_service.timezone.now", return_value=moment):
+            header = with_header_defaults({"work_center_id": "CF005"})
+        self.assertEqual(header["date"], dt.date(2026, 9, 22))
 
 
 class SiesaOutboxServiceTests(TestCase):
