@@ -211,7 +211,7 @@ Ambos producen las mismas líneas de ancho fijo (encabezado de 347 caracteres y 
 | `id_motivo_rechazo` | `rejection_reason_id` | Obligatorio si hay cantidad de rechazo |
 | `hora_inicial` | `start_time` | Formato `HH.MM` |
 | `hora_final` | `end_time` | Formato `HH.MM` |
-| `horas` | `hours` | Total de horas del movimiento |
+| `horas` | `hours` | Total de horas del movimiento. La API recibe **horas decimales** (`1.5` = 1 h 30 min); el backend las convierte a `HH.MM` para SIESA (`1.30`) con `decimal_hours_to_hhmm`. `TepDetail.hours` guarda el valor decimal. |
 | `id_motivo_paro` | `stop_reason_id` | Si tipo de hora 3 |
 | `notas` | `notes` | Notas del movimiento |
 | `numero_operarios` | `operator_count` | Si tipo de hora 0 o 2 (default 1) |

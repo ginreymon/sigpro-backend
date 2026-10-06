@@ -8,6 +8,7 @@ from apps.integration.builders.tep import (
     DETAIL_LAYOUT,
     HEADER_LAYOUT,
     build_tep_document,
+    decimal_hours_to_hhmm,
     validate_header,
 )
 from apps.integration.services.tep_submission_service import with_header_defaults
@@ -52,7 +53,7 @@ class TepBuilderByteAccuracyTests(SimpleTestCase):
             op_document_type_id="OP", op_document_number=40478,
             operation_number=30, operation_work_center_id="CF005",
             hour_type=0, operation_completed=0, completed_quantity=0.088,
-            hours=6.36,
+            hours=6.6,  # 6 h 36 min en horas decimales (6.36 en HH.MM de SIESA)
         )
 
     def test_header_line_matches_real_file_byte_for_byte(self):
@@ -78,6 +79,17 @@ class TepBuilderByteAccuracyTests(SimpleTestCase):
         self.assertEqual(lines[0], REAL_HEADER_LINE)
         detail_values = dict(self.detail_values, nro_registro=1)
         self.assertEqual(lines[1], build_line(DETAIL_LAYOUT, 3, detail_values))
+
+    def test_hours_are_sent_to_siesa_as_hhmm(self):
+        detail = dict(self.api_detail, hours=1.5)
+        line = build_tep_document(self.api_header, [detail])[1]
+        self.assertIn("000001.30", line)
+
+    def test_decimal_hours_to_hhmm(self):
+        cases = {1.5: 1.30, 1.83: 1.50, 6.6: 6.36, 0.25: 0.15, 2: 2.00, 0: 0.0, 0.999: 1.00}
+        for decimal_hours, expected in cases.items():
+            self.assertEqual(decimal_hours_to_hhmm(decimal_hours), expected, decimal_hours)
+        self.assertIsNone(decimal_hours_to_hhmm(None))
 
     def test_spanish_field_names_are_rejected(self):
         with self.assertRaises(ValueError):

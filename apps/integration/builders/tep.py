@@ -15,6 +15,8 @@ inglés; `HEADER_API_TO_SIESA`/`DETAIL_API_TO_SIESA` los traducen al entrar.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from apps.integration.builders.flat_file import FieldSpec, RecordLayout, build_line
 
 HEADER_LAYOUT = RecordLayout(
@@ -141,6 +143,20 @@ _HEADER_INHERITED_FIELDS = {
 }
 
 
+def decimal_hours_to_hhmm(hours) -> float | None:
+    """Convierte horas decimales al formato HH.MM que SIESA espera en `horas`
+    (los minutos van como decimales: 1.30 = 1 h 30 min, no 1.3 h).
+
+    1.5 -> 1.30, 1.83 -> 1.50, 0.25 -> 0.15. Los minutos se redondean al más
+    cercano (con acarreo a la hora: 0.999 h -> 1.00). None se deja en None.
+    """
+    if hours is None:
+        return None
+    total_minutes = round(Decimal(str(hours)) * 60)
+    whole_hours, minutes = divmod(total_minutes, 60)
+    return float(whole_hours + Decimal(minutes) / 100)
+
+
 def _to_siesa_names(values: dict, mapping: dict[str, str], record: str) -> dict:
     """Traduce las llaves de la API a los nombres del layout. Rechaza llaves
     desconocidas (incluidos los nombres viejos en español) en vez de
@@ -211,6 +227,8 @@ def build_tep_document(
 
     for i, detail in enumerate(details, start=1):
         detail_values = _to_siesa_names(detail, DETAIL_API_TO_SIESA, "details")
+        if "horas" in detail_values:
+            detail_values["horas"] = decimal_hours_to_hhmm(detail_values["horas"])
         detail_values.setdefault("cia", header.get("cia"))
         detail_values.setdefault("id_co", header.get("id_co"))
         for local_field, header_field in _HEADER_INHERITED_FIELDS.items():
