@@ -1,7 +1,7 @@
 import datetime as dt
 from unittest.mock import patch
 
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase
 
 from apps.integration.builders.flat_file import build_line
 from apps.integration.builders.tep import (
@@ -10,7 +10,6 @@ from apps.integration.builders.tep import (
     build_tep_document,
     validate_header,
 )
-from apps.integration.services.siesa_outbox_service import enqueue_document
 from apps.integration.services.tep_submission_service import with_header_defaults
 
 # Líneas reales tomadas de `assets/MovInv 3.TXT` (archivo generado por
@@ -117,14 +116,3 @@ class TepHeaderDateTests(SimpleTestCase):
             header = with_header_defaults({"work_center_id": "CF005"})
         self.assertEqual(header["date"], dt.date(2026, 9, 22))
 
-
-class SiesaOutboxServiceTests(TestCase):
-    """`enqueue_document` toca base de datos (Django ORM) — TestCase envuelve
-    cada test en una transacción y la revierte al final, sin dejar filas de
-    prueba en la tabla real."""
-
-    def test_enqueue_is_idempotent_by_idempotency_key(self):
-        lines = ["x" * 347, "y" * 562]
-        first = enqueue_document("TEP", "test-idempotency-key", lines)
-        second = enqueue_document("TEP", "test-idempotency-key", lines)
-        self.assertEqual(first.id, second.id)

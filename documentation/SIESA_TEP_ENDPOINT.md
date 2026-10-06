@@ -4,7 +4,7 @@
 
 Arma un documento TEP (Trabajo En Proceso) a partir de un JSON, lo envía **sincrónicamente** al webservice WSUNOEE de SIESA y devuelve la respuesta real de SIESA en el mismo response HTTP.
 
-**Es una llamada síncrona/bloqueante** (hasta ~30s mientras espera a SIESA) — a propósito NO usa el outbox asíncrono ya existente en el proyecto (ver [`apps/integration/services/siesa_outbox_service.py`](services/siesa_outbox_service.py) + el comando `dispatch_siesa_outbox`, disparado por tarea programada), mismo patrón que ya usa el comando `python manage.py test_siesa_webservice`. Sirve bien para envíos puntuales/bajo demanda; si este endpoint llega a recibir volumen real y sostenido de producción, lo arquitectónicamente correcto es migrar ese flujo al outbox (asíncrono, no bloquea el worker de Django).
+**Es una llamada síncrona/bloqueante** (hasta ~30s mientras espera a SIESA): el worker de Django queda ocupado hasta que SIESA responde.
 
 Implementación: [`apps/integration/views/siesa_tep_view.py`](views/siesa_tep_view.py) (`SiesaTepViewSet`).
 
@@ -97,7 +97,7 @@ Si `header` no los trae, el backend completa: `document_type_id="TPW"`, `documen
 
 ## Cambio de nombres: antes (español) → ahora (inglés)
 
-Las llaves del request pasaron de los nombres en español del plano de SIESA a nombres en inglés. **El comportamiento no cambió**: mismas reglas de negocio, mismos valores por defecto, mismas respuestas y exactamente el mismo archivo plano enviado a SIESA (`flat_file_lines`). Solo cambia cómo se llama cada llave en el JSON.
+Las llaves del request pasaron de los nombres en español del plano de SIESA a nombres en inglés. **El comportamiento no cambió**: mismas reglas de negocio, mismos valores por defecto, mismas respuestas y exactamente el mismo archivo plano enviado a SIESA. Solo cambia cómo se llama cada llave en el JSON.
 
 Cómo funciona: `builders/tep.py` traduce las llaves de la API al nombre del layout de SIESA (`HEADER_API_TO_SIESA` / `DETAIL_API_TO_SIESA`) antes de armar cada línea. Los `FieldSpec` conservan el nombre original de SIESA, por lo que siguen cotejables contra el plano oficial.
 
@@ -218,7 +218,7 @@ Ambos producen las mismas líneas de ancho fijo (encabezado de 347 caracteres y 
 
 ### Sin cambios
 
-- **Response:** `ok`, `error_type`, `error_detail_xml` y `flat_file_lines` ya estaban en inglés.
+- **Response:** `ok`, `error_type` y `error_detail_xml` ya estaban en inglés.
 - **URL, autenticación y códigos de estado:** iguales.
 - **Campos internos del layout** (`numero_reg`, `tipo_reg`, `subtipo_reg`, `version_reg`): no se envían en el request, los fija el builder.
 
@@ -230,19 +230,10 @@ Cualquier cliente que siga enviando los nombres viejos recibirá `400`. El únic
 
 | Status | Cuerpo | Significado |
 |---|---|---|
-| `200 OK` | `{"ok": true, "error_type": null, "error_detail_xml": null, "flat_file_lines": [...]}` | SIESA aceptó el documento. |
-| `422 Unprocessable Entity` | `{"ok": false, "error_type": N, "error_detail_xml": "...", "flat_file_lines": [...]}` | SIESA procesó la llamada pero reportó un error de negocio (OP inválida, centro de trabajo inválido, etc.) — respuesta esperada, no es un bug del endpoint. |
+| `200 OK` | `{"ok": true, "error_type": null, "error_detail_xml": null}` | SIESA aceptó el documento. |
+| `422 Unprocessable Entity` | `{"ok": false, "error_type": N, "error_detail_xml": "..."}` | SIESA procesó la llamada pero reportó un error de negocio (OP inválida, centro de trabajo inválido, etc.) — respuesta esperada, no es un bug del endpoint. |
 | `400 Bad Request` | `{"error": "..."}` | Body inválido: falta `header`/`details`, `date` mal formateada, llave desconocida, o falta algún campo obligatorio cruzado del layout TEP. |
 | `503 Service Unavailable` | `{"error": "..."}` | Faltan las variables `SIESA_WSUNOEE_*` en el servidor. |
 | `502 Bad Gateway` | `{"error": "..."}` | Falló la llamada SOAP/red hacia SIESA (timeout, WSDL inválido, etc.). |
 
-`flat_file_lines` son las líneas de ancho fijo ya armadas (encabezado + detalles), útiles para depurar qué se envió exactamente.
-
-## Probar con Postman
-
-Importar `apps/integration/postman/SIESA_TEP.postman_collection.json`:
-
-1. **Login** — completar usuario/clave reales en el body, ejecutar. El test script guarda el `access` token en la variable de colección `access_token` automáticamente.
-2. **TEP - Send** — trae un body de ejemplo con valores demo (`document_number=999999`, fácil de ubicar/ignorar en SIESA) — reemplazar por los datos reales antes de un envío real — y el header `Authorization: Bearer {{access_token}}` ya resuelto. Ejecutar y revisar la respuesta.
-
-Variable de colección `base_url` (default `http://localhost:8000`) — cambiar si el backend corre en otro host/puerto.
+Las líneas de ancho fijo enviadas a SIESA (encabezado + detalles) se guardan en `TepSubmission.flat_file_lines` para auditoría; no se devuelven en la respuesta.

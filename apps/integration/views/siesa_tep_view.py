@@ -26,12 +26,8 @@ class SiesaTepViewSet(viewsets.ViewSet):
     envia a SIESA (WSUNOEE), devolviendo la respuesta real de SIESA en el
     mismo request.
 
-    A proposito NO usa el outbox (`enqueue_document`/`dispatch_siesa_outbox`):
-    es una llamada sincrona que bloquea hasta ~30s por request (ver
-    advertencia en `siesa_webservice_client.py`). Sirve bien para envios
-    puntuales/bajo demanda; si este endpoint pasa a recibir volumen real y
-    sostenido de produccion, lo arquitectonicamente correcto es migrar ese
-    flujo al outbox (asincrono, no bloquea el worker de Django).
+    Es una llamada sincrona que bloquea hasta ~30s por request (ver
+    advertencia en `siesa_webservice_client.py`).
     """
 
     permission_classes = [IsAuthenticated]
@@ -98,7 +94,6 @@ class SiesaTepViewSet(viewsets.ViewSet):
                 "ok": result.ok,
                 "error_type": result.error_type,
                 "error_detail_xml": result.error_detail_xml,
-                "flat_file_lines": lines,
             },
             status=status.HTTP_200_OK if result.ok else status.HTTP_422_UNPROCESSABLE_ENTITY,
         )

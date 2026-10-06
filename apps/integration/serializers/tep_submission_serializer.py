@@ -89,7 +89,6 @@ class TepSubmissionSerializer(AuditSerializer):
             'error_detail',
             'siesa_messages',
             'sent_at',
-            'flat_file_lines',
             'details',
             'created_at',
             'updated_at',

@@ -15,12 +15,10 @@ ancho fijo en su propio builder y le pasa el resultado a `send_flat_file_lines`.
 
 ADVERTENCIAS (revisión 2026-09-23, ver conversación/commit para el detalle):
 
-- **Nunca invocar `send_xml`/`send_flat_file_lines` desde una vista/request de
-  usuario.** Es una llamada de red síncrona (hasta ~30s con el timeout
-  configurado) — bloquea el worker de Django mientras espera a SIESA. Debe
-  invocarse solo desde un comando de management/job en background (mismo
-  patrón de outbox/Windows Task Scheduler ya usado en el proyecto para otras
-  tareas SIESA), nunca en el ciclo request/response.
+- **`send_xml`/`send_flat_file_lines` son una llamada de red síncrona** (hasta
+  ~30s con el timeout configurado): bloquean el worker de Django mientras
+  espera a SIESA. Hoy solo las invoca `tep/send/`, a propósito en el ciclo
+  request/response.
 - **No valida el ancho/formato de `flat_file_lines`.** A propósito: esa
   validación es responsabilidad del builder de cada documento (igual que
   `construir_linea` en el repo de ejemplo), no de este transporte. Un builder
