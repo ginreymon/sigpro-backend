@@ -34,4 +34,14 @@ class OPStampingService:
 
     @staticmethod
     def get_ordenes_produccion_proceso_json(tipo_docto, consec_docto, id_plan="300"):
-        return OPStampingRepository.get_ordenes_produccion_proceso_json(tipo_docto, consec_docto, id_plan)
+        data = OPStampingRepository.get_ordenes_produccion_proceso_json(tipo_docto, consec_docto, id_plan)
+        if not data:
+            return data
+
+        # hasItemId: true si el SP generó al menos un itemId (colorRows[].items[].itemId).
+        data["hasItemId"] = any(
+            item.get("itemId")
+            for color in data.get("colorRows") or []
+            for item in color.get("items") or []
+        )
+        return data
