@@ -1,4 +1,3 @@
-from decimal import Decimal
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
@@ -7,17 +6,16 @@ from django.db.models import Sum, F
 from apps.production.models.production_record import ProductionRecord
 from apps.production.models.work_session_activity import WorkSessionActivity
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
-from core.serializers.audit_serializer import AuditSerializer
+from apps.production.serializers.op_record_serializer import OpRecordSerializer, to_decimal
 
 
-class ProductionRecordSerializer(AuditSerializer):
+class ProductionRecordSerializer(OpRecordSerializer):
     server_now = serializers.SerializerMethodField()
     is_paused = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta(OpRecordSerializer.Meta):
         model = ProductionRecord
-        fields = "__all__"
-        read_only_fields = ["start_time", "end_time", "server_now", "is_paused"]
+        read_only_fields = [*OpRecordSerializer.Meta.read_only_fields, "server_now", "is_paused"]
 
     def get_server_now(self, obj):
         return timezone.now()
@@ -58,12 +56,7 @@ class ProductionRecordSerializer(AuditSerializer):
 
         return new_activity
 
-    @transaction.atomic
-    def create(self, validated_data):
-        missing = [f for f in ("op_number", "op_type") if not validated_data.get(f)]
-        if missing:
-            raise ValidationError({f: "Este campo es obligatorio." for f in missing})
-
+    def prepare_create(self, validated_data):
         activity = (
             WorkSessionActivity.objects
             .select_for_update()
@@ -83,13 +76,13 @@ class ProductionRecordSerializer(AuditSerializer):
         if last_record is not None and last_record.sku_rowid != validated_data["sku_rowid"]:
             validated_data["work_session_activity"] = self._open_new_activity(activity)
 
-        completed = Decimal(str(validated_data.get("completed_quantity") or 0))
-        scrap = Decimal(str(validated_data.get("scrap_quantity") or 0))
-        rejected = Decimal(str(validated_data.get("rejected_quantity") or 0))
+        completed = to_decimal(validated_data.get("completed_quantity"))
+        scrap = to_decimal(validated_data.get("scrap_quantity"))
+        rejected = to_decimal(validated_data.get("rejected_quantity"))
         has_quantities = completed > 0 or scrap > 0 or rejected > 0
 
         if has_quantities:
-            ordered = Decimal(str(validated_data["ordered_quantity"]))
+            ordered = to_decimal(validated_data["ordered_quantity"])
             sku_rowid = validated_data["sku_rowid"]
             op_rowid = validated_data["op_rowid"]
             existing_sum = (
@@ -109,18 +102,13 @@ class ProductionRecordSerializer(AuditSerializer):
         validated_data["scrap_quantity"] = scrap
         validated_data["rejected_quantity"] = rejected
 
-        instance = super().create(validated_data)
-        # TODO: this must change, the time spent per OP has to be calculated
-        instance.end_time = instance.start_time
-        instance.save(update_fields=["end_time"])
-
-        return instance
+        return validated_data
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        completed = Decimal(str(validated_data.get("completed_quantity") or 0))
-        scrap = Decimal(str(validated_data.get("scrap_quantity") or 0))
-        rejected = Decimal(str(validated_data.get("rejected_quantity") or 0))
+        completed = to_decimal(validated_data.get("completed_quantity"))
+        scrap = to_decimal(validated_data.get("scrap_quantity"))
+        rejected = to_decimal(validated_data.get("rejected_quantity"))
         has_quantities = completed > 0 or scrap > 0 or rejected > 0
 
         if has_quantities:

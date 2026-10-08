@@ -1,6 +1,5 @@
 from django.db import connection
-from apps.production.mappers.recursive_mapper import translate_keys
-import json
+from apps.production.repositories.sp_json import exec_json_procedure
 
 
 class OPProductionRepository:
@@ -42,32 +41,12 @@ class OPProductionRepository:
 
     @staticmethod
     def get_detalle_produccion_op_json(tipo_docto: str, consec_docto: int, id_plan: str = "300"):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_detalle_produccion_op_json %s, %s, %s",
-                [tipo_docto, consec_docto, id_plan],
-            )
-
-            row = cursor.fetchone()
-
-            if not row or not row[0]:
-                return None
-            
-            data =json.loads(row[0])
-
-            return translate_keys(data)
+        return exec_json_procedure(
+            "sp_detalle_produccion_op_json", [tipo_docto, consec_docto, id_plan]
+        )
 
     @staticmethod
     def get_materiales_op_json(tipo_docto: str, consec_docto: int):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_obtener_materiales_op_json %s, %s",
-                [tipo_docto, consec_docto],
-            )
-
-            row = cursor.fetchone()
-
-            if not row or not row[0]:
-                return None
-
-            return translate_keys(json.loads(row[0]))
+        return exec_json_procedure(
+            "sp_obtener_materiales_op_json", [tipo_docto, consec_docto]
+        )

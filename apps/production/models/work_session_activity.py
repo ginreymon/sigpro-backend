@@ -98,6 +98,7 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
         now = timezone.now()
 
         self.production_records.filter(end_time__isnull=True).update(end_time=now)
+        self.stamping_records.filter(end_time__isnull=True).update(end_time=now)
 
         self.work_break_records.filter(resumed_at__isnull=True).update(
             resumed_at=now,

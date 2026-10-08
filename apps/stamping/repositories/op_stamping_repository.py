@@ -1,56 +1,27 @@
-from django.db import connection
-from apps.production.mappers.recursive_mapper import translate_keys
-import json
+from apps.production.repositories.sp_json import exec_json_procedure
 
 
 class OPStampingRepository:
 
     @staticmethod
     def get_detalle_estampacion_op_json(tipo_docto: str, consec_docto: int):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_detalle_estampacion_op_json %s, %s",
-                [tipo_docto, consec_docto],
-            )
-
-            row = cursor.fetchone()
-
-            if not row or not row[0]:
-                return None
-
-            # Solo operationCenters usa keys del KEY_MAP (operacion/centro_id/
-            # centro_nombre); el resto del JSON ya sale en camelCase desde el
-            # SP y pasa sin cambios (fallback en translate_keys).
-            return translate_keys(json.loads(row[0]))
+        # Only operationCenters uses KEY_MAP keys (operacion/centro_id/
+        # centro_nombre); the rest of the JSON already comes out in camelCase
+        # from the SP and passes through unchanged (fallback in translate_keys).
+        return exec_json_procedure(
+            "sp_detalle_estampacion_op_json", [tipo_docto, consec_docto]
+        )
 
     @staticmethod
     def get_ordenes_produccion_proceso_json(tipo_docto: str, consec_docto: int, id_plan: str = "300"):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_ordenes_produccion_proceso_json %s, %s, %s",
-                [tipo_docto, consec_docto, id_plan],
-            )
-
-            row = cursor.fetchone()
-
-            if not row or not row[0]:
-                return None
-
-            return translate_keys(json.loads(row[0]))
+        return exec_json_procedure(
+            "sp_ordenes_produccion_proceso_json", [tipo_docto, consec_docto, id_plan]
+        )
 
     @staticmethod
     def get_trazabilidad_op_json(consec_docto: int, tipo_docto: str = None):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_trazabilidad_op_json %s, %s",
-                [consec_docto, tipo_docto],
-            )
-
-            row = cursor.fetchone()
-
-            if not row or not row[0]:
-                return None
-
-            # SP ya devuelve todo en camelCase; translate_keys solo aplica el
-            # fallback de tz-aware en Fecha_Creacion -> createdAt.
-            return translate_keys(json.loads(row[0]))
+        # The SP already returns everything in camelCase; translate_keys only
+        # applies the tz-aware fallback on Fecha_Creacion -> createdAt.
+        return exec_json_procedure(
+            "sp_trazabilidad_op_json", [consec_docto, tipo_docto]
+        )

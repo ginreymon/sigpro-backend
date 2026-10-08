@@ -2,11 +2,11 @@ from decimal import Decimal
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.db import transaction
+from apps.production.serializers.op_record_serializer import OpRecordSerializer, to_decimal
 from apps.stamping.models.stamping_record import StampingRecord
 from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
 from apps.stamping.models.stamping_record_additional_time import StampingRecordAdditionalTime
 from apps.stamping.repositories.op_stamping_repository import OPStampingRepository
-from core.serializers.audit_serializer import AuditSerializer
 
 
 class AdditionalTimeSelectionSerializer(serializers.Serializer):
@@ -14,7 +14,7 @@ class AdditionalTimeSelectionSerializer(serializers.Serializer):
     count = serializers.IntegerField(min_value=1, default=1)
 
 
-class StampingRecordSerializer(AuditSerializer):
+class StampingRecordSerializer(OpRecordSerializer):
 
     additional_times = AdditionalTimeSelectionSerializer(
         many=True, required=False, write_only=True
@@ -30,20 +30,11 @@ class StampingRecordSerializer(AuditSerializer):
             for row in obj.additional_time_selections.all()
         ]
 
-    class Meta:
+    class Meta(OpRecordSerializer.Meta):
         model = StampingRecord
-        fields = "__all__"
-        read_only_fields = ["start_time", "end_time"]
 
-    @transaction.atomic
-    def create(self, validated_data):
-        additional_times = validated_data.pop("additional_times", [])
-
-        missing = [f for f in ("op_number", "op_type") if not validated_data.get(f)]
-        if missing:
-            raise ValidationError({f: "Este campo es obligatorio." for f in missing})
-
-        completed = Decimal(str(validated_data.get("completed_quantity") or 0))
+    def prepare_create(self, validated_data):
+        completed = to_decimal(validated_data.get("completed_quantity"))
 
         if completed > 0:
             order_detail = OPStampingRepository.get_detalle_estampacion_op_json(
@@ -69,9 +60,13 @@ class StampingRecordSerializer(AuditSerializer):
 
         validated_data["completed_quantity"] = completed
 
+        return validated_data
+
+    @transaction.atomic
+    def create(self, validated_data):
+        additional_times = validated_data.pop("additional_times", [])
+
         instance = super().create(validated_data)
-        instance.end_time = instance.start_time
-        instance.save(update_fields=["end_time"])
 
         StampingRecordAdditionalTime.objects.bulk_create([
             StampingRecordAdditionalTime(
@@ -91,7 +86,7 @@ class StampingRecordSerializer(AuditSerializer):
         additional_times = validated_data.pop("additional_times", None)
 
         if "completed_quantity" in validated_data:
-            completed = Decimal(str(validated_data.get("completed_quantity") or 0))
+            completed = to_decimal(validated_data.get("completed_quantity"))
 
             if completed > 0:
                 op_type = validated_data.get("op_type", instance.op_type)
