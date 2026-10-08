@@ -19,9 +19,9 @@ class StampingRecordSerializer(AuditSerializer):
     additional_times = AdditionalTimeSelectionSerializer(
         many=True, required=False, write_only=True
     )
-    # additional_times es write_only (payload de creación/edición) — esta es
-    # la única forma de leer qué tiempos adicionales tiene hoy un registro
-    # (p. ej. para precargar el formulario de edición).
+    # additional_times is write_only (create/update payload) — this is the
+    # only way to read which additional times a record currently has
+    # (e.g. to preload the edit form).
     additional_times_detail = serializers.SerializerMethodField(read_only=True)
 
     def get_additional_times_detail(self, obj):
@@ -100,9 +100,9 @@ class StampingRecordSerializer(AuditSerializer):
 
                 order_detail = OPStampingRepository.get_detalle_estampacion_op_json(op_type, op_number)
 
-                # pending_qty ya excluye lo que esta misma instancia tiene
-                # estampado hoy — se le devuelve esa cantidad para no penalizar
-                # al registro por su propio aporte anterior al editarlo.
+                # pending_qty already excludes what this same instance has
+                # stamped today — that quantity is added back so the record is
+                # not penalized for its own previous contribution when edited.
                 pending = Decimal("0")
                 if order_detail and sam:
                     sam_detail = next(

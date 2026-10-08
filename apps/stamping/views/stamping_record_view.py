@@ -12,15 +12,15 @@ from apps.stamping.serializers import StampingRecordSerializer
 
 def _additional_times_extra_seconds(records) -> float:
     """
-    Estampación valida el tiempo estándar de los additional_times de todo
-    el lote contra el disponible del turno además de duration_seconds —
-    producción no tiene additional_times y no participa en esta cuenta.
+    Stamping validates the standard time of the additional_times of the whole
+    batch against the shift's available time in addition to duration_seconds —
+    production has no additional_times and does not take part in this sum.
 
-    Cada registro trae additional_times: [{id, count}, ...] (mismo shape
-    que valida StampingRecordSerializer). Por cada item se multiplica
-    standard_time (AdditionalStampingTime, minutos por unidad — mismo
-    criterio que app-additional-stamping-time-card) por count, se suma
-    todo el lote y se convierte a segundos.
+    Each record carries additional_times: [{id, count}, ...] (same shape
+    that StampingRecordSerializer validates). For each item, standard_time
+    (AdditionalStampingTime, minutes per unit — same criterion as
+    app-additional-stamping-time-card) is multiplied by count, the whole
+    batch is summed and the result is converted to seconds.
     """
     counts_by_id: dict = {}
     for record in records:
@@ -58,14 +58,14 @@ class StampingRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
         """
         POST /stamping-records/manual-duration-batch/
 
-        Homólogo a production-records/manual-duration-batch/ (ver
-        perform_manual_duration_batch), con un ajuste adicional propio de
-        estampación: el tiempo estándar de los additional_times de todo
-        el lote (ver _additional_times_extra_seconds) se suma a
-        duration_seconds tanto para validar contra el tiempo disponible
-        del turno como para el span del ModuleDowntime creado — ese
-        tiempo también ocupó turno. Producción no tiene additional_times
-        y no se ve afectada.
+        Counterpart of production-records/manual-duration-batch/ (see
+        perform_manual_duration_batch), with an extra adjustment specific to
+        stamping: the standard time of the additional_times of the whole
+        batch (see _additional_times_extra_seconds) is added to
+        duration_seconds both to validate against the shift's available
+        time and for the span of the created ModuleDowntime — that time
+        also occupied the shift. Production has no additional_times
+        and is not affected.
         """
         records = request.data.get('records')
         extra_seconds = _additional_times_extra_seconds(records) if isinstance(records, list) else 0.0

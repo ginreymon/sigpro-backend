@@ -13,11 +13,11 @@ MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'PRODUCTION RECORD DOWNTIME'
 
 def active_work_session_and_activity(request):
     """
-    Resuelve la jornada (sesión) abierta del usuario y su actividad activa
-    actual (o (None, None) si no hay ninguna). Es la fuente de verdad del
-    servidor — nunca hay que confiar en un work_session_activity que venga
-    ya armado desde el frontend, porque puede haberse cerrado/rotado desde
-    que se armó ese payload. Compartido por producción y estampación.
+    Resolves the user's open work session and its current active activity
+    (or (None, None) if there is none). It is the server's source of truth —
+    never trust a work_session_activity that already comes assembled from the
+    frontend, because it may have been closed/rotated since that payload was
+    built. Shared by production and stamping.
     """
     from apps.production.models import WorkSession
 
@@ -31,9 +31,9 @@ def active_work_session_and_activity(request):
 
 def manual_duration_indicators(work_session, activity, tipo_modulo: str):
     """
-    Indicadores de tiempo del turno para `activity`, usados para validar
-    duration_seconds contra el turno. None si no hay jornada/actividad activa.
-    tipo_modulo: 'production' o 'stamping' (ver ProductivityRepository).
+    Shift time indicators for `activity`, used to validate duration_seconds
+    against the shift. None if there is no active session/activity.
+    tipo_modulo: 'production' or 'stamping' (see ProductivityRepository).
     """
     from apps.production.models import WorkShiftSnapshot
     from apps.production.repositories.productivity_repository import ProductivityRepository
@@ -65,28 +65,27 @@ def manual_duration_indicators(work_session, activity, tipo_modulo: str):
 
 def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_available_seconds: float = 0):
     """
-    Cuerpo compartido de POST .../manual-duration-batch/ para
-    ProductionRecordViewSet y StampingRecordViewSet.
+    Shared body of POST .../manual-duration-batch/ for
+    ProductionRecordViewSet and StampingRecordViewSet.
 
-    Payload: { "records": [<mismo shape que POST del create() normal>, ...],
-                "duration_seconds": <segundos del lote completo, uno o más registros> }
+    Payload: { "records": [<same shape as the regular create() POST>, ...],
+                "duration_seconds": <seconds of the whole batch, one or more records> }
 
-    duration_seconds cubre el lote entero (no cada registro individual): se
-    valida una sola vez contra el turno y luego se guarda cada registro
-    exactamente como el create() normal del serializer del view (todo-o-nada
-    dentro de una transacción). Además crea un único ModuleDowntime que
-    cubre esa duración, enlazado al primer registro del lote (ver
-    create_manual_duration_batch_downtime). La respuesta es la lista de
-    todos los registros guardados (mismo serializer.data que un create()
-    normal), cada uno con el duration_seconds del lote.
+    duration_seconds covers the entire batch (not each individual record): it
+    is validated once against the shift and then each record is saved exactly
+    like the view serializer's regular create() (all-or-nothing inside a
+    transaction). It also creates a single ModuleDowntime covering that
+    duration, linked to the first record of the batch (see
+    create_manual_duration_batch_downtime). The response is the list of all
+    saved records (same serializer.data as a regular create()), each one with
+    the batch's duration_seconds.
 
-    extra_available_seconds: tiempo adicional que el llamador ya calculó
-    fuera de esta función y que se suma a duration_seconds tanto para la
-    validación de presupuesto del turno como para el span (start_time/
-    end_time) del downtime (ver create_manual_duration_batch_downtime).
-    Producción no lo usa (0 por defecto); estampación lo usa para el
-    tiempo estándar de additional_times del lote (ver
-    StampingRecordViewSet.manual_duration_batch).
+    extra_available_seconds: additional time that the caller already computed
+    outside this function and that is added to duration_seconds both for the
+    shift budget validation and for the downtime span (start_time/end_time)
+    (see create_manual_duration_batch_downtime). Production does not use it
+    (defaults to 0); stamping uses it for the standard time of the batch's
+    additional_times (see StampingRecordViewSet.manual_duration_batch).
     """
     records = request.data.get('records')
     if not records or not isinstance(records, list):
@@ -103,14 +102,14 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_availab
 
     with transaction.atomic():
         created = []
-        # El work_session_activity que trae cada registro del lote se
-        # capturó en el frontend al encolarse (store en memoria), que puede
-        # llevar rato abierto — para cuando se confirma el lote esa
-        # actividad puede ya estar cerrada (rotación de actividad, fin de
-        # turno, etc). El servidor es la fuente de verdad: todos los
-        # registros se fuerzan a la actividad realmente activa ahora, y si
-        # el serializer.create() la rota a mitad de lote (cambio de SKU),
-        # los siguientes registros siguen esa rotación.
+        # The work_session_activity carried by each record of the batch was
+        # captured in the frontend when it was queued (in-memory store), which
+        # may have been open for a while — by the time the batch is confirmed
+        # that activity may already be closed (activity rotation, end of
+        # shift, etc). The server is the source of truth: every record is
+        # forced onto the activity that is actually active now, and if
+        # serializer.create() rotates it mid-batch (SKU change), the
+        # following records follow that rotation.
         current_activity_id = activity.id if activity else None
         first_instance = None
         record_ids = []
@@ -146,40 +145,39 @@ def create_manual_duration_batch_downtime(
     *, record, record_ids, indicators: dict, duration_seconds: float, user, extra_seconds: float = 0,
 ):
     """
-    Crea el ModuleDowntime que cubre la duración manual de todo un lote
-    (manual-duration-batch): por lote hay un solo downtime, enlazado
-    únicamente al primer registro creado (production_record o
-    stamping_record, según el tipo de `record`). custom_reason guarda
-    {"record_ids": [...]} con los ids de TODOS los registros del lote
-    (serializado a JSON), no solo el del registro enlazado —
-    ModuleDowntime.save() deriva `name` de custom_reason automáticamente.
+    Creates the ModuleDowntime that covers the manual duration of a whole batch
+    (manual-duration-batch): there is a single downtime per batch, linked only
+    to the first created record (production_record or stamping_record,
+    depending on the type of `record`). custom_reason stores
+    {"record_ids": [...]} with the ids of ALL the records in the batch
+    (serialized to JSON), not just the linked one —
+    ModuleDowntime.save() derives `name` from custom_reason automatically.
 
-    extra_seconds: tiempo adicional que se suma a duration_seconds tanto
-    para la validación de presupuesto del turno como para el propio span
-    (start_time/end_time) del downtime — el tiempo estándar de
-    additional_times también ocupó turno, así que el downtime debe cubrir
-    duration_seconds + extra_seconds, no solo duration_seconds. Producción
-    siempre pasa 0 (sin cambio de comportamiento); estampación pasa el
-    tiempo estándar de additional_times del lote (ver perform_manual_duration_batch).
+    extra_seconds: additional time that is added to duration_seconds both for
+    the shift budget validation and for the downtime's own span
+    (start_time/end_time) — the standard time of additional_times also
+    occupied the shift, so the downtime must cover
+    duration_seconds + extra_seconds, not just duration_seconds. Production
+    always passes 0 (no behavior change); stamping passes the standard time
+    of the batch's additional_times (see perform_manual_duration_batch).
 
-    Los tiempos start_time/end_time dependen de `indicators`
-    (ver manual_duration_indicators) y de total_duration = duration_seconds + extra_seconds:
+    The start_time/end_time values depend on `indicators`
+    (see manual_duration_indicators) and on total_duration = duration_seconds + extra_seconds:
 
     has_no_records=True:
-        se valida (now - period_start) - work_break_seconds - module_downtime_seconds - total_duration >= 0
-        start_time = hora de inicio del turno con la fecha actual (hoy)
+        validates (now - period_start) - work_break_seconds - module_downtime_seconds - total_duration >= 0
+        start_time = shift start time with the current date (today)
         end_time   = record.end_time - total_duration
 
     has_no_records=False:
-        se valida (now - period_start) - elapsed_time_max_seconds - total_duration >= 0
-        start_time = period_start + elapsed_time_max_seconds (fin del registro anterior)
+        validates (now - period_start) - elapsed_time_max_seconds - total_duration >= 0
+        start_time = period_start + elapsed_time_max_seconds (end of the previous record)
         end_time   = record.end_time - total_duration
 
-    Si la validación correspondiente falla, lanza ValidationError.
+    If the corresponding validation fails, raises ValidationError.
 
-    Reutilizable por producción y estampación — el link FK correcto de
-    ModuleDowntime (production_record/stamping_record) se resuelve según
-    el tipo de `record`.
+    Reusable by production and stamping — the correct ModuleDowntime FK
+    (production_record/stamping_record) is resolved from the type of `record`.
     """
     from apps.production.models.module_downtime import ModuleDowntime
     from apps.production.models.production_record import ProductionRecord

@@ -20,8 +20,8 @@ class ProductionRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
         """
         POST /production-records/manual-duration-batch/
 
-        Ver perform_manual_duration_batch (production_record_service) para
-        el detalle del payload y el comportamiento — compartido con el
-        homólogo de estampación (StampingRecordViewSet.manual_duration_batch).
+        See perform_manual_duration_batch (production_record_service) for
+        the payload and behavior details — shared with its stamping
+        counterpart (StampingRecordViewSet.manual_duration_batch).
         """
         return perform_manual_duration_batch(self, request, tipo_modulo='production')

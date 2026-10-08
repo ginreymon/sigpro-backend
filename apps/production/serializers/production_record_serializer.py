@@ -110,7 +110,8 @@ class ProductionRecordSerializer(AuditSerializer):
         validated_data["rejected_quantity"] = rejected
 
         instance = super().create(validated_data)
-        instance.end_time = instance.start_time ## TOCA CAMBIARLO PORQUE hay que calcular el tiempo gastado por op 
+        # TODO: this must change, the time spent per OP has to be calculated
+        instance.end_time = instance.start_time
         instance.save(update_fields=["end_time"])
 
         return instance
