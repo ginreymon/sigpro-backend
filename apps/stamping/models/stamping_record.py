@@ -1,14 +1,10 @@
 from django.db import models
 from apps.integration.models.op_record import OpRecord
-from apps.production.models.work_session_activity import WorkSessionActivity
+from apps.production.models.op_work_record import OpWorkRecord
 from .stamping_reference_sam import StampingReferenceSam
 
 
-class StampingRecord(OpRecord):
-
-    work_session_activity = models.ForeignKey(
-        WorkSessionActivity, on_delete=models.CASCADE, related_name="stamping_records"
-    )
+class StampingRecord(OpWorkRecord, OpRecord):
 
     stamping_reference_sam = models.ForeignKey(
         StampingReferenceSam,

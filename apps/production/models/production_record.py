@@ -1,14 +1,11 @@
 from django.db import models
 from apps.integration.models.op_record import OpRecord
-from apps.production.models.work_session_activity import WorkSessionActivity
+from apps.production.models.op_work_record import OpWorkRecord
 
 
-class ProductionRecord(OpRecord):
+class ProductionRecord(OpWorkRecord, OpRecord):
 
     sku_rowid = models.BigIntegerField()
-    work_session_activity = models.ForeignKey(
-        WorkSessionActivity, on_delete=models.CASCADE, related_name="production_records"
-    )
 
     planned_quantity = models.DecimalField(max_digits=10, decimal_places=2)
     scrap_quantity = models.DecimalField(max_digits=10, decimal_places=2)
