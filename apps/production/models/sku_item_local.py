@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import CharField, OuterRef, Subquery
 from core.models import TimeAuditModel, ActiveModel, LocalBaseModel
 
 
@@ -61,6 +62,18 @@ class SkuItemLocal(TimeAuditModel, ActiveModel, LocalBaseModel):
 
     def __str__(self):
         return f"{self.reference} - {self.size} / {self.color}"
+
+    @classmethod
+    def reference_subquery(cls, outer_field="rowid_item"):
+        """Subquery returning the reference of the first non-deleted SKU whose
+        rowid_item matches the outer queryset's `outer_field`."""
+        return Subquery(
+            cls.objects.filter(
+                rowid_item=OuterRef(outer_field),
+                is_deleted=False,
+            ).order_by().values("reference")[:1],
+            output_field=CharField(),
+        )
 
     @classmethod
     def map_by_rowid_item(cls, rowid_items):

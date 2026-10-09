@@ -1,7 +1,6 @@
 from rest_framework import viewsets
-from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.decorators import action
+from apps.common.http import missing_params_response, ok_or_404
 from apps.stamping.services.op_stamping_service import OPStampingService
 
 
@@ -12,37 +11,27 @@ class OPStampingDetailViewSet(viewsets.ViewSet):
         doc_type = request.query_params.get("type")
         doc_number = request.query_params.get("number")
 
-        if not doc_type or not doc_number:
-            return Response(
-                {"error": "type and number are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        error = missing_params_response(
+            request.query_params, "type", "number", message="type and number are required"
+        )
+        if error:
+            return error
 
         data = OPStampingService.get_detalle_estampacion_op_json(doc_type, int(doc_number))
 
-        if not data:
-            return Response(
-                {"error": "No data found"}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        return Response(data, status=status.HTTP_200_OK)
+        return ok_or_404(data)
 
     @action(detail=False, methods=["get"], url_path="traceability")
     def traceability(self, request):
         doc_number = request.query_params.get("number")
         doc_type = request.query_params.get("type")
 
-        if not doc_number:
-            return Response(
-                {"error": "number is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        error = missing_params_response(
+            request.query_params, "number", message="number is required"
+        )
+        if error:
+            return error
 
         data = OPStampingService.get_trazabilidad_op_json(int(doc_number), doc_type)
 
-        if not data:
-            return Response(
-                {"error": "No data found"}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        return Response(data, status=status.HTTP_200_OK)
+        return ok_or_404(data)
