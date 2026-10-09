@@ -33,30 +33,43 @@ class StampingRecordSerializer(OpRecordSerializer):
     class Meta(OpRecordSerializer.Meta):
         model = StampingRecord
 
+    @staticmethod
+    def _validate_within_pending(completed, op_type, op_number, sam, already_counted=Decimal("0")):
+        """
+        Raises if `completed` exceeds what is still pending to stamp for the
+        reference SAM in the order. `already_counted` is added back to the
+        pending quantity (the record's own previous contribution on edit).
+        """
+        if completed <= 0:
+            return
+
+        order_detail = OPStampingRepository.get_detalle_estampacion_op_json(op_type, op_number)
+
+        pending = Decimal("0")
+        if order_detail and sam:
+            sam_detail = next(
+                (s for s in order_detail.get("referenceSams") or [] if s.get("id") == sam.id),
+                None,
+            )
+            if sam_detail:
+                pending = Decimal(str(sam_detail["pending_qty"])) + already_counted
+
+        if completed > pending:
+            raise ValidationError({
+                "non_field_errors": (
+                    f"La cantidad ({completed}) supera lo pendiente por estampar ({pending})."
+                )
+            })
+
     def prepare_create(self, validated_data):
         completed = to_decimal(validated_data.get("completed_quantity"))
 
-        if completed > 0:
-            order_detail = OPStampingRepository.get_detalle_estampacion_op_json(
-                validated_data["op_type"], validated_data["op_number"]
-            )
-
-            pending = Decimal("0")
-            sam = validated_data.get("stamping_reference_sam")
-            if order_detail and sam:
-                sam_detail = next(
-                    (s for s in order_detail.get("referenceSams") or [] if s.get("id") == sam.id),
-                    None,
-                )
-                if sam_detail:
-                    pending = Decimal(str(sam_detail["pending_qty"]))
-
-            if completed > pending:
-                raise ValidationError({
-                    "non_field_errors": (
-                        f"La cantidad ({completed}) supera lo pendiente por estampar ({pending})."
-                    )
-                })
+        self._validate_within_pending(
+            completed,
+            validated_data["op_type"],
+            validated_data["op_number"],
+            validated_data.get("stamping_reference_sam"),
+        )
 
         validated_data["completed_quantity"] = completed
 
@@ -88,31 +101,16 @@ class StampingRecordSerializer(OpRecordSerializer):
         if "completed_quantity" in validated_data:
             completed = to_decimal(validated_data.get("completed_quantity"))
 
-            if completed > 0:
-                op_type = validated_data.get("op_type", instance.op_type)
-                op_number = validated_data.get("op_number", instance.op_number)
-                sam = validated_data.get("stamping_reference_sam", instance.stamping_reference_sam)
-
-                order_detail = OPStampingRepository.get_detalle_estampacion_op_json(op_type, op_number)
-
-                # pending_qty already excludes what this same instance has
-                # stamped today — that quantity is added back so the record is
-                # not penalized for its own previous contribution when edited.
-                pending = Decimal("0")
-                if order_detail and sam:
-                    sam_detail = next(
-                        (s for s in order_detail.get("referenceSams") or [] if s.get("id") == sam.id),
-                        None,
-                    )
-                    if sam_detail:
-                        pending = Decimal(str(sam_detail["pending_qty"])) + Decimal(str(instance.completed_quantity))
-
-                if completed > pending:
-                    raise ValidationError({
-                        "non_field_errors": (
-                            f"La cantidad ({completed}) supera lo pendiente por estampar ({pending})."
-                        )
-                    })
+            # pending_qty already excludes what this same instance has
+            # stamped today — that quantity is added back so the record is
+            # not penalized for its own previous contribution when edited.
+            self._validate_within_pending(
+                completed,
+                validated_data.get("op_type", instance.op_type),
+                validated_data.get("op_number", instance.op_number),
+                validated_data.get("stamping_reference_sam", instance.stamping_reference_sam),
+                already_counted=Decimal(str(instance.completed_quantity)),
+            )
 
             validated_data["completed_quantity"] = completed
 

@@ -57,6 +57,27 @@ class ProductionRecordSerializer(OpRecordSerializer):
 
         return new_activity
 
+    @staticmethod
+    def _validate_total_within_ordered(sku_rowid, op_rowid, ordered, new_quantities, exclude_pk=None):
+        """
+        Raises if the quantities already recorded for the SKU in the order
+        (excluding `exclude_pk` on edit) plus `new_quantities` exceed `ordered`.
+        """
+        records = ProductionRecord.objects.filter(sku_rowid=sku_rowid, op_rowid=op_rowid)
+        if exclude_pk is not None:
+            records = records.exclude(pk=exclude_pk)
+        existing_sum = (
+            records.aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
+            ["total"] or Decimal("0")
+        )
+        new_total = existing_sum + new_quantities
+        if new_total > ordered:
+            raise ValidationError({
+                "non_field_errors": (
+                    f"La suma de cantidades ({new_total}) supera la cantidad ordenada ({ordered})."
+                )
+            })
+
     def prepare_create(self, validated_data):
         activity = (
             WorkSessionActivity.objects
@@ -83,21 +104,12 @@ class ProductionRecordSerializer(OpRecordSerializer):
         has_quantities = completed > 0 or scrap > 0 or rejected > 0
 
         if has_quantities:
-            ordered = to_decimal(validated_data["ordered_quantity"])
-            sku_rowid = validated_data["sku_rowid"]
-            op_rowid = validated_data["op_rowid"]
-            existing_sum = (
-                ProductionRecord.objects.filter(sku_rowid=sku_rowid, op_rowid=op_rowid)
-                .aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
-                ["total"] or Decimal("0")
+            self._validate_total_within_ordered(
+                validated_data["sku_rowid"],
+                validated_data["op_rowid"],
+                to_decimal(validated_data["ordered_quantity"]),
+                completed + scrap + rejected,
             )
-            new_total = existing_sum + completed + scrap + rejected
-            if new_total > ordered:
-                raise ValidationError({
-                    "non_field_errors": (
-                        f"La suma de cantidades ({new_total}) supera la cantidad ordenada ({ordered})."
-                    )
-                })
 
         validated_data["completed_quantity"] = completed
         validated_data["scrap_quantity"] = scrap
@@ -113,19 +125,13 @@ class ProductionRecordSerializer(OpRecordSerializer):
         has_quantities = completed > 0 or scrap > 0 or rejected > 0
 
         if has_quantities:
-            existing_sum = (
-                ProductionRecord.objects.filter(sku_rowid=instance.sku_rowid, op_rowid=instance.op_rowid)
-                .exclude(pk=instance.pk)
-                .aggregate(total=Sum(F("completed_quantity") + F("scrap_quantity") + F("rejected_quantity")))
-                ["total"] or Decimal("0")
+            self._validate_total_within_ordered(
+                instance.sku_rowid,
+                instance.op_rowid,
+                instance.ordered_quantity,
+                completed + scrap + rejected,
+                exclude_pk=instance.pk,
             )
-            new_total = existing_sum + completed + scrap + rejected
-            if new_total > instance.ordered_quantity:
-                raise ValidationError({
-                    "non_field_errors": (
-                        f"La suma de cantidades ({new_total}) supera la cantidad ordenada ({instance.ordered_quantity})."
-                    )
-                })
 
         instance.completed_quantity = completed
         instance.scrap_quantity = scrap
