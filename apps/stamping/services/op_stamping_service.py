@@ -10,14 +10,14 @@ class OPStampingService:
         if not stamping_data:
             return stamping_data
 
-        # El SP de estampación solo trae header + orderedQty + referenceSams;
-        # el resto (colorRows, docStatus, classification, sam, stampingAudit,
-        # tracking...) ya lo calcula op_production_service, así que se reusa
-        # ese servicio (mismo que usa production-orders/detail) en vez de
-        # duplicar esa lógica en un segundo SP. Reusar la variante
-        # "_with_tracking" (no el repositorio plano) para que este endpoint
-        # sea un superset completo de production-orders/detail y las páginas
-        # de estampación puedan dejar de llamar a ese último.
+        # The stamping SP only returns header + orderedQty + referenceSams;
+        # the rest (colorRows, docStatus, classification, sam, stampingAudit,
+        # tracking...) is already computed by op_production_service, so that
+        # service (the one production-orders/detail uses) is reused instead of
+        # duplicating that logic in a second SP. The "_with_tracking" variant
+        # (not the plain repository) is reused so this endpoint is a complete
+        # superset of production-orders/detail and the stamping pages can stop
+        # calling the latter.
         production_data = OPProductionService.get_detalle_produccion_op_json_with_tracking(
             tipo_docto, consec_docto
         ) or {}
@@ -38,7 +38,7 @@ class OPStampingService:
         if not data:
             return data
 
-        # hasItemId: true si el SP generó al menos un itemId (colorRows[].items[].itemId).
+        # hasItemId: true if the SP generated at least one itemId (colorRows[].items[].itemId).
         data["hasItemId"] = any(
             item.get("itemId")
             for color in data.get("colorRows") or []
