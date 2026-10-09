@@ -15,3 +15,4 @@ from .stamping_record_view import StampingRecordViewSet
 from .stamping_module_machine_view import StampingModuleMachineViewSet
 from .stamping_productivity_view import StampingProductivityViewSet
 from .audit_record_view import AuditRecordViewSet
+from .sku_reference_view import SkuReferenceViewSet
