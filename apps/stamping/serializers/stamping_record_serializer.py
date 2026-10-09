@@ -2,7 +2,7 @@ from decimal import Decimal
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.db import transaction
-from apps.production.serializers.op_record_serializer import OpRecordSerializer, to_decimal
+from apps.common.serializers.op_record_serializer import OpRecordSerializer, to_decimal
 from apps.stamping.models.stamping_record import StampingRecord
 from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
 from apps.stamping.models.stamping_record_additional_time import StampingRecordAdditionalTime

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
@@ -6,7 +7,7 @@ from django.db.models import Sum, F
 from apps.production.models.production_record import ProductionRecord
 from apps.production.models.work_session_activity import WorkSessionActivity
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
-from apps.production.serializers.op_record_serializer import OpRecordSerializer, to_decimal
+from apps.common.serializers.op_record_serializer import OpRecordSerializer, to_decimal
 
 
 class ProductionRecordSerializer(OpRecordSerializer):

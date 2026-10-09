@@ -2,7 +2,7 @@ from rest_framework.decorators import action
 
 from core.views.audit_model_view import AuditModelViewSet
 from core.views.recent_records_view import RecentRecordsMixin
-from apps.production.services.production_record_service import perform_manual_duration_batch
+from apps.common.services.op_record_batch_service import perform_manual_duration_batch
 
 
 class OpRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
@@ -29,7 +29,7 @@ class OpRecordViewSet(RecentRecordsMixin, AuditModelViewSet):
         """
         POST .../manual-duration-batch/
 
-        See perform_manual_duration_batch (production_record_service) for
+        See perform_manual_duration_batch (op_record_batch_service) for
         the payload and behavior details.
         """
         return perform_manual_duration_batch(

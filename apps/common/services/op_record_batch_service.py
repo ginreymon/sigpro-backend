@@ -8,6 +8,10 @@ from rest_framework.response import Response
 
 from core.utils.date_utils import to_utc_naive
 
+# Shared by ProductionRecordViewSet and StampingRecordViewSet. The production
+# models/services it needs (WorkSession, WorkShiftSnapshot, ModuleDowntime,
+# ProductionRecord...) are imported lazily inside the functions, so this module
+# has no import-time dependency on `apps.production`.
 MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'PRODUCTION RECORD DOWNTIME'
 
 

@@ -1,6 +1,6 @@
 from django.db import models
 from apps.integration.models.op_record import OpRecord
-from apps.production.models.op_work_record import OpWorkRecord
+from apps.common.models.op_work_record import OpWorkRecord
 from .stamping_reference_sam import StampingReferenceSam
 
 

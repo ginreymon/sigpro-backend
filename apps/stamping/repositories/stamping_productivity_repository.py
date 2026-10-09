@@ -1,6 +1,6 @@
 import json
 from django.db import connection
-from apps.production.mappers.recursive_mapper import translate_keys
+from apps.common.mappers.recursive_mapper import translate_keys
 
 
 class StampingProductivityRepository:

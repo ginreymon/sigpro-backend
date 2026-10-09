@@ -1,4 +1,4 @@
-from apps.production.repositories.sp_json import exec_json_procedure
+from apps.common.repositories.sp_json import exec_json_procedure
 
 
 class OPStampingRepository:

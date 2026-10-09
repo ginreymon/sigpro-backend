@@ -1,6 +1,6 @@
 from apps.production.models import ProductionRecord
 from apps.production.serializers import ProductionRecordSerializer
-from apps.production.views.op_record_view import OpRecordViewSet
+from apps.common.views.op_record_view import OpRecordViewSet
 
 
 class ProductionRecordViewSet(OpRecordViewSet):

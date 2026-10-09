@@ -5,7 +5,7 @@ from core.models.audit_model import TimeAuditModel, UserAuditModel
 class OpRecord(TimeAuditModel, UserAuditModel):
     """Common TEP state of the records of a production order (ProductionRecord
     and StampingRecord). The work data lives in
-    `apps.production.models.op_work_record.OpWorkRecord`.
+    `apps.common.models.op_work_record.OpWorkRecord`.
     """
 
     # TEP submission (integration) the record is associated with; null until it
