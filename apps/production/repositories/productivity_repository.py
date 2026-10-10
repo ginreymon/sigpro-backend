@@ -9,9 +9,9 @@ def _to_float(value):
 
 
 class ProductivityRepository(BaseProductivityRepository):
-    efficiency_period_sp = "sp_eficiencia_periodo"
+    efficiency_period_sp = "sp_eficiencia_periodo_produccion"
     module_shift_summary_sp = "sp_resumen_modulos_eficiencia_turno"
-    module_efficiency_sp = "sp_eficiencia_modulos"
+    module_efficiency_sp = "sp_eficiencia_modulos_produccion"
     shift_summary_sp = "sp_resumen_produccion_turno"
 
     @staticmethod
