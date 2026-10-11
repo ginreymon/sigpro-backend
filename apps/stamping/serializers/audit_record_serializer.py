@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import serializers
 from apps.stamping.models.audit_record import AuditRecord
 from apps.stamping.models.audit_record_detail import AuditRecordDetail
@@ -87,40 +86,37 @@ class AuditRecordBulkCreateSerializer(serializers.Serializer):
     total_ordered_quantity = serializers.IntegerField(min_value=0)
     colors = ColorAuditSerializer(many=True)
 
-    def create(self, validated_data):
-        colors = validated_data.pop("colors")
-        user = self.context["request"].user
 
-        with transaction.atomic():
-            audit_record = AuditRecord.objects.create(
-                op_number=validated_data.get("op_number"),
-                op_rowid=validated_data.get("op_rowid"),
-                op_type=validated_data.get("op_type"),
-                total_ordered_quantity=validated_data["total_ordered_quantity"],
-                created_by=user,
-                updated_by=user,
-            )
-            details = [
-                AuditRecordDetail.objects.create(
-                    audit_record=audit_record,
-                    color=entry["color"],
-                    sku_rowids=entry["sku_rowids"],
-                    ordered_quantity=entry["ordered_quantity"],
-                    audited_quantity=entry["audited_quantity"],
-                )
-                for entry in colors
-            ]
-        return details
+REQUIRED_PARAM_MESSAGE = "Este parámetro es obligatorio."
+INTEGER_PARAM_MESSAGE = "Debe ser un número entero."
 
-    def replace(self, validated_data):
-        """Reemplaza el bloque completo de auditoría de una OP (delete + create).
 
-        El delete de los AuditRecord padres elimina en cascada sus
-        AuditRecordDetail hijos."""
-        with transaction.atomic():
-            AuditRecord.objects.filter(
-                op_number=validated_data.get("op_number"),
-                op_rowid=validated_data.get("op_rowid"),
-                op_type=validated_data.get("op_type"),
-            ).delete()
-            return self.create(validated_data)
+def _required_messages(**extra):
+    return {"required": REQUIRED_PARAM_MESSAGE, "blank": REQUIRED_PARAM_MESSAGE,
+            "null": REQUIRED_PARAM_MESSAGE, "invalid": INTEGER_PARAM_MESSAGE, **extra}
+
+
+class OpBlockParamsSerializer(serializers.Serializer):
+    """Query params that identify the audit block of an OP."""
+
+    op_number = serializers.IntegerField(error_messages=_required_messages())
+    op_rowid = serializers.IntegerField(error_messages=_required_messages())
+    op_type = serializers.CharField(error_messages=_required_messages())
+
+
+class OpDocumentParamsSerializer(serializers.Serializer):
+    """Query params of the audit status lookup by document (?docType=OP&docNumber=40346)."""
+
+    docType = serializers.CharField(error_messages=_required_messages())
+    docNumber = serializers.IntegerField(error_messages=_required_messages())
+
+
+def validate_query_params(serializer_class, query_params) -> dict:
+    """Validates query params and raises a ValidationError shaped {field: message}
+    (one message per field, as the audit endpoints always returned)."""
+    serializer = serializer_class(data=query_params)
+    if not serializer.is_valid():
+        raise serializers.ValidationError(
+            {field: messages[0] for field, messages in serializer.errors.items()}
+        )
+    return serializer.validated_data

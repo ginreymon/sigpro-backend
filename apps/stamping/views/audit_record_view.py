@@ -1,19 +1,22 @@
 import django_filters as filters
-from django.db.models import CharField
-from django.db.models.functions import Cast
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed, ValidationError
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 from core.views.audit_model_view import AuditModelViewSet
-from apps.stamping.models.audit_record import AuditRecord
 from apps.stamping.models.audit_record_detail import AuditRecordDetail
+from apps.stamping.repositories.audit_record_repository import AuditRecordRepository
 from apps.stamping.serializers import (
     AuditRecordSerializer,
     AuditRecordBulkCreateSerializer,
     AuditedOpSummarySerializer,
 )
+from apps.stamping.serializers.audit_record_serializer import (
+    OpBlockParamsSerializer,
+    OpDocumentParamsSerializer,
+    validate_query_params,
+)
+from apps.stamping.services.audit_record_service import AuditRecordService
 
 
 class AuditRecordDetailFilterSet(filters.FilterSet):
@@ -46,23 +49,25 @@ class AuditRecordViewSet(AuditModelViewSet):
     Almacenamiento normalizado: cada fila expuesta por la API es un
     AuditRecordDetail (un color), aplanado junto a los datos de su
     AuditRecord padre (op_number/op_rowid/op_type/total_ordered_quantity).
+
+    La vista solo interpreta la petición y serializa la respuesta; las reglas
+    viven en AuditRecordService y el acceso a datos en AuditRecordRepository.
     """
 
-    queryset = AuditRecordDetail.objects.select_related(
-        'audit_record', 'audit_record__created_by', 'audit_record__updated_by',
-    ).all()
+    queryset = AuditRecordRepository.details_queryset()
     serializer_class = AuditRecordSerializer
     filterset_class = AuditRecordDetailFilterSet
     ordering_fields = ['color', 'ordered_quantity', 'audited_quantity']
     ordering = ['-audit_record__created_at']
 
-    def create(self, request, *args, **kwargs):
-        input_serializer = AuditRecordBulkCreateSerializer(data=request.data, context={"request": request})
-        input_serializer.is_valid(raise_exception=True)
-        instances = input_serializer.save()
+    def _serialize_details(self, details):
+        return AuditRecordSerializer(details, many=True, context=self.get_serializer_context()).data
 
-        output_serializer = AuditRecordSerializer(instances, many=True, context=self.get_serializer_context())
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+    def create(self, request, *args, **kwargs):
+        input_serializer = AuditRecordBulkCreateSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        instances = AuditRecordService.create_block(input_serializer.validated_data, request.user)
+        return Response(self._serialize_details(instances), status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         raise MethodNotAllowed(request.method)
@@ -81,108 +86,47 @@ class AuditRecordViewSet(AuditModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='bulk/confirm')
     def confirm(self, request):
-        op_number = request.query_params.get('op_number')
-        op_rowid = request.query_params.get('op_rowid')
-        op_type = request.query_params.get('op_type')
+        block = validate_query_params(OpBlockParamsSerializer, request.query_params)
+        details = AuditRecordService.confirm_block(
+            block['op_number'], block['op_rowid'], block['op_type'], request.user,
+        )
 
-        missing = [f for f, v in (('op_number', op_number), ('op_rowid', op_rowid), ('op_type', op_type)) if not v]
-        if missing:
-            raise ValidationError({f: "Este parámetro es obligatorio." for f in missing})
-
-        # QuerySet.update() bypasses save(), so auto_now on updated_at won't
-        # fire on its own — stamp it explicitly, it's what "most recently
-        # audited" ordering in the audited-ops list sorts by.
-        updated = AuditRecord.objects.filter(
-            op_number=op_number, op_rowid=op_rowid, op_type=op_type,
-        ).update(is_audited=True, updated_at=timezone.now(), updated_by=request.user)
-
-        if not updated:
+        if details is None:
             return Response(
                 {"detail": "No existe un bloque de auditoría para esta OP."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        details = AuditRecordDetail.objects.filter(
-            audit_record__op_number=op_number,
-            audit_record__op_rowid=op_rowid,
-            audit_record__op_type=op_type,
-        ).select_related('audit_record', 'audit_record__created_by', 'audit_record__updated_by')
-
-        output_serializer = AuditRecordSerializer(details, many=True, context=self.get_serializer_context())
-        return Response(output_serializer.data)
+        return Response(self._serialize_details(details))
 
     @action(detail=False, methods=['get'], url_path='status')
     def status_for_op(self, request):
         """Estado de auditoría de una OP por docType/docNumber (?docType=OP&docNumber=40346),
         sin traer el detalle por color — para saber al buscar una OP si ya
         fue auditada."""
-        doc_type = request.query_params.get('docType')
-        doc_number = request.query_params.get('docNumber')
-
-        missing = [f for f, v in (('docType', doc_type), ('docNumber', doc_number)) if not v]
-        if missing:
-            raise ValidationError({f: "Este parámetro es obligatorio." for f in missing})
-
-        try:
-            doc_number = int(doc_number)
-        except (TypeError, ValueError):
-            raise ValidationError({"docNumber": "Debe ser un número entero."})
-
-        audit_record = AuditRecord.objects.filter(op_type=doc_type, op_number=doc_number).first()
-
-        if not audit_record:
-            return Response({
-                "exists": False,
-                "is_audited": False,
-                "total_ordered_quantity": None,
-                "total_audited_quantity": None,
-                "matches_total": None,
-            })
-
-        return Response({
-            "exists": True,
-            "is_audited": audit_record.is_audited,
-            "total_ordered_quantity": audit_record.total_ordered_quantity,
-            "total_audited_quantity": audit_record.total_audited_quantity,
-            "matches_total": audit_record.matches_total,
-        })
+        document = validate_query_params(OpDocumentParamsSerializer, request.query_params)
+        return Response(
+            AuditRecordService.status_for_document(document['docType'], document['docNumber'])
+        )
 
     @action(detail=False, methods=['get'], url_path='audited-ops')
     def audited_ops(self, request):
         """Una fila por OP ya confirmada (is_audited=True), de la más
         reciente a la más antigua en ser auditada. Búsqueda por op_number
         (parcial, ej. "404" encuentra la OP 40436)."""
-        queryset = AuditRecord.objects.filter(is_audited=True).select_related(
-            'created_by', 'updated_by',
-        ).order_by('-updated_at')
-
-        search = request.query_params.get('search')
-        if search:
-            queryset = queryset.annotate(
-                op_number_str=Cast('op_number', output_field=CharField()),
-            ).filter(op_number_str__icontains=search)
+        queryset = AuditRecordService.audited_ops(request.query_params.get('search'))
 
         page = self.paginate_queryset(queryset)
         serializer = AuditedOpSummarySerializer(page, many=True, context=self.get_serializer_context())
         return self.get_paginated_response(serializer.data)
 
     def _bulk_update(self, request):
-        input_serializer = AuditRecordBulkCreateSerializer(data=request.data, context={"request": request})
+        input_serializer = AuditRecordBulkCreateSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
-        instances = input_serializer.replace(input_serializer.validated_data)
-
-        output_serializer = AuditRecordSerializer(instances, many=True, context=self.get_serializer_context())
-        return Response(output_serializer.data)
+        instances = AuditRecordService.replace_block(input_serializer.validated_data, request.user)
+        return Response(self._serialize_details(instances))
 
     def _bulk_delete(self, request):
-        op_number = request.query_params.get('op_number')
-        op_rowid = request.query_params.get('op_rowid')
-        op_type = request.query_params.get('op_type')
-
-        missing = [f for f, v in (('op_number', op_number), ('op_rowid', op_rowid), ('op_type', op_type)) if not v]
-        if missing:
-            raise ValidationError({f: "Este parámetro es obligatorio." for f in missing})
-
-        # Cascade: borrar el AuditRecord padre elimina sus AuditRecordDetail hijos.
-        AuditRecord.objects.filter(op_number=op_number, op_rowid=op_rowid, op_type=op_type).delete()
+        block = validate_query_params(OpBlockParamsSerializer, request.query_params)
+        AuditRecordService.delete_block(block['op_number'], block['op_rowid'], block['op_type'])
         return Response(status=status.HTTP_204_NO_CONTENT)
