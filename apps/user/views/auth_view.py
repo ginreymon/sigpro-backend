@@ -9,8 +9,8 @@ from django.utils.crypto import get_random_string
 from django.utils import timezone
 from datetime import timedelta
 from apps.user.serializers import RegisterSerializer, ChangePasswordSerializer
-from apps.user.employee import get_employee_model
-from apps.user.models import PasswordResetToken, UserEmployeeLink
+from apps.people.models import AuthUserEmployee, EmployeeLocal
+from apps.user.models import PasswordResetToken
 from core.models.option import Option
 from core.models.role_home_view import RoleHomeView
 
@@ -142,10 +142,9 @@ class AuthViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        EmployeeLocal = get_employee_model()
         try:
             employee = EmployeeLocal.objects.get(id_number=id_number)
-            link = UserEmployeeLink.objects.get(employee_local=employee)
+            link = AuthUserEmployee.objects.get(employee_local=employee)
             user = link.auth_user
 
             if user.username != username:

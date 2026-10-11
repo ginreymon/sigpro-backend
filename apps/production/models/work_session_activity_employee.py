@@ -1,6 +1,6 @@
 from core.models.audit_model import AuditModel
 from django.db import models
-from apps.production.models.employee_local import EmployeeLocal
+from apps.people.models import EmployeeLocal
 
 class WorkSessionActivityEmployee(AuditModel):
 

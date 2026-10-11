@@ -1,5 +1,6 @@
-from apps.production.models import EmployeeLocal, ProductionAreaCostCenter
-from apps.production.serializers import EmployeeLocalSerializer
+from apps.production.models import ProductionAreaCostCenter
+from apps.people.models import EmployeeLocal
+from apps.people.serializers import EmployeeLocalSerializer
 from .local_base_model_view import LocalBaseModelViewSet
 
 

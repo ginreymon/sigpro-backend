@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from apps.user.employee import get_employee_serializer_class
+from apps.people.serializers import EmployeeLocalSerializer
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -65,7 +65,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         if hasattr(obj, "employee_link"):
             employee = obj.employee_link.employee_local
-            return get_employee_serializer_class()(employee).data
+            return EmployeeLocalSerializer(employee).data
 
         return None
 

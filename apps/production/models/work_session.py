@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from apps.production.models.employee_local import EmployeeLocal
+from apps.people.models import EmployeeLocal
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 from apps.production.models.work_shift import WorkShift
 from core.models.audit_model import TimeAuditModel, UserAuditModel

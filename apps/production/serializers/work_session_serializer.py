@@ -4,7 +4,8 @@ from apps.production.models.work_shift import WorkShift
 from apps.production.models.module import Module
 from apps.production.serializers.module_serializer import ModuleSerializer
 from apps.production.serializers.work_shift_serializer import WorkShiftSerializer
-from apps.production.models import WorkSession, EmployeeLocal
+from apps.production.models import WorkSession
+from apps.people.models import EmployeeLocal
 from apps.production.models.work_shift_snapshot import WorkShiftSnapshot
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee

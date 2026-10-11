@@ -1,9 +1,9 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from apps.production.models.employee_continuous_work_limit import EmployeeContinuousWorkLimit
-from apps.production.models.employee_local import EmployeeLocal
+from apps.people.models import EmployeeLocal
 from core.serializers.audit_serializer import AuditSerializer
-from .employee_local_serializer import EmployeeLocalSerializer
+from apps.people.serializers import EmployeeLocalSerializer
 
 
 class EmployeeContinuousWorkLimitSerializer(AuditSerializer):

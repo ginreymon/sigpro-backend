@@ -1,6 +1,6 @@
 from django.db import models
 from core.models.audit_model import AuditModel
-from apps.production.models.employee_local import EmployeeLocal
+from apps.people.models import EmployeeLocal
 
 
 class EmployeeContinuousWorkLimit(AuditModel):

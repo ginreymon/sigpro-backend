@@ -3,7 +3,6 @@ from django.contrib import admin
 # Register your models here.
 from apps.production.models import (
     Module,
-    EmployeeLocal,
     ModuleAssignee,
     ProductionRecord,
     WorkBreakRecord,
@@ -16,6 +15,7 @@ from apps.production.models import (
     WorkSessionActivityEmployee,
     ProductionArea,
 )
+from apps.people.models import EmployeeLocal
 
 admin.site.register([
     Module,

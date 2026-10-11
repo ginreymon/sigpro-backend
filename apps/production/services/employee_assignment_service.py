@@ -1,5 +1,6 @@
 from rest_framework.exceptions import ValidationError
-from apps.production.models import ModuleAssignee, WorkSessionActivity, EmployeeLocal, EmployeeContinuousWorkLimit
+from apps.production.models import ModuleAssignee, WorkSessionActivity, EmployeeContinuousWorkLimit
+from apps.people.models import EmployeeLocal
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 
 

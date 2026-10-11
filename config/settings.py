@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_spectacular_sidecar',
     'core',
+    'apps.people',
     'apps.user',
     'apps.production',
     'apps.stamping',

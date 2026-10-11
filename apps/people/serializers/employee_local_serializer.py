@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.production.models.employee_local import EmployeeLocal
+from apps.people.models.employee_local import EmployeeLocal
 
 
 class EmployeeLocalSerializer(serializers.ModelSerializer):

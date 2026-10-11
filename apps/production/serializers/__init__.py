@@ -7,7 +7,6 @@ from .module_serializer import ModuleSerializer
 from .work_break_serializer import WorkBreakSerializer
 from .work_shift_serializer import WorkShiftSerializer
 from .work_session_serializer import WorkSessionSerializer
-from .employee_local_serializer import EmployeeLocalSerializer
 from .employee_continuous_work_limit_serializer import EmployeeContinuousWorkLimitSerializer
 from .work_center_local_serializer import WorkCenterLocalSerializer
 from .sku_item_local_serializer import (

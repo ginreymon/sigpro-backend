@@ -109,3 +109,11 @@ Also done (same day):
 - `user` no longer imports `production`: every reference goes through `apps/user/employee.py` (`get_employee_model()`, `get_employee_serializer_class()`).
 
 Resulting graph: static imports go only `stamping -> production -> common` (and `stamping -> common`). `integration` and `user` have no static imports of production/stamping. The functional dependency still exists by design (TEP submission needs the record tables; accounts link to employees) but is declared in one place per app and resolved at runtime. `manage.py check` OK, `makemigrations --check` no changes, `manage.py test apps.integration` 13/13 OK.
+
+## 7. Progress: `people` app (employee + account link), 2026-10-11
+
+- New app `apps/people` owns `EmployeeLocal` (table `production_employee_local`, unchanged) and `AuthUserEmployee` (was `user.UserEmployeeLink`; table `user_employee_link` -> `auth_user_employee`). `EmployeeLocalSerializer` moved with them.
+- Migrations: `people.0001_initial` (state-only for EmployeeLocal, `sp_rename` for the link table, content types/permissions re-pointed), `user.0005_delete_useremployeelink` and `production.0058_move_employee_local_to_people` (both state-only). Verified: `makemigrations --check` clean; migration graph builds and project state resolves the new models and FKs. NOT applied to any database.
+- `apps/user/employee.py` (the get_model/import_string layer) was removed: `user` and `production` import `apps.people` directly (downward arrow, `people` imports nothing from them).
+- API contract unchanged (routes `/production/employees/`, `/user/employee-directory/`, field `employee_local_id`). `EmployeeLocalViewSet` stays in `production` because it filters by `ProductionAreaCostCenter`.
+- Graph: `people` <- `production` <- `stamping`; `user` -> `people`.

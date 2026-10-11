@@ -1,7 +1,7 @@
 from django.db import models
 from core.models import TimeAuditModel, UserAuditModel
 from .module import Module
-from .employee_local import EmployeeLocal
+from apps.people.models import EmployeeLocal
 
 
 class ModuleAssignee(TimeAuditModel, UserAuditModel):
