@@ -86,10 +86,15 @@ def session_core_module_id(session):
     return activity.module.location.core_module_id
 
 
-def force_close(session, expires_at: datetime) -> None:
+def finalize_expired_session(session, expires_at: datetime) -> None:
     """
-    Closes a session using expires_at as ended_at.
-    Used for sessions that exceeded their shift window.
+    Closes a session that exceeded its shift window and leaves it finalized.
+
+    The session ends at expires_at (shift end + grace) and editing_finalized is
+    set: records are captured hourly, so a session that is closed by expiry
+    instead of by the user must lock the hourly editing, which is what the flag
+    does in the frontend and in the SQL functions. WorkSession.close_session
+    (manual close) does not finalize.
     """
     with transaction.atomic():
         activity = session.get_active_activity()
@@ -168,7 +173,7 @@ def get_active_session(user, core_module_id=None):
     expires_at = session_expires_at(session, get_grace_hours())
 
     if timezone.now() >= expires_at:
-        force_close(session, expires_at)
+        finalize_expired_session(session, expires_at)
         return None
 
     return session
@@ -195,7 +200,7 @@ def rotate_activity(session_id, user, read_input):
         expires_at = session_expires_at(session, get_grace_hours())
 
         if timezone.now() >= expires_at:
-            force_close(session, expires_at)
+            finalize_expired_session(session, expires_at)
             expired = True
         else:
             employee_ids, apprentice_ids = read_input()

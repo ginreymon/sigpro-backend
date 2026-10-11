@@ -32,7 +32,7 @@ Target: View -> Service -> Repository -> DB/SP. Serializers validate/transform. 
 5. Swagger/ReDoc exposed without auth in `config/urls.py`.
 
 ### 2.2 High (structure)
-1. `work_session_view.py` / `work_session_activity_view.py` hold business logic (see table). Two different "close session" paths: `close_session()` (model) vs `force_close()` (service).
+1. `work_session_view.py` / `work_session_activity_view.py` hold business logic (see table). Two different "close session" paths: `close_session()` (model) vs `finalize_expired_session()` (service).
 2. `WorkSessionSerializer` does orchestration; also imports `WorkBreakRecordSerializer` inside a method (circular import smell).
 3. `common/services/op_record_batch_service.py` imports production models/repositories lazily and builds `ModuleDowntime` — domain logic of production inside `common`.
 4. `StampingRecordViewSet._additional_times_extra_seconds` does ORM + math in the view module.
@@ -69,7 +69,7 @@ Target: View -> Service -> Repository -> DB/SP. Serializers validate/transform. 
 | 3 | **Throttling**: `ScopedRateThrottle` on login/refresh/reset; protect Swagger behind auth | `settings.py`, `urls.py` | Low | 2.1.3 / 2.1.5 |
 | 4 | **Error contract**: one DRF `EXCEPTION_HANDLER` normalising to `{detail, code, errors}`; replace bare-list/`error`/`message` responses | `core/exceptions.py`, views | Med (frontend parsing) — do together with a frontend change | 2.3.1 |
 | 5 | **Input serializers for params**: `PeriodQuerySerializer`, `OpQuerySerializer`, `PauseInputSerializer`; remove hand-written 400s and make invalid ints a 400 | `common/views/productivity_params.py`, `audit_record_view.py`, `work_session_activity_view.py` | Low | 2.2.5 / 2.3.2 / 2.3.3 |
-| 6 | **`WorkSessionService` + `WorkBreakService`**: move pause/resume/rotate/close/create-guard out of views; unify `close_session`/`force_close`; serializer `create/update` calls the service | `production/services/`, `work_session_*_view.py`, `work_session_serializer.py` | **High** (core flow) — needs characterization tests first | 2.2.1 / 2.2.2 |
+| 6 | **`WorkSessionService` + `WorkBreakService`**: move pause/resume/rotate/close/create-guard out of views; unify `close_session`/`finalize_expired_session`; serializer `create/update` calls the service | `production/services/`, `work_session_*_view.py`, `work_session_serializer.py` | **High** (core flow) — needs characterization tests first | 2.2.1 / 2.2.2 |
 | 7 | **Break `common -> production` cycle**: move `op_record_batch_service` to `production/services` (or inject callables); same for `user -> production` | `common/`, `user/` | Med | 2.2.3 |
 | 8 | **AuditRecordService/Repository** for `confirm`, `status`, `audited-ops`, `bulk delete` | `stamping/` | Low | 2.2 |
 | 9 | **Restrict filters**: explicit `filterset_fields`/`ordering_fields` per ViewSet; `max_limit` on pagination; bound `/all/` | `base_model_view.py`, ViewSets | Med (frontend may rely on `__all__`) — grep frontend first | 2.3.7 / 2.3.10 |
@@ -127,14 +127,14 @@ Resulting graph: static imports go only `stamping -> production -> common` (and 
   - `services/exceptions.py` + `views/session_rule_error_mixin.py`: `SessionRuleError(payload, status_code)` keeps every response exactly as before (`{"detail": ...}`, the bare-list "expirada" payload, the 404 for an unknown break type).
 - Behaviour kept on purpose: validation order of `pause`; an expired session is force-closed and that close is committed (the error is raised after the transaction ends); `rotate` validates its body only after the session checks.
 - Views no longer use `.objects`, `select_for_update`, `transaction` or `timezone` (only the class-level `queryset` the router needs).
-- Not done (out of scope here): `WorkSessionSerializer.create/update` orchestration and the model methods `close_session` / `WorkSessionActivity.close` vs `force_close` (two close paths still exist). Unit tests with mocked repositories (26 new); nothing was run against SQL Server.
+- Not done (out of scope here): `WorkSessionSerializer.create/update` orchestration and the model methods `close_session` / `WorkSessionActivity.close` vs `finalize_expired_session` (two close paths still exist). Unit tests with mocked repositories (26 new); nothing was run against SQL Server.
 
 ## 9. Progress: WorkSessionSerializer orchestration, 2026-10-11
 
 - `WorkSessionSerializer` now only validates and represents; `create`/`update` delegate to `services/work_session_setup_service.py` (`create_session`, `update_session`, `snapshot_shift`, `assign_employees`), which owns the transactions and the checks (module conflict, active employees, employee conflicts, "no employees without a module", "no active activity").
 - ORM access moved to `WorkSessionRepository` (create/update, shift snapshot, employee snapshots). `ModelSerializer.create/update` were replaced by the equivalent `objects.create(**data)` / set attributes + `save()`.
 - 8 unit tests added (mocked repository); 54 production/stamping/integration tests pass. Nothing was run against SQL Server.
-- Still open: two close paths (`WorkSession.close_session` / `WorkSessionActivity.close` vs `force_close`); `get_active_activity` still imports `WorkBreakRecordSerializer` inside the method.
+- Still open: two close paths (`WorkSession.close_session` / `WorkSessionActivity.close` vs `finalize_expired_session`); `get_active_activity` still imports `WorkBreakRecordSerializer` inside the method.
 
 ### Decision on the two close paths (2026-10-11)
-`WorkSession.close_session` and `work_session_service.force_close` are **kept as they are, on purpose**; they are not unified. They differ: manual close ends the session at `now` and does not set `editing_finalized`; the expiry close ends it at `max(expires_at, started_at)`, sets `editing_finalized` and runs in its own transaction. Both close the active activity with `activity.close()` (uses `now`). The tests in `SessionCloseTests` pin that behaviour. Any future change to it (e.g. closing the activity at `expires_at`) must be a deliberate decision because it changes the `end_time` values used by the efficiency calculation.
+`WorkSession.close_session` and `work_session_service.finalize_expired_session` are **kept as they are, on purpose**; they are not unified. They differ: manual close ends the session at `now` and does not set `editing_finalized`; the expiry close ends it at `max(expires_at, started_at)`, sets `editing_finalized` and runs in its own transaction. Both close the active activity with `activity.close()` (uses `now`). The tests in `SessionCloseTests` pin that behaviour. Any future change to it (e.g. closing the activity at `expires_at`) must be a deliberate decision because it changes the `end_time` values used by the efficiency calculation.

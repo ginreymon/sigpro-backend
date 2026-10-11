@@ -37,7 +37,7 @@ Target architecture: **View -> Service -> Repository -> DB/SP**. Serializers onl
 - **Cycles:** integration <-> production/stamping (`OpRecord` in integration, FK back); `common` -> `production` hidden via lazy imports (`op_record_batch_service`); `user` -> production internals; stamping <-> production.
 - **Business logic in views:** `work_session_activity_view`, `work_session_view`, `sku_item_local_view`, `reference_sam_view`, `productivity_view`, stamping `audit_record_view`, `stamping_record_view`, catalog `technical_sheet_view`, `auth_view`, `core/views/menu_view`.
 - **Business logic in serializers:** production `module`, `work_session`, `production_record`, `production_area`; stamping `stamping_record`, `audit_record`; user `group`, `register`, `user_update`.
-- **Business logic in models:** `WorkSession.start_activity/close_session`, `WorkSessionActivity.close` (cross-app), `ModuleDowntime.save`. Session close exists twice with different semantics (`close_session` vs `force_close`).
+- **Business logic in models:** `WorkSession.start_activity/close_session`, `WorkSessionActivity.close` (cross-app), `ModuleDowntime.save`. Session close exists twice with different semantics (`close_session` vs `finalize_expired_session`).
 - **Missing repositories:** production sessions/modules/employees/records/SKU-SAM, stamping records/audit, integration `TepSubmission`, user, catalog (not on shared SP helper).
 - **Base classes misplaced:** `LocalBaseModelViewSet` lives in `production/views` but is used by catalog; three view bases in play (`BaseModelViewSet`, `LocalBaseModelViewSet`, `AuditModelViewSet`) with inconsistent usage.
 - **Uncommitted refactor:** `apps/common/*productivity*` files are untracked but imported by production/stamping; a clean checkout breaks until committed.
@@ -90,7 +90,7 @@ Order by risk/value: **production -> stamping -> user/auth -> catalog -> integra
 For each app: create repositories for ORM access; move view/serializer/model orchestration into services; slim views; serializers validate only.
 
 Production:
-- `WorkBreakService` (pause/resume/auto-resume), `WorkSessionService` (start/rotate/close/expire — single close path, replaces `WorkSession.close_session` and `force_close` divergence), `ModuleService` (next number, machine/user sync), `ProductionRecordService` (quantity limit, activity rotation).
+- `WorkBreakService` (pause/resume/auto-resume), `WorkSessionService` (start/rotate/close/expire — single close path, replaces `WorkSession.close_session` and `finalize_expired_session` divergence), `ModuleService` (next number, machine/user sync), `ProductionRecordService` (quantity limit, activity rotation).
 - `SkuItemRepository` owning the SAM subquery once; `ReferenceSamRepository`.
 - Management command `close_expired_sessions` calls a service only.
 - Merge `exports/reports/helpers` into one `exports/` package.

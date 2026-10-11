@@ -158,17 +158,17 @@ class SessionLifecycleTests(SimpleTestCase):
         repository.get_detail.assert_called_once_with(7)
         self.assertIs(result, repository.get_detail.return_value)
 
-    @patch(f"{SESSION_SERVICE}.force_close")
+    @patch(f"{SESSION_SERVICE}.finalize_expired_session")
     @patch(f"{SESSION_SERVICE}.session_expires_at")
     @patch(f"{SESSION_SERVICE}.get_grace_hours", return_value=8)
     @patch(f"{SESSION_SERVICE}.WorkSessionRepository")
-    def test_active_session_expired_is_force_closed(self, repository, _grace, expires_at, force_close):
+    def test_active_session_expired_is_finalized(self, repository, _grace, expires_at, finalize_expired_session):
         session = MagicMock()
         repository.find_open_session_of.return_value = session
         expires_at.return_value = timezone.now() - timedelta(minutes=1)
 
         self.assertIsNone(work_session_service.get_active_session("user"))
-        force_close.assert_called_once_with(session, expires_at.return_value)
+        finalize_expired_session.assert_called_once_with(session, expires_at.return_value)
 
     @patch(f"{SESSION_SERVICE}.session_core_module_id", return_value=1)
     @patch(f"{SESSION_SERVICE}.WorkSessionRepository")
@@ -177,12 +177,12 @@ class SessionLifecycleTests(SimpleTestCase):
         self.assertIsNone(work_session_service.get_active_session("user", core_module_id="2"))
 
     @patch(f"{SESSION_SERVICE}.transaction")
-    @patch(f"{SESSION_SERVICE}.force_close")
+    @patch(f"{SESSION_SERVICE}.finalize_expired_session")
     @patch(f"{SESSION_SERVICE}.session_expires_at")
     @patch(f"{SESSION_SERVICE}.get_grace_hours", return_value=8)
     @patch(f"{SESSION_SERVICE}.WorkSessionRepository")
     def test_rotate_on_expired_session_closes_it_then_fails(
-        self, repository, _grace, expires_at, force_close, _transaction,
+        self, repository, _grace, expires_at, finalize_expired_session, _transaction,
     ):
         session = MagicMock(is_closed=False)
         repository.lock_by_id.return_value = session
@@ -192,7 +192,7 @@ class SessionLifecycleTests(SimpleTestCase):
         with self.assertRaises(SessionRuleError) as ctx:
             work_session_service.rotate_activity(1, "user", read_input)
 
-        force_close.assert_called_once_with(session, expires_at.return_value)
+        finalize_expired_session.assert_called_once_with(session, expires_at.return_value)
         read_input.assert_not_called()
         self.assertEqual(ctx.exception.payload, ["La jornada (sesión) ha expirado."])
 
@@ -409,7 +409,7 @@ class SessionCloseTests(SimpleTestCase):
 
     - WorkSession.close_session (manual close, and closing the previous session
       when a new one opens): ended_at = now, does NOT mark editing_finalized.
-    - work_session_service.force_close (expired session): ended_at =
+    - work_session_service.finalize_expired_session (expired session): ended_at =
       max(expires_at, started_at), marks editing_finalized, runs in its own
       transaction.
     Both close the active activity with activity.close() (which uses `now`).
@@ -451,7 +451,7 @@ class SessionCloseTests(SimpleTestCase):
         session = self.fake_session(started)
 
         with patch(f"{SESSION_SERVICE}.transaction"):
-            work_session_service.force_close(session, expires_at)
+            work_session_service.finalize_expired_session(session, expires_at)
 
         session.get_active_activity.return_value.close.assert_called_once_with()
         self.assertEqual(session.ended_at, expires_at)
@@ -467,7 +467,7 @@ class SessionCloseTests(SimpleTestCase):
         session = self.fake_session(started)
 
         with patch(f"{SESSION_SERVICE}.transaction"):
-            work_session_service.force_close(session, started - timedelta(hours=1))
+            work_session_service.finalize_expired_session(session, started - timedelta(hours=1))
 
         self.assertEqual(session.ended_at, started)
         self.assertEqual(session.total_time, timedelta(0))

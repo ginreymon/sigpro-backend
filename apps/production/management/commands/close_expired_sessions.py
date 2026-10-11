@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.production.models.work_session import WorkSession
 from apps.production.services.work_session_service import (
     COLOMBIA_TZ,
-    force_close,
+    finalize_expired_session,
     get_grace_hours,
     session_expires_at,
 )
@@ -60,7 +60,7 @@ class Command(BaseCommand):
                         session.editing_finalized,
                     )
                     if not dry_run:
-                        force_close(session, expires_at)
+                        finalize_expired_session(session, expires_at)
                     closed += 1
                 else:
                     remaining = expires_at - now_utc
