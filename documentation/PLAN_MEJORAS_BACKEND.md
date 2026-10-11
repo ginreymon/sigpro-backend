@@ -117,3 +117,14 @@ Resulting graph: static imports go only `stamping -> production -> common` (and 
 - `apps/user/employee.py` (the get_model/import_string layer) was removed: `user` and `production` import `apps.people` directly (downward arrow, `people` imports nothing from them).
 - API contract unchanged (routes `/production/employees/`, `/user/employee-directory/`, field `employee_local_id`). `EmployeeLocalViewSet` stays in `production` because it filters by `ProductionAreaCostCenter`.
 - Graph: `people` <- `production` <- `stamping`; `user` -> `people`.
+
+## 8. Progress: sessions / activities / breaks (step 6), 2026-10-11
+
+- Rules moved out of `work_session_view.py` and `work_session_activity_view.py`:
+  - `services/work_session_service.py`: `open_session`, `close`, `get_active_session`, `rotate_activity` (next to the existing expiry helpers).
+  - `services/work_break_service.py`: `pause` (incl. auto-resume) and `resume`.
+  - `repositories/work_session_repository.py`: `WorkSessionRepository` (detail queryset, `select_for_update` locks) and `WorkSessionActivityRepository`.
+  - `services/exceptions.py` + `views/session_rule_error_mixin.py`: `SessionRuleError(payload, status_code)` keeps every response exactly as before (`{"detail": ...}`, the bare-list "expirada" payload, the 404 for an unknown break type).
+- Behaviour kept on purpose: validation order of `pause`; an expired session is force-closed and that close is committed (the error is raised after the transaction ends); `rotate` validates its body only after the session checks.
+- Views no longer use `.objects`, `select_for_update`, `transaction` or `timezone` (only the class-level `queryset` the router needs).
+- Not done (out of scope here): `WorkSessionSerializer.create/update` orchestration and the model methods `close_session` / `WorkSessionActivity.close` vs `force_close` (two close paths still exist). Unit tests with mocked repositories (26 new); nothing was run against SQL Server.
