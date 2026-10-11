@@ -5,12 +5,9 @@ from apps.production.models.module import Module
 from apps.production.serializers.module_serializer import ModuleSerializer
 from apps.production.serializers.work_shift_serializer import WorkShiftSerializer
 from apps.production.models import WorkSession
-from apps.people.models import EmployeeLocal
-from apps.production.models.work_shift_snapshot import WorkShiftSnapshot
 from apps.production.serializers.production_record_serializer import ProductionRecordSerializer
-from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
-from apps.production.services.employee_assignment_service import validate_employee_conflicts, validate_employees_active, sync_module_assignees, validate_module_conflict, get_continuous_work_minutes_map
-from django.db import transaction
+from apps.production.serializers.work_break_record_serializer import WorkBreakRecordSerializer
+from apps.production.services import work_session_setup_service
 from core.serializers.audit_serializer import AuditSerializer
 
 
@@ -94,8 +91,6 @@ class WorkSessionSerializer(AuditSerializer):
         last_record = activity.last_production_record
         active_break = activity.active_break
 
-        from apps.production.serializers.work_break_record_serializer import WorkBreakRecordSerializer
-
         return {
             "id": activity.id,
             "started_at": activity.started_at,
@@ -116,128 +111,8 @@ class WorkSessionSerializer(AuditSerializer):
             ),
         }
 
-    def _sync_activity_employees(self, activity, employee_ids, apprentice_ids, created_by):
-        employees = EmployeeLocal.objects.filter(id__in=employee_ids)
-        apprentice_set = set(apprentice_ids or [])
-        continuous_minutes_map = get_continuous_work_minutes_map(employee_ids)
-
-        WorkSessionActivityEmployee.objects.filter(work_session_activity=activity).delete()
-        WorkSessionActivityEmployee.objects.bulk_create([
-            WorkSessionActivityEmployee(
-                work_session_activity=activity,
-                employee=emp,
-                is_apprentice=emp.id in apprentice_set,
-                worked_minutes_per_hour=continuous_minutes_map.get(emp.id),
-                created_by=created_by,
-            )
-            for emp in employees
-        ])
-
-    def _handle_employees(self, instance, employee_ids, activity=None, apprentice_ids=None):
-        if not activity:
-            activity = instance.get_active_activity()
-
-        if not activity:
-            raise ValidationError("No se encontró una actividad activa.")
-
-        created_by = getattr(instance, "updated_by", None) or instance.created_by
-
-        validate_employees_active(employee_ids)
-        validate_employee_conflicts(employee_ids, activity)
-        self._sync_activity_employees(activity, employee_ids, apprentice_ids, created_by)
-        sync_module_assignees(activity.module, created_by)
-
-    def _sync_shift_snapshot(self, work_session, work_shift, audit_user):
-        # Congela hora/ubicación del turno al momento de abrir la jornada (sesión) o de
-        # cambiar de turno — si WorkShift cambia después, este registro histórico no
-        # debe verse afectado. Se actualiza (no se crea otro) si ya existe uno.
-        snapshot = WorkShiftSnapshot.objects.filter(work_session=work_session).first()
-
-        if snapshot:
-            snapshot.work_shift = work_shift
-            snapshot.location = work_shift.location
-            snapshot.start_time = work_shift.start_time
-            snapshot.end_time = work_shift.end_time
-            snapshot.updated_by = audit_user
-            snapshot.save(update_fields=["work_shift", "location", "start_time", "end_time", "updated_by"])
-        else:
-            WorkShiftSnapshot.objects.create(
-                work_session=work_session,
-                work_shift=work_shift,
-                location=work_shift.location,
-                start_time=work_shift.start_time,
-                end_time=work_shift.end_time,
-                created_by=audit_user,
-                updated_by=audit_user,
-            )
-
-    @transaction.atomic
     def create(self, validated_data):
-        employee_ids = validated_data.pop("employee_ids", [])
-        apprentice_ids = validated_data.pop("apprentice_ids", [])
-        module = validated_data.pop("module_id", None)
+        return work_session_setup_service.create_session(validated_data)
 
-        work_session = super().create(validated_data)
-
-        self._sync_shift_snapshot(
-            work_session, work_session.work_shift, validated_data.get("created_by")
-        )
-
-        activity = None
-
-        if module:
-            validate_module_conflict(module)
-            activity = work_session.start_activity(module)
-
-        if employee_ids:
-            if not activity:
-                raise ValidationError("No se pueden asignar empleados sin un módulo.")
-
-            self._handle_employees(work_session, employee_ids, activity, apprentice_ids)
-
-        return work_session
-
-    @transaction.atomic
     def update(self, instance, validated_data):
-        employee_ids = validated_data.pop("employee_ids", None)
-        apprentice_ids = validated_data.pop("apprentice_ids", None)
-        module = validated_data.pop("module_id", None)
-
-        # Capture current state before any changes
-        current_activity = instance.get_active_activity()
-        current_module = current_activity.module if current_activity else None
-        current_employee_ids = set(
-            current_activity.employee_snapshots.values_list("employee_id", flat=True)
-        ) if current_activity else set()
-        current_apprentice_ids = set(
-            current_activity.employee_snapshots.filter(is_apprentice=True).values_list("employee_id", flat=True)
-        ) if current_activity else set()
-
-        new_work_shift = validated_data.get("work_shift")
-
-        module_changed = module is not None and module != current_module
-        work_shift_changed = new_work_shift is not None and new_work_shift != instance.work_shift
-        employees_changed = employee_ids is not None and set(employee_ids) != current_employee_ids
-        apprentice_changed = apprentice_ids is not None and set(apprentice_ids) != current_apprentice_ids
-
-        any_field_changed = module_changed or work_shift_changed or employees_changed or apprentice_changed
-
-        instance = super().update(instance, validated_data)
-
-        if work_shift_changed:
-            self._sync_shift_snapshot(instance, new_work_shift, validated_data.get("updated_by"))
-
-        if any_field_changed:
-            target_module = module or current_module
-            if not target_module:
-                return instance
-
-            if module_changed:
-                validate_module_conflict(target_module, current_session=instance)
-
-            activity = instance.start_activity(target_module)
-            effective_ids = list(employee_ids) if employee_ids is not None else list(current_employee_ids)
-            effective_apprentice_ids = list(apprentice_ids) if apprentice_ids is not None else list(current_apprentice_ids)
-            self._handle_employees(instance, effective_ids, activity, effective_apprentice_ids)
-
-        return instance
+        return work_session_setup_service.update_session(instance, validated_data)

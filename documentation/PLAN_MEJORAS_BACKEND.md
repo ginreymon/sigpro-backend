@@ -128,3 +128,13 @@ Resulting graph: static imports go only `stamping -> production -> common` (and 
 - Behaviour kept on purpose: validation order of `pause`; an expired session is force-closed and that close is committed (the error is raised after the transaction ends); `rotate` validates its body only after the session checks.
 - Views no longer use `.objects`, `select_for_update`, `transaction` or `timezone` (only the class-level `queryset` the router needs).
 - Not done (out of scope here): `WorkSessionSerializer.create/update` orchestration and the model methods `close_session` / `WorkSessionActivity.close` vs `force_close` (two close paths still exist). Unit tests with mocked repositories (26 new); nothing was run against SQL Server.
+
+## 9. Progress: WorkSessionSerializer orchestration, 2026-10-11
+
+- `WorkSessionSerializer` now only validates and represents; `create`/`update` delegate to `services/work_session_setup_service.py` (`create_session`, `update_session`, `snapshot_shift`, `assign_employees`), which owns the transactions and the checks (module conflict, active employees, employee conflicts, "no employees without a module", "no active activity").
+- ORM access moved to `WorkSessionRepository` (create/update, shift snapshot, employee snapshots). `ModelSerializer.create/update` were replaced by the equivalent `objects.create(**data)` / set attributes + `save()`.
+- 8 unit tests added (mocked repository); 54 production/stamping/integration tests pass. Nothing was run against SQL Server.
+- Still open: two close paths (`WorkSession.close_session` / `WorkSessionActivity.close` vs `force_close`); `get_active_activity` still imports `WorkBreakRecordSerializer` inside the method.
+
+### Decision on the two close paths (2026-10-11)
+`WorkSession.close_session` and `work_session_service.force_close` are **kept as they are, on purpose**; they are not unified. They differ: manual close ends the session at `now` and does not set `editing_finalized`; the expiry close ends it at `max(expires_at, started_at)`, sets `editing_finalized` and runs in its own transaction. Both close the active activity with `activity.close()` (uses `now`). The tests in `SessionCloseTests` pin that behaviour. Any future change to it (e.g. closing the activity at `expires_at`) must be a deliberate decision because it changes the `end_time` values used by the efficiency calculation.

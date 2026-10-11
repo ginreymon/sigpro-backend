@@ -6,7 +6,8 @@ from django.test import SimpleTestCase
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from apps.production.services import work_break_service, work_session_service
+from apps.production.models import WorkSession
+from apps.production.services import work_break_service, work_session_service, work_session_setup_service
 from apps.production.services.exceptions import SessionRuleError
 from apps.production.views.session_rule_error_mixin import SessionRuleErrorMixin
 
@@ -274,3 +275,199 @@ class SessionRuleErrorMixinTests(SimpleTestCase):
     def test_list_payload_is_kept(self):
         response = SessionRuleErrorMixin().handle_exception(SessionRuleError(["expirada"]))
         self.assertEqual((response.status_code, response.data), (400, ["expirada"]))
+
+
+SETUP_SERVICE = "apps.production.services.work_session_setup_service"
+
+
+class WorkSessionSetupTests(SimpleTestCase):
+    """Orchestration that used to live in WorkSessionSerializer.create/update."""
+
+    def setUp(self):
+        patches = [
+            patch(f"{SETUP_SERVICE}.transaction"),
+            patch(f"{SETUP_SERVICE}.WorkSessionRepository"),
+            patch(f"{SETUP_SERVICE}.validate_module_conflict"),
+            patch(f"{SETUP_SERVICE}.validate_employees_active"),
+            patch(f"{SETUP_SERVICE}.validate_employee_conflicts"),
+            patch(f"{SETUP_SERVICE}.get_continuous_work_minutes_map", return_value={}),
+            patch(f"{SETUP_SERVICE}.sync_module_assignees"),
+        ]
+        (_, self.repository, self.validate_module, self.validate_active,
+         self.validate_conflicts, _, self.sync) = [p.start() for p in patches]
+        for p in patches:
+            self.addCleanup(p.stop)
+
+    def test_create_without_module_only_snapshots_the_shift(self):
+        session = self.repository.create.return_value
+        self.repository.find_shift_snapshot.return_value = None
+
+        result = work_session_setup_service.create_session({"created_by": "u", "work_shift": "s"})
+
+        self.assertIs(result, session)
+        self.repository.create.assert_called_once_with(created_by="u", work_shift="s")
+        self.repository.create_shift_snapshot.assert_called_once()
+        self.validate_module.assert_not_called()
+        session.start_activity.assert_not_called()
+
+    def test_create_with_module_starts_activity_and_assigns_employees(self):
+        session = self.repository.create.return_value
+        self.repository.find_shift_snapshot.return_value = None
+        module = MagicMock()
+
+        work_session_setup_service.create_session(
+            {"module_id": module, "employee_ids": [3, 4], "apprentice_ids": [4], "created_by": "u"}
+        )
+
+        self.validate_module.assert_called_once_with(module)
+        session.start_activity.assert_called_once_with(module)
+        activity = session.start_activity.return_value
+        self.validate_active.assert_called_once_with([3, 4])
+        self.validate_conflicts.assert_called_once_with([3, 4], activity)
+        self.repository.replace_activity_employees.assert_called_once_with(
+            activity, [3, 4], [4], {}, session.updated_by,
+        )
+        self.sync.assert_called_once_with(activity.module, session.updated_by)
+
+    def test_create_with_employees_but_no_module_fails(self):
+        self.repository.find_shift_snapshot.return_value = None
+
+        with self.assertRaises(ValidationError) as ctx:
+            work_session_setup_service.create_session({"employee_ids": [1], "created_by": "u"})
+
+        self.assertIn("No se pueden asignar empleados sin un módulo.", str(ctx.exception.detail))
+
+    def test_snapshot_is_updated_in_place_when_it_exists(self):
+        snapshot = MagicMock()
+        self.repository.find_shift_snapshot.return_value = snapshot
+        shift = MagicMock()
+
+        work_session_setup_service.snapshot_shift("session", shift, "u")
+
+        self.assertEqual((snapshot.start_time, snapshot.end_time, snapshot.updated_by),
+                         (shift.start_time, shift.end_time, "u"))
+        snapshot.save.assert_called_once()
+        self.repository.create_shift_snapshot.assert_not_called()
+
+    def test_assign_employees_needs_an_active_activity(self):
+        session = MagicMock()
+        session.get_active_activity.return_value = None
+
+        with self.assertRaises(ValidationError) as ctx:
+            work_session_setup_service.assign_employees(session, [1])
+
+        self.assertIn("No se encontró una actividad activa.", str(ctx.exception.detail))
+
+    def _session_with_activity(self, module, employee_ids, apprentice_ids):
+        session = MagicMock()
+        session.work_shift = "shift-1"
+        session.get_active_activity.return_value.module = module
+        self.repository.active_employee_ids.return_value = set(employee_ids)
+        self.repository.active_apprentice_ids.return_value = set(apprentice_ids)
+        self.repository.update.return_value = session
+        return session
+
+    def test_update_without_relevant_changes_does_not_open_an_activity(self):
+        module = MagicMock()
+        session = self._session_with_activity(module, [1, 2], [])
+
+        work_session_setup_service.update_session(
+            session, {"module_id": module, "employee_ids": [2, 1], "apprentice_ids": []}
+        )
+
+        session.start_activity.assert_not_called()
+        self.repository.replace_activity_employees.assert_not_called()
+
+    def test_update_with_new_module_checks_conflict_and_restarts(self):
+        old_module, new_module = MagicMock(), MagicMock()
+        session = self._session_with_activity(old_module, [1, 2], [])
+
+        work_session_setup_service.update_session(session, {"module_id": new_module})
+
+        self.validate_module.assert_called_once_with(new_module, current_session=session)
+        session.start_activity.assert_called_once_with(new_module)
+        # employees are carried over from the previous activity
+        self.validate_active.assert_called_once()
+        self.assertEqual(sorted(self.validate_active.call_args.args[0]), [1, 2])
+
+    def test_update_with_new_shift_snapshots_it(self):
+        module = MagicMock()
+        session = self._session_with_activity(module, [1], [])
+        self.repository.find_shift_snapshot.return_value = None
+        new_shift = MagicMock()
+
+        work_session_setup_service.update_session(session, {"work_shift": new_shift, "updated_by": "u"})
+
+        self.repository.create_shift_snapshot.assert_called_once()
+        self.assertEqual(self.repository.create_shift_snapshot.call_args.kwargs["work_shift"], new_shift)
+        session.start_activity.assert_called_once_with(module)
+
+
+class SessionCloseTests(SimpleTestCase):
+    """Pins how the two close paths work today. They differ on purpose and must
+    stay as they are:
+
+    - WorkSession.close_session (manual close, and closing the previous session
+      when a new one opens): ended_at = now, does NOT mark editing_finalized.
+    - work_session_service.force_close (expired session): ended_at =
+      max(expires_at, started_at), marks editing_finalized, runs in its own
+      transaction.
+    Both close the active activity with activity.close() (which uses `now`).
+    """
+
+    def fake_session(self, started_at, is_closed=False):
+        return SimpleNamespace(
+            started_at=started_at,
+            is_closed=is_closed,
+            ended_at=None,
+            total_time=None,
+            editing_finalized=False,
+            get_active_activity=MagicMock(),
+            save=MagicMock(),
+        )
+
+    def test_manual_close_uses_now_and_does_not_finalize_editing(self):
+        session = self.fake_session(timezone.now() - timedelta(hours=2))
+
+        WorkSession.close_session(session)
+
+        session.get_active_activity.return_value.close.assert_called_once_with()
+        self.assertTrue(session.is_closed)
+        self.assertFalse(session.editing_finalized)
+        self.assertEqual(session.total_time, session.ended_at - session.started_at)
+        session.save.assert_called_once_with(update_fields=["ended_at", "total_time", "is_closed"])
+
+    def test_manual_close_is_idempotent(self):
+        session = self.fake_session(timezone.now(), is_closed=True)
+
+        WorkSession.close_session(session)
+
+        session.get_active_activity.assert_not_called()
+        session.save.assert_not_called()
+
+    def test_expiry_close_uses_expires_at_and_finalizes_editing(self):
+        started = timezone.now() - timedelta(hours=20)
+        expires_at = started + timedelta(hours=12)
+        session = self.fake_session(started)
+
+        with patch(f"{SESSION_SERVICE}.transaction"):
+            work_session_service.force_close(session, expires_at)
+
+        session.get_active_activity.return_value.close.assert_called_once_with()
+        self.assertEqual(session.ended_at, expires_at)
+        self.assertEqual(session.total_time, timedelta(hours=12))
+        self.assertTrue(session.is_closed)
+        self.assertTrue(session.editing_finalized)
+        session.save.assert_called_once_with(
+            update_fields=["ended_at", "total_time", "is_closed", "editing_finalized"]
+        )
+
+    def test_expiry_before_start_is_clamped_to_started_at(self):
+        started = timezone.now()
+        session = self.fake_session(started)
+
+        with patch(f"{SESSION_SERVICE}.transaction"):
+            work_session_service.force_close(session, started - timedelta(hours=1))
+
+        self.assertEqual(session.ended_at, started)
+        self.assertEqual(session.total_time, timedelta(0))
