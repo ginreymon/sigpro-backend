@@ -1,15 +1,15 @@
-from django.apps import apps
-
 from core.utils.date_utils import apply_client_offset
 
 
 class BaseProductivityService:
     """
     Productivity logic shared by production and stamping. Subclasses set the
-    repository and whether they serve stamping machines.
+    repository, the Module model (`common` must not import `production`) and
+    whether they serve stamping machines.
     """
 
     repository = None
+    module_model = None
     is_stamping: bool = False
 
     @classmethod
@@ -17,9 +17,8 @@ class BaseProductivityService:
         # A module is a stamping machine iff it has a StampingModuleMachine
         # assignment — this is the structural, always-true discriminator,
         # unlike core_module_id (client-supplied, can be missing/racy).
-        Module = apps.get_model("production", "Module")
         return set(
-            Module.objects.filter(stamping_machine_assignment__isnull=not cls.is_stamping)
+            cls.module_model.objects.filter(stamping_machine_assignment__isnull=not cls.is_stamping)
             .values_list("id", flat=True)
         )
 
@@ -33,14 +32,13 @@ class BaseProductivityService:
 
     @classmethod
     def get_module_shift_summary(cls, core_module_id: int | None = None) -> list[dict]:
-        Module = apps.get_model("production", "Module")
         data = cls.repository.get_module_shift_summary()
 
         module_ids = cls.module_ids()
         data = [row for row in data if row.get("module_id") in module_ids]
 
         core_module_by_id = dict(
-            Module.objects.values_list("id", "location__core_module_id")
+            cls.module_model.objects.values_list("id", "location__core_module_id")
         )
         for row in data:
             row["core_module_id"] = core_module_by_id.get(row.get("module_id"))

@@ -1,3 +1,4 @@
+from apps.common.repositories.op_common_repository import OPCommonRepository
 from apps.stamping.repositories.op_stamping_repository import OPStampingRepository
 from apps.production.services.op_production_service import OPProductionService
 
@@ -30,7 +31,7 @@ class OPStampingService:
 
     @staticmethod
     def get_trazabilidad_op_json(consec_docto, tipo_docto=None):
-        return OPStampingRepository.get_trazabilidad_op_json(consec_docto, tipo_docto)
+        return OPCommonRepository.get_trazabilidad_op_json(consec_docto, tipo_docto)
 
     @staticmethod
     def get_ordenes_produccion_proceso_json(tipo_docto, consec_docto, id_plan="300"):

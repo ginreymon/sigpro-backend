@@ -2,7 +2,7 @@ from rest_framework.decorators import action
 
 from core.views.audit_model_view import AuditModelViewSet
 from core.views.recent_records_view import RecentRecordsMixin
-from apps.common.services.op_record_batch_service import perform_manual_duration_batch
+from apps.production.services.op_record_batch_service import perform_manual_duration_batch
 
 
 class OpRecordViewSet(RecentRecordsMixin, AuditModelViewSet):

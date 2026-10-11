@@ -1,7 +1,5 @@
 from django.db import models
 from core.models import TimeAuditModel, ActiveModel
-from apps.production.models.work_center_local import WorkCenterLocal
-from apps.production.models.production_area import ProductionArea
 
 
 class WorkCenterProductionArea(TimeAuditModel, ActiveModel):
@@ -10,13 +8,13 @@ class WorkCenterProductionArea(TimeAuditModel, ActiveModel):
     dbo.fn_totales_registrados_por_op (origin_id = production_area.id)."""
 
     work_center = models.OneToOneField(
-        WorkCenterLocal,
+        "production.WorkCenterLocal",
         on_delete=models.PROTECT,
         related_name="production_area_link",
     )
 
     production_area = models.ForeignKey(
-        ProductionArea,
+        "production.ProductionArea",
         on_delete=models.PROTECT,
         related_name="work_centers",
     )

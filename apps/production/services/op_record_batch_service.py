@@ -6,12 +6,14 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from apps.production.models import ProductionRecord, WorkSession, WorkShiftSnapshot
+from apps.production.models.module_downtime import ModuleDowntime
+from apps.production.repositories.productivity_repository import ProductivityRepository
+from apps.production.services.work_session_service import shift_start_utc
 from core.utils.date_utils import to_utc_naive
 
-# Shared by ProductionRecordViewSet and StampingRecordViewSet. The production
-# models/services it needs (WorkSession, WorkShiftSnapshot, ModuleDowntime,
-# ProductionRecord...) are imported lazily inside the functions, so this module
-# has no import-time dependency on `apps.production`.
+# Shared by ProductionRecordViewSet and StampingRecordViewSet. It lives in
+# `apps.production` (stamping depends on production, never the reverse).
 MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'PRODUCTION RECORD DOWNTIME'
 
 
@@ -23,8 +25,6 @@ def active_work_session_and_activity(request):
     frontend, because it may have been closed/rotated since that payload was
     built. Shared by production and stamping.
     """
-    from apps.production.models import WorkSession
-
     work_session = WorkSession.objects.filter(user=request.user, is_closed=False).first()
     if not work_session:
         return None, None
@@ -39,10 +39,6 @@ def manual_duration_indicators(work_session, activity, tipo_modulo: str):
     against the shift. None if there is no active session/activity.
     tipo_modulo: 'production' or 'stamping' (see ProductivityRepository).
     """
-    from apps.production.models import WorkShiftSnapshot
-    from apps.production.repositories.productivity_repository import ProductivityRepository
-    from apps.production.services.work_session_service import shift_start_utc
-
     if not work_session or not activity:
         return None
 
@@ -183,9 +179,6 @@ def create_manual_duration_batch_downtime(
     Reusable by production and stamping — the correct ModuleDowntime FK
     (production_record/stamping_record) is resolved from the type of `record`.
     """
-    from apps.production.models.module_downtime import ModuleDowntime
-    from apps.production.models.production_record import ProductionRecord
-
     now = timezone.now()
     elapsed_real_seconds = (now - indicators['period_start']).total_seconds()
     total_duration = duration_seconds + extra_seconds

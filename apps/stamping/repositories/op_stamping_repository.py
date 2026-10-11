@@ -17,11 +17,3 @@ class OPStampingRepository:
         return exec_json_procedure(
             "sp_ordenes_produccion_proceso_json", [tipo_docto, consec_docto, id_plan]
         )
-
-    @staticmethod
-    def get_trazabilidad_op_json(consec_docto: int, tipo_docto: str = None):
-        # The SP already returns everything in camelCase; translate_keys only
-        # applies the tz-aware fallback on Fecha_Creacion -> createdAt.
-        return exec_json_procedure(
-            "sp_trazabilidad_op_json", [consec_docto, tipo_docto]
-        )

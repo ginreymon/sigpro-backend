@@ -1,15 +1,14 @@
 from core.views.base_model_view import BaseModelViewSet
-from apps.production.models import EmployeeLocal
-from apps.production.serializers import EmployeeLocalSerializer
+from apps.user.employee import get_employee_model, get_employee_serializer_class
 
 
 class EmployeeDirectoryViewSet(BaseModelViewSet):
     """Directorio de empleados sin filtro de centro de costo, para administración de cuentas."""
 
     queryset = (
-        EmployeeLocal.objects.filter(is_deleted=False).select_related("user_link__auth_user")
+        get_employee_model().objects.filter(is_deleted=False).select_related("user_link__auth_user")
     )
-    serializer_class = EmployeeLocalSerializer
+    serializer_class = get_employee_serializer_class()
     http_method_names = ["get", "head", "options"]
 
     search_fields = [

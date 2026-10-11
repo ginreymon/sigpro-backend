@@ -14,6 +14,7 @@ from __future__ import annotations
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.apps import apps as django_apps
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -24,8 +25,6 @@ from apps.integration.models import (
     TepSubmission,
     TepSubmissionStatus,
 )
-from apps.production.models import ProductionRecord
-from apps.stamping.models import StampingRecord
 
 # settings.TIME_ZONE es UTC: la fecha del documento se calcula en hora local
 # para que un envío en la noche no salga con la fecha del día siguiente.
@@ -34,8 +33,14 @@ SUBMISSION_TIME_ZONE = ZoneInfo("America/Bogota")
 # El `status` del encabezado de SIESA (0/1/2) se guarda como `document_status`.
 _HEADER_FIELD_ALIASES = {"status": "document_status"}
 
-# origin_id (production_production_area.id) -> modelo de registros.
-RECORD_MODELS = {1: ProductionRecord, 2: StampingRecord}
+# origin_id (production_production_area.id) -> modelo de registros ("app.Model").
+# Se resuelve con el registro de apps para que `integration` no importe
+# `production` ni `stamping`.
+RECORD_MODELS = {1: "production.ProductionRecord", 2: "stamping.StampingRecord"}
+
+
+def record_model(origin_id: int):
+    return django_apps.get_model(RECORD_MODELS[origin_id])
 
 # Piezas por unidad de cada registro (misma regla que fn_totales_registrados_por_op:
 # producción 1, estampación stamped_pieces del SAM, 1 si es nulo).
@@ -143,7 +148,7 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
         fields.append(pieces_field)
     records = {
         record["id"]: record
-        for record in RECORD_MODELS[origin_id].objects.select_for_update().filter(id__in=ids).values(*fields)
+        for record in record_model(origin_id).objects.select_for_update().filter(id__in=ids).values(*fields)
     }
 
     missing = sorted(set(ids) - set(records))
@@ -219,7 +224,7 @@ def register_submission(
         TepDetailRecord.objects.bulk_create(
             [TepDetailRecord(detail=saved, origin_id=reference["origin_id"], record_id=i) for i in ids]
         )
-        RECORD_MODELS[reference["origin_id"]].objects.filter(id__in=ids).update(
+        record_model(reference["origin_id"]).objects.filter(id__in=ids).update(
             tep_submission=submission, tep_processed=True
         )
     return submission

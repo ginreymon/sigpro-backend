@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from apps.common.views.op_record_view import OpRecordViewSet
+from apps.production.views.op_record_view import OpRecordViewSet
 from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
 from apps.stamping.models.stamping_record import StampingRecord
 from apps.stamping.serializers import StampingRecordSerializer

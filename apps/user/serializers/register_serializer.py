@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User, Group
 from apps.user.models import UserEmployeeLink
-from apps.production.models import EmployeeLocal
+from apps.user.employee import get_employee_model
 from django.db import transaction
 from rest_framework.validators import UniqueValidator
 
@@ -32,6 +32,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         if email and User.objects.filter(email=email).exists():
             raise serializers.ValidationError({"email": "El correo ya existe"})
 
+        EmployeeLocal = get_employee_model()
         try:
             employee = EmployeeLocal.objects.get(id=employee_id)
         except EmployeeLocal.DoesNotExist:
@@ -57,7 +58,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         employee_id = validated_data.pop("employee_local_id")
         group_id = validated_data.pop("group_id")
 
-        employee = EmployeeLocal.objects.get(id=employee_id)
+        employee = get_employee_model().objects.get(id=employee_id)
 
         group = Group.objects.get(id=group_id)
 

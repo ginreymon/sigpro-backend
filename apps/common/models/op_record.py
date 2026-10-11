@@ -10,8 +10,7 @@ class OpRecord(TimeAuditModel, UserAuditModel):
 
     # TEP submission (integration) the record is associated with; null until it
     # has been submitted (it also goes back to null on every save()). Referenced
-    # by string to avoid importing `integration` from `production` (prevents a
-    # circular import).
+    # by string so that `common` does not import `integration`.
     tep_submission = models.ForeignKey(
         "integration.TepSubmission",
         on_delete=models.SET_NULL,

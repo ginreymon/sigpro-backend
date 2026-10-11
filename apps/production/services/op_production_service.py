@@ -2,7 +2,7 @@ from apps.production.repositories.op_production_repository import OPProductionRe
 from apps.production.models.production_record import ProductionRecord
 from apps.production.models.sku_item_local import SkuItemLocal
 from apps.production.models.reference_sam import ReferenceSam
-from apps.stamping.repositories.op_stamping_repository import OPStampingRepository
+from apps.common.repositories.op_common_repository import OPCommonRepository
 
 CUT_WORK_CENTER_CODE = "CR001"
 
@@ -39,7 +39,7 @@ class OPProductionService:
         if not data:
             return data
 
-        traz_list = OPStampingRepository.get_trazabilidad_op_json(consec_docto, tipo_docto) or []
+        traz_list = OPCommonRepository.get_trazabilidad_op_json(consec_docto, tipo_docto) or []
         op_traz = next(
             (
                 t for t in traz_list

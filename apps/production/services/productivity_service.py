@@ -6,6 +6,7 @@ from core.utils.date_utils import apply_client_offset
 
 class ProductivityService(BaseProductivityService):
     repository = ProductivityRepository
+    module_model = Module
     is_stamping = False
 
     @staticmethod
