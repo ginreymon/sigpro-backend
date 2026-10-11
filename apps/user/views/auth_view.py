@@ -12,6 +12,7 @@ from apps.user.serializers import RegisterSerializer, ChangePasswordSerializer
 from apps.people.models import AuthUserEmployee, EmployeeLocal
 from apps.user.models import PasswordResetToken
 from core.models.option import Option
+from core.exceptions import error_response
 from core.models.role_home_view import RoleHomeView
 
 
@@ -29,20 +30,17 @@ class AuthViewSet(viewsets.ViewSet):
     def register(self, request):
 
         serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
 
-        if serializer.is_valid():
-            user = serializer.save()          
-
-            return Response(
-                {
-                    "user": serializer.data,
-                    "user_id":user.id,
-                    "rol": list(user.groups.values_list("name", flat=True))
-                },
-                status=status.HTTP_201_CREATED,
-            )
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "user": serializer.data,
+                "user_id":user.id,
+                "rol": list(user.groups.values_list("name", flat=True))
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='login')
     def login(self, request):
@@ -51,16 +49,17 @@ class AuthViewSet(viewsets.ViewSet):
         password = request.data.get("password")
 
         if not password or not username:
-            return Response(
-                {"message": "Usuario y contraseña requeridos"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "Usuario y contraseña requeridos", code="missing_credentials",
+                legacy={"message": "Usuario y contraseña requeridos"},
             )
 
         user = authenticate(username=username, password=password)
 
         if user is None:
-            return Response(
-                {"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED
+            return error_response(
+                "Credenciales inválidas", status_code=status.HTTP_401_UNAUTHORIZED,
+                code="invalid_credentials", legacy={"error": "Credenciales inválidas"},
             )
 
         refresh = RefreshToken.for_user(user)
@@ -85,8 +84,9 @@ class AuthViewSet(viewsets.ViewSet):
         refresh_token = request.data.get("refresh")
 
         if not refresh_token:
-            return Response(
-                {"error": "Refresh token requerido"}, status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                "Refresh token requerido", code="missing_refresh_token",
+                legacy={"error": "Refresh token requerido"},
             )
 
         try:
@@ -95,18 +95,16 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({"access": str(refresh.access_token)})
 
         except TokenError:
-            return Response(
-                {"error": "Refresh token inválido o expirado"},
-                status=status.HTTP_401_UNAUTHORIZED,
+            return error_response(
+                "Refresh token inválido o expirado", status_code=status.HTTP_401_UNAUTHORIZED,
+                code="invalid_refresh_token", legacy={"error": "Refresh token inválido o expirado"},
             )
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path="change-password")
     def change_password(self, request):
 
         serializer = ChangePasswordSerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         user = request.user
 
@@ -114,15 +112,15 @@ class AuthViewSet(viewsets.ViewSet):
         new_password = serializer.validated_data["new_password"]
 
         if not user.check_password(old_password):
-            return Response(
-                {"message": "Contraseña actual incorrecta"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "Contraseña actual incorrecta", code="wrong_password",
+                legacy={"message": "Contraseña actual incorrecta"},
             )
 
         if old_password == new_password:
-            return Response(
-                {"message": "La nueva contraseña no puede ser igual a la anterior"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "La nueva contraseña no puede ser igual a la anterior", code="same_password",
+                legacy={"message": "La nueva contraseña no puede ser igual a la anterior"},
             )
 
         user.set_password(new_password)
@@ -137,9 +135,9 @@ class AuthViewSet(viewsets.ViewSet):
         username = request.data.get("username")
 
         if not id_number or not username:
-            return Response(
-                {"message": "Usuario y número de identificación requeridos"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "Usuario y número de identificación requeridos", code="missing_params",
+                legacy={"message": "Usuario y número de identificación requeridos"},
             )
 
         try:
@@ -163,7 +161,9 @@ class AuthViewSet(viewsets.ViewSet):
                 "expires_in_minutes": 15
             })
 
-        except EmployeeLocal.DoesNotExist:
+        except (EmployeeLocal.DoesNotExist, AuthUserEmployee.DoesNotExist):
+            # Same answer whether the employee does not exist or has no account, so the
+            # endpoint does not reveal which employees have one (and never answers 500).
             return Response({
                 "message": "Datos inválidos"
             })
@@ -175,18 +175,18 @@ class AuthViewSet(viewsets.ViewSet):
         new_password = request.data.get("new_password")
 
         if not token or not new_password:
-            return Response(
-                {"message": "Token y contraseña requeridos"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "Token y contraseña requeridos", code="missing_params",
+                legacy={"message": "Token y contraseña requeridos"},
             )
 
         try:
             reset_token = PasswordResetToken.objects.get(token=token)
 
             if not reset_token.is_valid():
-                return Response(
-                    {"message": "Token expirado o usado"},
-                    status=status.HTTP_400_BAD_REQUEST
+                return error_response(
+                    "Token expirado o usado", code="token_expired",
+                    legacy={"message": "Token expirado o usado"},
                 )
 
             user = reset_token.user
@@ -199,9 +199,9 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({"message": "Contraseña actualizada correctamente"})
 
         except PasswordResetToken.DoesNotExist:
-            return Response(
-                {"message": "Token inválido"},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                "Token inválido", code="invalid_token",
+                legacy={"message": "Token inválido"},
             )
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], url_path="has-access")
@@ -210,16 +210,17 @@ class AuthViewSet(viewsets.ViewSet):
         option_id = request.query_params.get("optionId")
 
         if not option_id:
-            return Response(
-                {"message": "optionId is required"}, status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                "optionId is required", code="missing_params",
+                legacy={"message": "optionId is required"},
             )
 
         try:
             option_id = int(option_id)
         except ValueError:
-            return Response(
-                {"message": "optionId must be an integer"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "optionId must be an integer", code="invalid_param",
+                legacy={"message": "optionId must be an integer"},
             )
 
         has_access = Option.objects.filter(

@@ -266,15 +266,22 @@ class SessionLifecycleTests(SimpleTestCase):
 
 class SessionRuleErrorMixinTests(SimpleTestCase):
 
-    def test_error_is_answered_with_its_payload_and_status(self):
+    def test_error_is_answered_with_the_standard_envelope(self):
         response = SessionRuleErrorMixin().handle_exception(
             SessionRuleError({"detail": "x"}, status_code=404)
         )
-        self.assertEqual((response.status_code, response.data), (404, {"detail": "x"}))
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            (response.data["detail"], response.data["code"], response.data["errors"]),
+            ("x", "business_rule", {}),
+        )
+        self.assertEqual(response.data["detail"], "x")
 
-    def test_list_payload_is_kept(self):
+    def test_list_payload_becomes_non_field_errors(self):
         response = SessionRuleErrorMixin().handle_exception(SessionRuleError(["expirada"]))
-        self.assertEqual((response.status_code, response.data), (400, ["expirada"]))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["errors"], {"non_field_errors": ["expirada"]})
+        self.assertEqual(response.data["detail"], "expirada")
 
 
 SETUP_SERVICE = "apps.production.services.work_session_setup_service"

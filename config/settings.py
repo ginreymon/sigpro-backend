@@ -79,7 +79,13 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
 }
+
+# Every error is the standard envelope {detail, code, errors} (core/exceptions.py).
+# Set API_ERRORS_LEGACY_MIRROR=True only to roll back: it also copies the keys of the
+# previous error shapes ("error", "message", form field names) next to the envelope.
+API_ERRORS_LEGACY_MIRROR = env.bool('API_ERRORS_LEGACY_MIRROR', default=False)
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -89,6 +95,7 @@ SIMPLE_JWT = {
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'core.exceptions.ApiErrorEnvelopeMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

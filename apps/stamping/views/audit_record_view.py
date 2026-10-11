@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
+from core.exceptions import error_response
 from core.views.audit_model_view import AuditModelViewSet
 from apps.stamping.models.audit_record_detail import AuditRecordDetail
 from apps.stamping.repositories.audit_record_repository import AuditRecordRepository
@@ -92,9 +93,9 @@ class AuditRecordViewSet(AuditModelViewSet):
         )
 
         if details is None:
-            return Response(
-                {"detail": "No existe un bloque de auditoría para esta OP."},
-                status=status.HTTP_404_NOT_FOUND,
+            return error_response(
+                "No existe un bloque de auditoría para esta OP.",
+                status_code=status.HTTP_404_NOT_FOUND, code="audit_block_not_found",
             )
 
         return Response(self._serialize_details(details))

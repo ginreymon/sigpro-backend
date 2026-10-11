@@ -138,3 +138,35 @@ Resulting graph: static imports go only `stamping -> production -> common` (and 
 
 ### Decision on the two close paths (2026-10-11)
 `WorkSession.close_session` and `work_session_service.finalize_expired_session` are **kept as they are, on purpose**; they are not unified. They differ: manual close ends the session at `now` and does not set `editing_finalized`; the expiry close ends it at `max(expires_at, started_at)`, sets `editing_finalized` and runs in its own transaction. Both close the active activity with `activity.close()` (uses `now`). The tests in `SessionCloseTests` pin that behaviour. Any future change to it (e.g. closing the activity at `expires_at`) must be a deliberate decision because it changes the `end_time` values used by the efficiency calculation.
+
+## 10. Standard error envelope (step 4), 2026-10-11
+
+Every 4xx/5xx JSON response under `/api/v1/` now has:
+
+```json
+{ "detail": "message (first error)", "code": "validation_error", "errors": { "field": ["message"] } }
+```
+
+- `errors` is `{}` when there are no field errors; non-field messages go in `errors.non_field_errors`.
+- `code`: `validation_error`, `not_authenticated`, `permission_denied`, `not_found`, `method_not_allowed`, `throttled`, `business_rule` (session/break rules), `bad_request`, `server_error`... (SimpleJWT keeps its own, e.g. `token_not_valid`).
+- Produced by `core/exceptions.py`: `api_exception_handler` (REST_FRAMEWORK `EXCEPTION_HANDLER`: everything DRF handles), `ApiErrorEnvelopeMiddleware` (manual `Response(..., status=4xx)` written before the standard) and `api_not_found` / `api_server_error` (JSON 404/500 only for `/api/`). `error_response(detail, status_code=, code=)` is the helper for new manual errors. Success responses are never touched.
+- **Legacy mirror** (`API_ERRORS_LEGACY_MIRROR`, default `False`): roll-back switch. When `True`, the keys of the previous shapes (`error`, `message`, form field names, TEP `details`) are also copied next to the envelope. A field called `code`/`errors`/`detail` is only read from `errors` (never mirrored at the top level, to avoid clashing with the envelope).
+- Shape changes that cannot be mirrored: a body that used to be a **list** (e.g. `["La jornada (sesión) ha expirado."]`) is now the envelope with `errors.non_field_errors`.
+
+Frontend: `common/functions/api-error.ts` (`apiErrorDetail`, `apiErrorCode`, `apiFieldErrors`, `apiNonFieldErrors`) reads the envelope first and falls back to the old shapes, so it works against old and new backends. Migrated readers: `session-errors.ts`, `base-crud-page.ts` (`markServerFieldErrors`), `actions-crud-page.ts`, `pause-modal.ts`, `shift-cycles.ts`.
+
+**Deployment order (important):** deploy the frontend first, then the backend. Deploying the backend first would break old frontends in two places: forms with a field called `code` (the old reader would take the envelope `code` as that field's error) and bodies that used to be lists.
+
+### Status after the full pass
+
+- Every manual error `Response` in `apps/` (auth, productivity, integration/TEP, audit, order lookups, role delete, shared `common/http.py`) now uses `error_response(detail, status_code=, code=, errors=, legacy=, extra=)` or raises (serializer errors go through the exception handler). No manual `Response({"error": ...}, status=4xx/5xx)` is left. The middleware stays as a safety net for anything new that forgets it.
+- `error_response` codes: `missing_params`, `invalid_params`, `invalid_param`, `missing_credentials`, `invalid_credentials`, `missing_refresh_token`, `invalid_refresh_token`, `wrong_password`, `same_password`, `token_expired`, `invalid_token`, `role_has_users`, `audit_block_not_found`, `not_found`, `invalid_tep_request`, `invalid_tep_document`, `invalid_register_ids`, `siesa_not_configured`, `siesa_unreachable`, `siesa_rejected`.
+- Domain data that travels with an error is kept through `extra`: a rejected TEP answers 422 with the envelope **and** `submission_id`, `ok`, `error_type`, `error_detail_xml`. `register_ids` problems are in `errors.register_ids`.
+- Frontend: all readers go through `common/functions/api-error.ts` (`manual-integration.ts` included). Login / confirm-password show fixed texts and do not read the body; `forgot-password` reads a 200 success body, not an error. No Playwright test asserts an error shape.
+- Tests: backend 85 (core 25), frontend 11 for `api-error`. Not run against SQL Server or in a browser.
+
+### Legacy mirror: off by default
+
+`API_ERRORS_LEGACY_MIRROR` now defaults to `False`: the only top-level keys of an error are `detail`, `code`, `errors` (+ `extra` data such as the TEP result). Every frontend reader already reads the envelope, so nothing in the app depends on the old keys. The switch stays only as a roll-back for a bad rollout (a browser with a cached old frontend keeps reading `error` / `message` / form field keys: set `API_ERRORS_LEGACY_MIRROR=True` in the environment, no code change). Once the new frontend is the only one in use, the `legacy=` arguments in `error_response` calls and the mirror code can be deleted.
+
+Known leftovers: `password-reset-request` answers 200 with `{"message": "Datos inválidos"}` (a 200, so it is not an error for the envelope; fixed with the auth hardening step).

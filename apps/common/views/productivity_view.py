@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.common.views.productivity_params import parse_required_dates, parse_optional_int
+from core.exceptions import error_response
 
 
 class BaseProductivityViewSet(viewsets.ViewSet):
@@ -18,7 +19,7 @@ class BaseProductivityViewSet(viewsets.ViewSet):
     def efficiency(self, request):
         start_date, end_date, client_now, error = parse_required_dates(request.query_params)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(error, code="invalid_params", legacy={"error": error})
 
         module_id = parse_optional_int(request.query_params, "module_id")
         shift_id  = parse_optional_int(request.query_params, "shift_id")
@@ -35,13 +36,16 @@ class BaseProductivityViewSet(viewsets.ViewSet):
     def shift_summary(self, request):
         start_date, end_date, client_now, error = parse_required_dates(request.query_params)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(error, code="invalid_params", legacy={"error": error})
 
         shift_id  = parse_optional_int(request.query_params, "shift_id")
         module_id = parse_optional_int(request.query_params, "module_id")
 
         if shift_id is None or module_id is None:
-            return Response({"error": "shift_id and module_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(
+                "shift_id and module_id are required", code="missing_params",
+                legacy={"error": "shift_id and module_id are required"},
+            )
 
         employee_id = parse_optional_int(request.query_params, "employee_id")
 
@@ -67,7 +71,10 @@ class BaseProductivityViewSet(viewsets.ViewSet):
         end_date   = request.query_params.get("end_date")
 
         if not start_date or not end_date:
-            return Response({"error": "start_date and end_date are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(
+                "start_date and end_date are required", code="missing_params",
+                legacy={"error": "start_date and end_date are required"},
+            )
 
         module_id = parse_optional_int(request.query_params, "module_id")
 

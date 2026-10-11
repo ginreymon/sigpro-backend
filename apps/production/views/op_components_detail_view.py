@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from apps.production.serializers import OPComponentsDetailSerializer
+from core.exceptions import error_response
 from apps.production.services.op_production_service import OPProductionService
 
 
@@ -15,9 +16,9 @@ class OPComponentsDetailViewSet(viewsets.ViewSet):
         id_plan = request.query_params.get("id_plan", "300")
 
         if not doc_type or not doc_number:
-            return Response(
-                {"error": "type and number are required"},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                "type and number are required", code="missing_params",
+                legacy={"error": "type and number are required"},
             )
      
         data = OPProductionService.get_detalle_componentes_op(

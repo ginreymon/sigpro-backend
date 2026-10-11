@@ -4,6 +4,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from core.exceptions import error_response
 
 from apps.integration.builders.tep import build_tep_document
 from apps.integration.services.tep_submission_service import (
@@ -38,9 +39,15 @@ class SiesaTepViewSet(viewsets.ViewSet):
         details = request.data.get("details")
 
         if not isinstance(header, dict) or not header:
-            return Response({"error": "'header' es requerido (objeto)"}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(
+                "'header' es requerido (objeto)", code="invalid_tep_request",
+                legacy={"error": "'header' es requerido (objeto)"},
+            )
         if not isinstance(details, list) or not details:
-            return Response({"error": "'details' es requerido (lista no vacia)"}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(
+                "'details' es requerido (lista no vacia)", code="invalid_tep_request",
+                legacy={"error": "'details' es requerido (lista no vacia)"},
+            )
 
         header = with_header_defaults(dict(header))
         date = header["date"]
@@ -48,9 +55,9 @@ class SiesaTepViewSet(viewsets.ViewSet):
             try:
                 header["date"] = dt.date.fromisoformat(date)
             except ValueError:
-                return Response(
-                    {"error": "'header.date' debe tener formato AAAA-MM-DD"},
-                    status=status.HTTP_400_BAD_REQUEST,
+                return error_response(
+                    "'header.date' debe tener formato AAAA-MM-DD", code="invalid_tep_request",
+                    legacy={"error": "'header.date' debe tener formato AAAA-MM-DD"},
                 )
 
         # register_ids/origin_id no son de SIESA: se separan antes de armar el documento.
@@ -59,12 +66,15 @@ class SiesaTepViewSet(viewsets.ViewSet):
         try:
             lines = build_tep_document(header, details)
         except ValueError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(str(exc), code="invalid_tep_document", legacy={"error": str(exc)})
 
         try:
             cfg = SiesaWebserviceConfig.from_settings()
         except SiesaWebserviceConfigError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return error_response(
+                str(exc), status_code=status.HTTP_503_SERVICE_UNAVAILABLE, code="siesa_not_configured",
+                legacy={"error": str(exc)},
+            )
 
         # Valida los register_ids y guarda antes de llamar a SIESA: queda
         # registro aunque falle el envío.
@@ -73,27 +83,39 @@ class SiesaTepViewSet(viewsets.ViewSet):
                 header, details, lines, user=request.user, references=references
             )
         except RecordValidationError as exc:
-            return Response(
-                {"error": "register_ids invalidos", "details": exc.errors},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                "register_ids invalidos", code="invalid_register_ids",
+                errors={"register_ids": exc.errors},
+                legacy={"error": "register_ids invalidos", "details": exc.errors},
             )
 
         try:
             result = send_flat_file_lines(lines, cfg=cfg)
         except SiesaWebserviceError as exc:
             mark_submission_result(submission, ok=False, error_detail=str(exc))
-            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+            return error_response(
+                str(exc), status_code=status.HTTP_502_BAD_GATEWAY, code="siesa_unreachable",
+                legacy={"error": str(exc)},
+            )
 
         mark_submission_result(
             submission, ok=result.ok, error_type=result.error_type, error_detail=result.error_detail_xml
         )
 
-        return Response(
-            {
-                "submission_id": submission.id,
-                "ok": result.ok,
-                "error_type": result.error_type,
-                "error_detail_xml": result.error_detail_xml,
-            },
-            status=status.HTTP_200_OK if result.ok else status.HTTP_422_UNPROCESSABLE_ENTITY,
+        payload = {
+            "submission_id": submission.id,
+            "ok": result.ok,
+            "error_type": result.error_type,
+            "error_detail_xml": result.error_detail_xml,
+        }
+
+        if result.ok:
+            return Response(payload, status=status.HTTP_200_OK)
+
+        # SIESA rejected the document: an error response that still carries its result.
+        return error_response(
+            f"SIESA rechazó el envío (tipo de error {result.error_type}).",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="siesa_rejected",
+            extra=payload,
         )

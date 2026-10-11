@@ -1,6 +1,7 @@
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from apps.stamping.services.sku_reference_service import SkuReferenceService
+from core.exceptions import error_response
 
 
 class SkuReferenceViewSet(viewsets.ViewSet):
@@ -9,9 +10,9 @@ class SkuReferenceViewSet(viewsets.ViewSet):
         data = SkuReferenceService.get_references()
 
         if not data:
-            return Response(
-                {"error": "No data found"},
-                status=status.HTTP_404_NOT_FOUND,
+            return error_response(
+                "No data found", status_code=status.HTTP_404_NOT_FOUND, code="not_found",
+                legacy={"error": "No data found"},
             )
 
         return Response(data, status=status.HTTP_200_OK)
