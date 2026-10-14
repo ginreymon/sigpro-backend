@@ -2,8 +2,8 @@ from rest_framework import serializers
 
 
 class OrderToBeOutboundDetailSerializer(serializers.Serializer):
-    """Una entrada de `detail` de sp_totales_registrados_por_op_json: las
-    columnas del SP que no son del grupo."""
+    """One `detail` entry of sp_totales_registrados_por_op_json: the SP columns
+    that do not belong to the group."""
 
     op_rowid = serializers.IntegerField()
     op_number = serializers.IntegerField()
@@ -27,20 +27,24 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
     erp_scrap_quantity = serializers.FloatField(allow_null=True)
     recorded_quantity_per_piece = serializers.FloatField(allow_null=True)
     erp_quantity_difference = serializers.FloatField(allow_null=True)
-    # Ids de los registros agrupados (production/stamping record), arreglo JSON del SP.
+    # Net time of the OP (excluding breaks and module stoppages) and per recorded
+    # unit. Production with a date range only; None for stamping or without a range.
+    total_seconds = serializers.FloatField(allow_null=True)
+    seconds_by_unit = serializers.FloatField(allow_null=True)
+    # Ids of the grouped records (production/stamping record), JSON array from the SP.
     register_ids = serializers.ListField(child=serializers.IntegerField())
 
 
 class OrderToBeOutboundSerializer(serializers.Serializer):
-    """Fila de la tabla de aprobación: un item de `work_centers` de
-    dbo.sp_totales_registrados_por_op_json (día + code/work_center_id), con el
-    largo de su `detail` y el `detail` mismo (ver OPTotalsService). Las
-    columnas deben coincidir con el JSON del SP."""
+    """Approval table row: one `work_centers` item of
+    dbo.sp_totales_registrados_por_op_json (day + code/work_center_id), with the
+    length of its `detail` and the `detail` itself (see OPTotalsService). The
+    columns must match the SP JSON."""
 
-    # Secuencial dentro de la respuesta (lo asigna OPTotalsService): la fila
-    # no tiene un id propio, solo encaja con el contrato BaseEntity de la tabla.
+    # Sequential within the response (assigned by OPTotalsService): the row has
+    # no id of its own, it only fits the table's BaseEntity contract.
     id = serializers.IntegerField()
-    # None cuando la consulta no trae rango de fechas.
+    # None when the query has no date range.
     day_number = serializers.IntegerField(allow_null=True)
     record_date = serializers.CharField(allow_null=True)
 
