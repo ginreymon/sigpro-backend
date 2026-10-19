@@ -174,6 +174,13 @@ IIS Manager → **Sites** → clic derecho → **Add Website**
 icacls "C:\inetpub\wwwroot\SIGPRO\backend" /grant "IIS AppPool\SGIPRO-Backend:(OI)(CI)RX" /T
 ```
 
+El app pool también necesita **escritura** en `logs\` (`django.log` y `api_requests.log`). La carpeta no viene en el repo (está en `.gitignore`): crearla y dar permiso:
+
+```cmd
+mkdir C:\inetpub\wwwroot\SIGPRO\backend\logs
+icacls "C:\inetpub\wwwroot\SIGPRO\backend\logs" /grant "IIS AppPool\SGIPRO-Backend:(OI)(CI)M" /T
+```
+
 ---
 
 ## 10. Iniciar / Reiniciar app pool
@@ -220,6 +227,7 @@ C:\inetpub\wwwroot\SIGPRO\backend\venv\Scripts\python.exe C:\inetpub\wwwroot\SIG
 |-------|-------|-----|
 | `500 - scriptProcessor no encontrado` | FastCGI no registrado o ruta incorrecta | Paso 6 — verificar ruta exacta del venv |
 | `500 - acceso denegado` | Permisos NTFS incorrectos | Paso 9 — correr icacls |
+| `500` al arrancar / no se crea `api_requests.log` | App pool sin escritura en `logs\` | Paso 9 — icacls con `M` sobre `logs` |
 | `STATIC_ROOT not set` | Falta en settings.py | Agregar `STATIC_ROOT = BASE_DIR / 'staticfiles'` |
 | `ALLOWED_HOSTS error` | IP no en .env | Agregar IP a `ALLOWED_HOSTS` en `.env` |
 | `venv bloqueado al borrar` | IIS usa el proceso | Detener app pool → borrar → recrear |
