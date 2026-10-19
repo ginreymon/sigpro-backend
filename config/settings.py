@@ -96,6 +96,7 @@ SIMPLE_JWT = {
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'core.exceptions.ApiErrorEnvelopeMiddleware',
+    'core.request_log.ApiRequestLogMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -250,6 +251,10 @@ LOGGING = {
             "format": "{levelname} {asctime} {module} {message}",
             "style": "{",
         },
+        "api_request": {
+            "format": "{asctime} {levelname} {message}",
+            "style": "{",
+        },
     },
     "handlers": {
         "file": {
@@ -259,6 +264,14 @@ LOGGING = {
             "maxBytes": 1024 * 1024 * 5,
             "backupCount": 5,
             "formatter": "verbose",
+        },
+        "api_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "api_requests.log",
+            "maxBytes": 1024 * 1024 * 5,
+            "backupCount": 5,
+            "formatter": "api_request",
         },
         "console": {
             "class": "logging.StreamHandler",
@@ -281,5 +294,13 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "api.request": {
+            "handlers": ["console"] if _RUNSERVER_PARENT else ["api_file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
+
+# Paths under /api/v1/ that ApiRequestLogMiddleware skips (e.g. high-frequency polling).
+API_REQUEST_LOG_EXCLUDED_PATHS = ()
