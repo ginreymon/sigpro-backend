@@ -1,2 +1,2 @@
-from .order_to_be_outbound_serializer import OrderToBeOutboundSerializer
+from .order_to_be_outbound_serializer import OrderByWorkCenterSerializer, OrderToBeOutboundSerializer
 from .tep_submission_serializer import TepSubmissionSerializer

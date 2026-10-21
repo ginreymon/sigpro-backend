@@ -36,7 +36,7 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
 
 
 class OrderToBeOutboundSerializer(serializers.Serializer):
-    """Approval table row: one `work_centers` item of
+    """Approval table row: one array item of
     dbo.sp_totales_registrados_por_op_json (day + code/work_center_id), with the
     length of its `detail` and the `detail` itself (see OPTotalsService). The
     columns must match the SP JSON."""
@@ -59,3 +59,32 @@ class OrderToBeOutboundSerializer(serializers.Serializer):
 
     detail_count = serializers.IntegerField()
     detail = OrderToBeOutboundDetailSerializer(many=True)
+
+
+class WorkCenterDocumentSerializer(OrderToBeOutboundDetailSerializer):
+    """One `documents` entry of sp_totales_registrados_por_op_work_center_json: the
+    detail columns, without `total_seconds` (not calculated) and with the
+    per-document `detail` ({"ColorRows": [...]}, only for origin_id = 1)."""
+
+    total_seconds = serializers.FloatField(required=False, allow_null=True)
+    detail = serializers.DictField(allow_null=True)
+
+
+class OrderByWorkCenterSerializer(serializers.Serializer):
+    """Row of sp_totales_registrados_por_op_work_center_json: one work center with
+    its `documents` and their count (see OPTotalsService). The columns must match
+    the SP JSON."""
+
+    # Sequential within the response (assigned by OPTotalsService).
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    description = serializers.CharField(allow_null=True)
+    work_center_id = serializers.IntegerField()
+    origin = serializers.CharField()
+    origin_id = serializers.IntegerField()
+    core_module_id = serializers.IntegerField(allow_null=True)
+    first_start = serializers.DateTimeField(allow_null=True)
+    last_end = serializers.DateTimeField(allow_null=True)
+
+    documents_count = serializers.IntegerField()
+    documents = WorkCenterDocumentSerializer(many=True)

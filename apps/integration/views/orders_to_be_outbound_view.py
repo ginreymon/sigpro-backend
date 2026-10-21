@@ -1,9 +1,10 @@
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 
-from apps.integration.serializers import OrderToBeOutboundSerializer
+from apps.integration.serializers import OrderByWorkCenterSerializer, OrderToBeOutboundSerializer
 from apps.integration.services.op_totals_service import OPTotalsService
 
 SEARCH_FIELDS = ("origin", "code")
@@ -45,6 +46,31 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         if search:
             search = search.lower()
             data = [row for row in data if self._matches(row, search)]
+
+        page = self.paginate_queryset(data)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="by-work-center",
+            serializer_class=OrderByWorkCenterSerializer)
+    def by_work_center(self, request):
+        """Totals per work center without day split
+        (sp_totales_registrados_por_op_work_center_json). Optional `op_rowid`,
+        `first_start_from` and `last_end_to` (ISO datetimes, UTC)."""
+        op_rowid = request.query_params.get("op_rowid")
+        first_start_from = parse_datetime(request.query_params.get("first_start_from") or "")
+        last_end_to = parse_datetime(request.query_params.get("last_end_to") or "")
+
+        if first_start_from and last_end_to and last_end_to < first_start_from:
+            raise ValidationError(
+                {"last_end_to": "last_end_to no puede ser menor que first_start_from."}
+            )
+
+        data = OPTotalsService.get_totales_por_work_center(
+            int(op_rowid) if op_rowid else None,
+            first_start_from,
+            last_end_to,
+        )
 
         page = self.paginate_queryset(data)
         serializer = self.get_serializer(page, many=True)
