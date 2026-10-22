@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from apps.common.mappers.recursive_mapper import translate_keys
 from apps.integration.repositories.op_totals_repository import OPTotalsRepository
 
 DETAIL_KEY = "detail"
@@ -54,8 +55,14 @@ class OPTotalsService:
 
         rows = []
         for group in groups:
+            # `detail` ({"ColorRows": [...]}) comes straight from the SQL function with
+            # Spanish keys: translate it like production-orders/detail does.
             documents = sorted(
-                group[DOCUMENTS_KEY], key=lambda item: (item["op_type"], item["op_number"])
+                (
+                    {**item, DETAIL_KEY: translate_keys(item.get(DETAIL_KEY))}
+                    for item in group[DOCUMENTS_KEY]
+                ),
+                key=lambda item: (item["op_type"], item["op_number"]),
             )
             rows.append({
                 "id": len(rows) + 1,

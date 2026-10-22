@@ -64,7 +64,7 @@ class OrderToBeOutboundSerializer(serializers.Serializer):
 class WorkCenterDocumentSerializer(OrderToBeOutboundDetailSerializer):
     """One `documents` entry of sp_totales_registrados_por_op_work_center_json: the
     detail columns, with `additional_seconds_by_unit` (not calculated) instead of
-    `total_seconds` and with the per-document `detail` ({"ColorRows": [...]},
+    `total_seconds` and with the per-document `detail` ({"colorRows": [...]},
     only for origin_id = 1)."""
 
     total_seconds = None  # drops the field inherited from the detail serializer
