@@ -19,14 +19,11 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
     pieces = serializers.FloatField(allow_null=True)
     times_on_route = serializers.IntegerField(allow_null=True)
     operation_number = serializers.IntegerField(allow_null=True)
-    completed_operation = serializers.IntegerField(allow_null=True)
-    erp_planned_quantity = serializers.FloatField(allow_null=True)
-    erp_ordered_quantity = serializers.FloatField(allow_null=True)
+    erp_completed_operation = serializers.IntegerField(allow_null=True)
+    erp_execution_quantity = serializers.FloatField(allow_null=True)
     erp_completed_quantity = serializers.FloatField(allow_null=True)
-    erp_rejected_quantity = serializers.FloatField(allow_null=True)
-    erp_scrap_quantity = serializers.FloatField(allow_null=True)
     recorded_quantity_per_piece = serializers.FloatField(allow_null=True)
-    erp_quantity_difference = serializers.FloatField(allow_null=True)
+    erp_quantity_discrepancy =serializers.FloatField(allow_null=True)
     # Net time of the OP (excluding breaks and module stoppages) and per recorded
     # unit. Production with a date range only; None for stamping or without a range.
     total_seconds = serializers.FloatField(allow_null=True)
