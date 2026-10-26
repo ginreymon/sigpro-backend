@@ -19,14 +19,11 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
     pieces = serializers.FloatField(allow_null=True)
     times_on_route = serializers.IntegerField(allow_null=True)
     operation_number = serializers.IntegerField(allow_null=True)
-    completed_operation = serializers.IntegerField(allow_null=True)
-    erp_planned_quantity = serializers.FloatField(allow_null=True)
-    erp_ordered_quantity = serializers.FloatField(allow_null=True)
+    erp_completed_operation = serializers.IntegerField(allow_null=True)
+    erp_execution_quantity = serializers.FloatField(allow_null=True)
     erp_completed_quantity = serializers.FloatField(allow_null=True)
-    erp_rejected_quantity = serializers.FloatField(allow_null=True)
-    erp_scrap_quantity = serializers.FloatField(allow_null=True)
     recorded_quantity_per_piece = serializers.FloatField(allow_null=True)
-    erp_quantity_difference = serializers.FloatField(allow_null=True)
+    erp_quantity_discrepancy =serializers.FloatField(allow_null=True)
     # Net time of the OP (excluding breaks and module stoppages) and per recorded
     # unit. Production with a date range only; None for stamping or without a range.
     total_seconds = serializers.FloatField(allow_null=True)
@@ -36,7 +33,7 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
 
 
 class OrderToBeOutboundSerializer(serializers.Serializer):
-    """Approval table row: one `work_centers` item of
+    """Approval table row: one array item of
     dbo.sp_totales_registrados_por_op_json (day + code/work_center_id), with the
     length of its `detail` and the `detail` itself (see OPTotalsService). The
     columns must match the SP JSON."""
@@ -59,3 +56,34 @@ class OrderToBeOutboundSerializer(serializers.Serializer):
 
     detail_count = serializers.IntegerField()
     detail = OrderToBeOutboundDetailSerializer(many=True)
+
+
+class WorkCenterDocumentSerializer(OrderToBeOutboundDetailSerializer):
+    """One `documents` entry of sp_totales_registrados_por_op_work_center_json: the
+    detail columns, with `additional_seconds_by_unit` (not calculated) instead of
+    `total_seconds` and with the per-document `detail` ({"colorRows": [...]},
+    only for origin_id = 1)."""
+
+    total_seconds = None  # drops the field inherited from the detail serializer
+    additional_seconds_by_unit = serializers.FloatField(allow_null=True)
+    detail = serializers.DictField(allow_null=True)
+
+
+class OrderByWorkCenterSerializer(serializers.Serializer):
+    """Row of sp_totales_registrados_por_op_work_center_json: one work center with
+    its `documents` and their count (see OPTotalsService). The columns must match
+    the SP JSON."""
+
+    # Sequential within the response (assigned by OPTotalsService).
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    description = serializers.CharField(allow_null=True)
+    work_center_id = serializers.IntegerField()
+    origin = serializers.CharField()
+    origin_id = serializers.IntegerField()
+    core_module_id = serializers.IntegerField(allow_null=True)
+    first_start = serializers.DateTimeField(allow_null=True)
+    last_end = serializers.DateTimeField(allow_null=True)
+
+    documents_count = serializers.IntegerField()
+    documents = WorkCenterDocumentSerializer(many=True)
