@@ -1,7 +1,7 @@
 import json
 from django.db import connection
 from apps.common.mappers.recursive_mapper import translate_keys
-from apps.common.repositories.productivity_repository import BaseProductivityRepository, rows_with_json
+from apps.common.repositories.productivity_repository import BaseProductivityRepository
 
 
 def _to_float(value):
@@ -13,6 +13,7 @@ class ProductivityRepository(BaseProductivityRepository):
     module_shift_summary_sp = "sp_resumen_modulos_eficiencia_turno"
     module_efficiency_sp = "sp_eficiencia_modulos_produccion"
     shift_summary_sp = "sp_resumen_produccion_turno"
+    balance_summary_sp = "sp_resumen_produccion"
 
     @staticmethod
     def get_efficiency_report(start_date, end_date, module_id=None, shift_id=None, employee_id=None):
@@ -62,11 +63,3 @@ class ProductivityRepository(BaseProductivityRepository):
 
             return indicators
 
-    @staticmethod
-    def get_balance_summary(start_date, end_date, module_id=None):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_resumen_produccion %s, %s, %s",
-                [start_date, end_date, module_id],
-            )
-            return rows_with_json(cursor, "records_detail")

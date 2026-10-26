@@ -30,6 +30,16 @@ class BaseProductivityRepository:
     module_shift_summary_sp: str
     module_efficiency_sp: str
     shift_summary_sp: str
+    balance_summary_sp: str
+
+    @classmethod
+    def get_balance_summary(cls, start_date, end_date, module_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"EXEC {cls.balance_summary_sp} %s, %s, %s",
+                [start_date, end_date, module_id],
+            )
+            return rows_with_json(cursor, "records_detail")
 
     @classmethod
     def get_efficiency_period(cls, start_date, end_date, module_id=None, shift_id=None):
