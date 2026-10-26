@@ -55,6 +55,12 @@ class BaseProductivityService:
         return [row for row in data if row.get("module_id") in module_ids]
 
     @classmethod
+    def get_balance_summary(cls, start_date, end_date, client_now, module_id=None):
+        corrected_start = apply_client_offset(start_date, client_now)
+        corrected_end   = apply_client_offset(end_date,   client_now)
+        return cls.repository.get_balance_summary(corrected_start, corrected_end, module_id)
+
+    @classmethod
     def get_shift_summary(cls, start_date, end_date, client_now, *, module_id, shift_id, employee_id=None):
         corrected_start = apply_client_offset(start_date, client_now)
         corrected_end   = apply_client_offset(end_date,   client_now)

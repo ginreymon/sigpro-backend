@@ -57,6 +57,20 @@ class BaseProductivityViewSet(viewsets.ViewSet):
         )
         return Response(data, status=status.HTTP_200_OK)
 
+    # GET .../productivity/balance-summary/
+    @action(detail=False, methods=["get"], url_path="balance-summary")
+    def balance_summary(self, request):
+        start_date, end_date, client_now, error = parse_required_dates(request.query_params)
+        if error:
+            return error_response(error, code="invalid_params", legacy={"error": error})
+
+        module_id = parse_optional_int(request.query_params, "module_id")
+
+        data = self.service.get_balance_summary(
+            start_date, end_date, client_now, module_id=module_id
+        )
+        return Response(data, status=status.HTTP_200_OK)
+
     # GET .../productivity/module-shift-summary/[?core_module_id=N]
     @action(detail=False, methods=["get"], url_path="module-shift-summary")
     def module_shift_summary(self, request):

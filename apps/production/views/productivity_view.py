@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import HttpResponse
 
-from apps.common.views.productivity_params import parse_required_dates, parse_optional_int
+from apps.common.views.productivity_params import parse_optional_int
 from core.exceptions import error_response
 from apps.common.views.productivity_view import BaseProductivityViewSet
 from apps.production.services.productivity_service import ProductivityService
@@ -12,20 +12,6 @@ from apps.production.exports.efficiency_report_export import build_efficiency_re
 
 class ProductivityViewSet(BaseProductivityViewSet):
     service = ProductivityService
-
-    # GET /productivity/balance-summary/
-    @action(detail=False, methods=["get"], url_path="balance-summary")
-    def balance_summary(self, request):
-        start_date, end_date, client_now, error = parse_required_dates(request.query_params)
-        if error:
-            return error_response(error, code="invalid_params", legacy={"error": error})
-
-        module_id = parse_optional_int(request.query_params, "module_id")
-
-        data = ProductivityService.get_balance_summary(
-            start_date, end_date, client_now, module_id=module_id
-        )
-        return Response(data, status=status.HTTP_200_OK)
 
     # GET /productivity/efficiency-report/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD[&module_id=N&shift_id=N&employee_id=N]
     @action(detail=False, methods=["get"], url_path="efficiency-report")
