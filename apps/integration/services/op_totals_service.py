@@ -6,6 +6,11 @@ from apps.integration.repositories.op_totals_repository import OPTotalsRepositor
 DETAIL_KEY = "detail"
 DOCUMENTS_KEY = "documents"
 
+STATUS_PENDING = "PENDING"
+STATUS_MISSING = "MISSING"
+STATUS_INTEGRATED = "INTEGRATED"
+INTEGRATION_STATUSES = (STATUS_PENDING, STATUS_MISSING, STATUS_INTEGRATED)
+
 
 class OPTotalsService:
 
@@ -39,6 +44,45 @@ class OPTotalsService:
                 "detail_count": len(detail),
             })
         return rows
+
+    @staticmethod
+    def get_estado_integracion(
+        op_rowid: int | None = None,
+        first_start_from: datetime | None = None,
+        last_end_to: datetime | None = None,
+        status: str | None = None,
+    ):
+        """One row per OP / origin / work center with its integrated, pending and
+        missing quantities and `integration_status`, optionally filtered by status.
+        Sorted by OP type and number; `id` is sequential within the response (the
+        table's row key, not an entity)."""
+        rows = OPTotalsRepository.get_estado_integracion(op_rowid, first_start_from, last_end_to)
+
+        if status:
+            rows = [row for row in rows if row["integration_status"] == status]
+
+        rows.sort(key=lambda row: (row["op_type"], row["op_number"], row["code"] or ""))
+        return [{"id": index + 1, **row} for index, row in enumerate(rows)]
+
+    @staticmethod
+    def get_resumen_integracion(
+        op_rowid: int | None = None,
+        first_start_from: datetime | None = None,
+        last_end_to: datetime | None = None,
+    ):
+        """Counters for the integration dashboard: rows (OP / work center) and
+        quantities per status, over the same filters as get_estado_integracion."""
+        rows = OPTotalsRepository.get_estado_integracion(op_rowid, first_start_from, last_end_to)
+
+        summary = {
+            "total": len(rows),
+            "integrated_quantity": sum(row["integrated_quantity"] or 0 for row in rows),
+            "pending_quantity": sum(row["pending_quantity"] or 0 for row in rows),
+            "missing_quantity": sum(row["missing_quantity"] or 0 for row in rows),
+        }
+        for status in INTEGRATION_STATUSES:
+            summary[status.lower()] = sum(1 for row in rows if row["integration_status"] == status)
+        return summary
 
     @staticmethod
     def get_totales_por_work_center(

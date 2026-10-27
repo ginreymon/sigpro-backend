@@ -25,6 +25,22 @@ class OPTotalsRepository:
         return json.loads(row[0]) if row and row[0] else []
 
     @staticmethod
+    def get_estado_integracion(
+        op_rowid: int | None = None,
+        first_start_from: datetime | None = None,
+        last_end_to: datetime | None = None,
+    ) -> list[dict]:
+        """Rows of dbo.fn_estado_integracion_op: integrated / pending / missing
+        quantities per OP, origin and work center (all OPs, not only pending)."""
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM dbo.fn_estado_integracion_op(%s, %s, %s)",
+                [op_rowid, first_start_from, last_end_to],
+            )
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    @staticmethod
     def get_totales_por_work_center_json(
         op_rowid: int | None = None,
         first_start_from: datetime | None = None,

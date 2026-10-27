@@ -30,6 +30,7 @@ class OPProductionDetailSerializer(serializers.Serializer):
     rejectedQty = serializers.FloatField(source="Cant_Rechazos")
 
     skuRowId = serializers.IntegerField(source="SKU_RowID")
+    movRowId = serializers.IntegerField(source="MovRowID")
 
     operationCenters = serializers.SerializerMethodField()
     totals = serializers.SerializerMethodField()
