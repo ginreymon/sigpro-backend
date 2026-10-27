@@ -99,8 +99,9 @@ class OPTotalsService:
 
         rows = []
         for group in groups:
-            # `detail` ({"ColorRows": [...]}) comes straight from the SQL function with
-            # Spanish keys: translate it like production-orders/detail does.
+            # `detail` comes straight from the SQL function: {"ColorRows": [...]} (Confección,
+            # Spanish keys translated like production-orders/detail does) or {"referenceSams": [...]}
+            # (Estampación, already in snake_case; translate_keys leaves it unchanged).
             documents = sorted(
                 (
                     {**item, DETAIL_KEY: translate_keys(item.get(DETAIL_KEY))}
