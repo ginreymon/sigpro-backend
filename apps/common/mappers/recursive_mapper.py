@@ -47,6 +47,11 @@
     "Tiene_Registros_Abiertos": "hasOpenRecords",
     "Cantidad_Base_Ruta": "baseRouteQuantity",
     "Tep_Procesado": "tepProcessed",
+    "Tep_Todos_Registros_Procesados": "totalTepProcessed",
+    "Tiene_Registros_Procesados": "hasProcessedRecords",
+    "Cantidad_Registrada": "recordedQuantity",
+    "Registros_Cantidad_Completa": "recordsQuantityComplete",
+    "Tep_Procesado_Y_Completo": "tepProcessedAndComplete",
     "Records": "records",
     "SAM": "sam",
     # clasificacion
