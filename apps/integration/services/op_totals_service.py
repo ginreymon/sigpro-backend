@@ -46,6 +46,13 @@ class OPTotalsService:
         return rows
 
     @staticmethod
+    def get_detalle_sku_op(op_type: str, op_number: int) -> dict:
+        """Color x size detail of one Confección OP, `{"colorRows": [...]}`, with the keys translated
+        like production-orders/detail and by-work-center. Includes SKUs already integrated."""
+        color_rows = OPTotalsRepository.get_detalle_integracion_op_produccion_json(op_type, op_number)
+        return translate_keys({"ColorRows": color_rows})
+
+    @staticmethod
     def get_estado_integracion(
         op_rowid: int | None = None,
         first_start_from: datetime | None = None,

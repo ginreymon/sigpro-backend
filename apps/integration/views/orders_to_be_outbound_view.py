@@ -73,6 +73,24 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 
+    @action(detail=False, methods=["get"], url_path="op-sku-detail")
+    def op_sku_detail(self, request):
+        """Color x size matrix of one Confección OP (sp_detalle_integracion_op_produccion),
+        whatever the TEP state of its SKUs, so a sent submission can show what it integrated.
+        Required `op_type` and `op_number`; `colorRows` is empty when the OP does not exist."""
+        op_type = (request.query_params.get("op_type") or "").strip()
+        op_number = request.query_params.get("op_number")
+
+        errors = {}
+        if not op_type:
+            errors["op_type"] = "op_type es obligatorio."
+        if not op_number or not op_number.isdigit():
+            errors["op_number"] = "op_number debe ser un numero entero."
+        if errors:
+            raise ValidationError(errors)
+
+        return Response(OPTotalsService.get_detalle_sku_op(op_type, int(op_number)))
+
     @action(detail=False, methods=["get"], url_path="integration-status",
             serializer_class=OrderIntegrationStatusSerializer)
     def integration_status(self, request):
