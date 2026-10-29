@@ -50,6 +50,7 @@
     "Tep_Todos_Registros_Procesados": "totalTepProcessed",
     "Tiene_Registros_Procesados": "hasProcessedRecords",
     "Cantidad_Registrada": "recordedQuantity",
+    "Cantidad_Integrada": "integratedQuantity",
     "Registros_Cantidad_Completa": "recordsQuantityComplete",
     "Tep_Procesado_Y_Completo": "tepProcessedAndComplete",
     "Records": "records",
