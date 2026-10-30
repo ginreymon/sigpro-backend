@@ -66,6 +66,8 @@ class WorkCenterDocumentSerializer(OrderToBeOutboundDetailSerializer):
 
     total_seconds = None  # drops the field inherited from the detail serializer
     additional_seconds_by_unit = serializers.FloatField(allow_null=True)
+    # MAX(Cantidad_Base_Ruta) of the OP; only Confección (origin_id = 1), None in the rest.
+    base_route_quantity = serializers.FloatField(allow_null=True)
     detail = serializers.DictField(allow_null=True)
 
 
