@@ -1,3 +1,5 @@
+from datetime import timezone as dt_timezone
+
 from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -15,6 +17,7 @@ from apps.integration.services.op_totals_service import INTEGRATION_STATUSES, OP
 
 SEARCH_FIELDS = ("origin", "code")
 DETAIL_SEARCH_FIELDS = ("op_number", "op_type")
+WORK_CENTER_SEARCH_FIELDS = ("origin", "code", "description")
 # Mismo tope que sp_totales_registrados_por_op_json (31 dias, ambos inclusive):
 # cada dia ejecuta fn_trazabilidad_op, costosa.
 MAX_RANGE_DAYS = 31
@@ -62,12 +65,26 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
     def by_work_center(self, request):
         """Totals per work center without day split
         (sp_totales_registrados_por_op_work_center_json). Optional `op_rowid`,
-        `first_start_from` and `last_end_to` (ISO datetimes, UTC)."""
+        `first_start_from` and `last_end_to` (ISO datetimes, UTC).
+
+        Also filtered in memory (the SP has no such parameters): `search` (origin, work
+        center code/description or OP, e.g. "OP 46957") and `last_end_gte`/`last_end_lte`
+        (ISO datetimes, UTC) to keep the work centers whose `last_end` falls in that window."""
         op_rowid, first_start_from, last_end_to = self._parse_period_filters(request)
 
         data = OPTotalsService.get_totales_por_work_center(
             op_rowid, first_start_from, last_end_to
         )
+
+        data = self._filter_by_last_end(
+            data,
+            parse_datetime(request.query_params.get("last_end_gte") or ""),
+            parse_datetime(request.query_params.get("last_end_lte") or ""),
+        )
+
+        search = (request.query_params.get("search") or "").strip().lower()
+        if search:
+            data = [row for row in data if self._matches_work_center(row, search)]
 
         page = self.paginate_queryset(data)
         serializer = self.get_serializer(page, many=True)
@@ -182,6 +199,42 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
             raise ValidationError(
                 {"date_to": f"El rango maximo es de {MAX_RANGE_DAYS} dias."}
             )
+
+    @staticmethod
+    def _filter_by_last_end(rows, last_end_gte, last_end_lte):
+        """Rows whose `last_end` (UTC, naive when it comes from the SP) is inside the window."""
+        if last_end_gte is None and last_end_lte is None:
+            return rows
+
+        def as_utc(value):
+            return value if value.tzinfo else value.replace(tzinfo=dt_timezone.utc)
+
+        def inside(row):
+            last_end = parse_datetime(str(row.get("last_end") or ""))
+            if last_end is None:
+                return False
+            last_end = as_utc(last_end)
+            return (last_end_gte is None or last_end >= as_utc(last_end_gte)) and (
+                last_end_lte is None or last_end <= as_utc(last_end_lte)
+            )
+
+        return [row for row in rows if inside(row)]
+
+    @staticmethod
+    def _matches_work_center(row, search):
+        """`search` (lowercase) against the work center group (origin, code, description) or
+        any of its documents: op_number, op_type or both ("op 46957"), or reference."""
+        if any(search in str(row.get(field) or "").lower() for field in WORK_CENTER_SEARCH_FIELDS):
+            return True
+        compact = search.replace(" ", "")
+        for item in row["documents"]:
+            if search in str(item.get("reference") or "").lower():
+                return True
+            op_type = str(item.get("op_type") or "").strip().lower()
+            op_number = str(item.get("op_number") or "")
+            if compact in f"{op_type}{op_number}" or search in f"{op_type} {op_number}":
+                return True
+        return False
 
     @staticmethod
     def _matches(row, search):
