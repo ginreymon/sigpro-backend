@@ -38,6 +38,7 @@
     # tallas / totales
     "Talla": "size",
     "SKU_RowID": "skuRowId",
+    "MovRowID": "movRowId",
     "Cant_Ordenada": "orderedQty",
     "Cant_Planeada": "plannedQty",
     "Cant_Completada": "completedQty",
@@ -45,6 +46,14 @@
     "Cant_Rechazos": "rejectedQty",
     "Tiene_Registros_Abiertos": "hasOpenRecords",
     "Cantidad_Base_Ruta": "baseRouteQuantity",
+    "Tep_Procesado": "tepProcessed",
+    "Tep_Todos_Registros_Procesados": "totalTepProcessed",
+    "Tiene_Registros_Procesados": "hasProcessedRecords",
+    "Cantidad_Registrada": "recordedQuantity",
+    "Cantidad_Integrada": "integratedQuantity",
+    "Registros_Cantidad_Completa": "recordsQuantityComplete",
+    "Tep_Procesado_Y_Completo": "tepProcessedAndComplete",
+    "Records": "records",
     "SAM": "sam",
     # clasificacion
     "Marca": "brand",
