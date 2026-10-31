@@ -19,6 +19,8 @@ class WorkSessionSerializer(AuditSerializer):
     modules = serializers.SerializerMethodField()
     employees_snapshot = serializers.SerializerMethodField()
     active_activity = serializers.SerializerMethodField()
+    # Computed from started_at/ended_at (WorkSession.total_time property); not stored.
+    total_time = serializers.DurationField(read_only=True)
 
     module_id = serializers.PrimaryKeyRelatedField(
         queryset=Module.objects.all(), write_only=True, required=False, allow_null=True,
@@ -31,7 +33,7 @@ class WorkSessionSerializer(AuditSerializer):
     class Meta:
         model = WorkSession
         fields = "__all__"
-        read_only_fields = ("user", "total_time", "is_closed")
+        read_only_fields = ("user", "is_closed")
 
     def validate(self, attrs):
         employee_ids = attrs.get("employee_ids")

@@ -20,7 +20,6 @@ class WorkSession(TimeAuditModel, UserAuditModel):
 
     started_at = models.DateTimeField(default=timezone.now)
     ended_at = models.DateTimeField(null=True, blank=True)
-    total_time = models.DurationField(null=True, blank=True)
 
     is_closed = models.BooleanField(default=False)
     editing_finalized = models.BooleanField(default=False)
@@ -39,6 +38,12 @@ class WorkSession(TimeAuditModel, UserAuditModel):
                 name="unique_active_session_per_user",
             )
         ]
+
+    @property
+    def total_time(self):
+        if not self.started_at or not self.ended_at:
+            return None
+        return self.ended_at - self.started_at
 
     def get_active_activity(self):
         return (
@@ -136,14 +141,12 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             activity.close()
 
         self.ended_at = timezone.now()
-        self.total_time = self.ended_at - self.started_at
         self.is_closed = True
 
-        self.save(update_fields=["ended_at", "total_time", "is_closed"])
+        self.save(update_fields=["ended_at", "is_closed"])
 
     def save(self, *args, **kwargs):
         if self.started_at and self.ended_at and not self.is_closed:
-            self.total_time = self.ended_at - self.started_at
             self.is_closed = True
 
         super().save(*args, **kwargs)
