@@ -17,6 +17,13 @@ class TepSubmissionViewSet(BaseModelViewSet):
     serializer_class = TepSubmissionSerializer
     http_method_names = ['get', 'head', 'options']
 
-    filterset_fields = ['status', 'document_number', 'work_center_id', 'date']
+    # created_at__gte / created_at__lt: date range of the submission (UTC datetimes).
+    filterset_fields = {
+        'status': ['exact'],
+        'document_number': ['exact'],
+        'work_center_id': ['exact'],
+        'date': ['exact'],
+        'created_at': ['gte', 'lt'],
+    }
     search_fields = ['work_center_id', 'error_detail', 'details__op_document_number']
     ordering_fields = ['created_at', 'sent_at', 'status', 'date', 'document_number']
