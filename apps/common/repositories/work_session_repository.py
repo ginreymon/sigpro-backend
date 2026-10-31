@@ -19,13 +19,14 @@ class WorkSessionRepository:
         op_type: str | None,
         reference: str | None,
         module_name: str | None,
+        search: str | None,
         offset: int,
         limit: int,
     ) -> list[dict]:
         with connection.cursor() as cursor:
             cursor.execute(
-                f"EXEC {cls.work_sessions_sp} %s, %s, %s, %s, %s, %s, %s, %s",
-                [start_date, end_date, op_number, op_type, reference, module_name, offset, limit],
+                f"EXEC {cls.work_sessions_sp} %s, %s, %s, %s, %s, %s, %s, %s, %s",
+                [start_date, end_date, op_number, op_type, reference, module_name, search, offset, limit],
             )
             rows = cursor.fetchall()
 

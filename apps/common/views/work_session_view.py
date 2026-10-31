@@ -15,7 +15,8 @@ class WorkSessionView(APIView):
     """GET /api/v1/dashboard/work-sessions/
 
     Optional filters: `start`, `end` (YYYY-MM-DD, inclusive, local date), `op_number`,
-    `op_type`, `reference` (contains), `module_name` (contains). Pagination is done
+    `op_type`, `reference` (contains), `module_name` (contains), `search` (free text over
+    OP type/number, reference and module). Pagination is done
     in the database: `limit` / `offset`, same response contract as LimitOffsetPagination.
     """
 
@@ -43,6 +44,7 @@ class WorkSessionView(APIView):
             op_type=(params.get("op_type") or "").strip() or None,
             reference=(params.get("reference") or "").strip() or None,
             module_name=(params.get("module_name") or "").strip() or None,
+            search=(params.get("search") or "").strip() or None,
             offset=offset,
             limit=limit,
         )
