@@ -31,8 +31,8 @@ class BaseProductivityService:
         )
 
     @classmethod
-    def get_module_shift_summary(cls, core_module_id: int | None = None) -> list[dict]:
-        data = cls.repository.get_module_shift_summary()
+    def get_module_shift_summary(cls, core_module_id: int | None = None, module_id: int | None = None) -> list[dict]:
+        data = cls.repository.get_module_shift_summary(module_id)
 
         module_ids = cls.module_ids()
         data = [row for row in data if row.get("module_id") in module_ids]

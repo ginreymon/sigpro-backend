@@ -53,9 +53,13 @@ class BaseProductivityRepository:
             return translate_keys([dict(zip(columns, row))])[0] if row else {}
 
     @classmethod
-    def get_module_shift_summary(cls) -> list[dict]:
+    def get_module_shift_summary(cls, module_id: int | None = None) -> list[dict]:
         with connection.cursor() as cursor:
-            cursor.execute(f"EXEC {cls.module_shift_summary_sp}")
+            # The module parameter is sent only when given: without it the call is the same as before.
+            if module_id is None:
+                cursor.execute(f"EXEC {cls.module_shift_summary_sp}")
+            else:
+                cursor.execute(f"EXEC {cls.module_shift_summary_sp} %s", [module_id])
             rows = cursor.fetchall()
             if not rows:
                 return []
