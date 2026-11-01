@@ -5,6 +5,7 @@ from apps.production.models.work_session import WorkSession
 from apps.production.models.module import Module
 from django.utils import timezone
 from django.db.models import Q, Case, When, Value, F
+from rest_framework.exceptions import ValidationError
 
 
 class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
@@ -114,10 +115,27 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
         self.save(update_fields=["ended_at", "is_active"])
 
     def save(self, *args, **kwargs):
+        self._validate_module_unchanged(kwargs.get("update_fields"))
+
         if self.ended_at:
             self.is_active = False
 
         super().save(*args, **kwargs)
+
+    def _validate_module_unchanged(self, update_fields):
+        """An activity belongs to a single module for its whole life: changing the
+        module of a session opens a new activity (see update_session), it never
+        edits the existing one."""
+        if self._state.adding or self.pk is None:
+            return
+        if update_fields is not None and not {"module", "module_id"} & set(update_fields):
+            return
+
+        stored_module_id = (
+            type(self).objects.filter(pk=self.pk).values_list("module_id", flat=True).first()
+        )
+        if stored_module_id is not None and stored_module_id != self.module_id:
+            raise ValidationError("La actividad no puede cambiar de módulo.")
 
     def __str__(self):
         return f"WorkSession {self.work_session.id} - Module {self.module.id} ({self.started_at})"
