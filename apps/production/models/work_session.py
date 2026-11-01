@@ -6,6 +6,7 @@ from apps.production.models.work_shift import WorkShift
 from core.models.audit_model import TimeAuditModel, UserAuditModel
 from django.utils import timezone
 from django.db.models import Q
+from rest_framework.exceptions import ValidationError
 
 
 class WorkSession(TimeAuditModel, UserAuditModel):
@@ -54,6 +55,14 @@ class WorkSession(TimeAuditModel, UserAuditModel):
         )
 
     def start_activity(self, module, employee_ids=None, created_by=None, apprentice_ids=None):
+        # A session works on a single module: switching module requires closing the
+        # session and opening a new one.
+        if self.work_session_activities.exclude(module=module).exists():
+            raise ValidationError(
+                "La jornada (sesión) ya pertenece a otro módulo. "
+                "Ciérrela y abra una nueva para cambiar de módulo."
+            )
+
         activity = self.get_active_activity()
         if activity:
             activity.close()
