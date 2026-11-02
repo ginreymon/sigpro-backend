@@ -21,7 +21,7 @@ DEFAULT_GRACE_HOURS = 8
 def get_grace_hours() -> int:
     try:
         value = (
-            AppSetting.objects.filter(key="GRACE_HOURS")
+            AppSetting.objects.filter(key="GRACE_HOURS", is_active=True)
             .values_list("value", flat=True)
             .first()
         )
@@ -96,12 +96,12 @@ def finalize_expired_session(session, expires_at: datetime) -> None:
     does in the frontend and in the SQL functions. WorkSession.close_session
     (manual close) does not finalize.
     """
+    ended_at = max(expires_at, session.started_at)
+
     with transaction.atomic():
         activity = session.get_active_activity()
         if activity:
-            activity.close()
-
-        ended_at = max(expires_at, session.started_at)
+            activity.close(ended_at)
 
         session.ended_at = ended_at
         session.is_closed = True
@@ -166,9 +166,31 @@ def close_active_session(user):
         return close(session) if session else None
 
 
-def get_last_session(user):
-    """The user's most recently started session in any state, or None."""
-    return WorkSessionRepository.find_last_session_of(user)
+def get_last_session(user, close_expired=False):
+    """
+    The user's most recently started session in any state, or None.
+
+    When `close_expired` is set and the session is still open past its expiry
+    (shift end + grace, server clock), it is finalized and returned in its
+    closed state. The row lock + re-check avoids double closes.
+    """
+    session = WorkSessionRepository.find_last_session_of(user)
+
+    if not session or session.is_closed or not close_expired:
+        return session
+
+    with transaction.atomic():
+        locked = WorkSessionRepository.lock_by_id(session.pk)
+        if locked.is_closed:
+            return WorkSessionRepository.get_detail(session.pk)
+
+        expires_at = session_expires_at(locked, get_grace_hours())
+        if timezone.now() < expires_at:
+            return session
+
+        finalize_expired_session(locked, expires_at)
+
+    return WorkSessionRepository.get_detail(session.pk)
 
 
 def get_active_session(user, core_module_id=None):

@@ -92,11 +92,12 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
             .first()
         )
 
-    def close(self):
+    def close(self, ended_at=None):
+        """Closes the activity and its open records at `ended_at` (default: now)."""
         if self.ended_at:
             return
 
-        now = timezone.now()
+        now = ended_at or timezone.now()
 
         self.production_records.filter(end_time__isnull=True).update(end_time=now)
         self.stamping_records.filter(end_time__isnull=True).update(end_time=now)

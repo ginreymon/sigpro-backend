@@ -58,7 +58,9 @@ class WorkSessionViewSet(SessionRuleErrorMixin, AuditModelViewSet):
     # /work-sessions/last/
     @action(detail=False, methods=["get"])
     def last(self, request):
-        session = work_session_service.get_last_session(request.user)
+        # ?close-expired=true closes the session if it is open past shift end + grace.
+        close_expired = request.query_params.get("close-expired", "").lower() == "true"
+        session = work_session_service.get_last_session(request.user, close_expired)
         return Response(self.get_serializer(session).data if session else None)
 
     # /work-sessions/active/
