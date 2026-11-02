@@ -155,6 +155,17 @@ def close(session):
     return WorkSessionRepository.get_detail(session.pk)
 
 
+def close_active_session(user):
+    """
+    Closes the user's open session manually (no expiry finalization, same as
+    close()), or returns None when there is none. The row lock makes the
+    check and the close atomic.
+    """
+    with transaction.atomic():
+        session = WorkSessionRepository.lock_open_session_of(user)
+        return close(session) if session else None
+
+
 def get_active_session(user, core_module_id=None):
     """
     The user's open session, or None. Also None when it belongs to another

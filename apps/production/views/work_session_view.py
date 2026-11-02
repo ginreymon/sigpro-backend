@@ -49,6 +49,12 @@ class WorkSessionViewSet(SessionRuleErrorMixin, AuditModelViewSet):
         session = work_session_service.close(self.get_object())
         return Response(self.get_serializer(session).data)
 
+    # /work-sessions/close-active/
+    @action(detail=False, methods=["post"], url_path="close-active")
+    def close_active(self, request):
+        session = work_session_service.close_active_session(request.user)
+        return Response(self.get_serializer(session).data if session else None)
+
     # /work-sessions/active/
     @action(detail=False, methods=["get"])
     def active(self, request):
