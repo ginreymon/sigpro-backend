@@ -34,6 +34,10 @@ class WorkSessionRepository:
     def find_open_session_of(cls, user):
         return cls.detail_queryset().filter(is_closed=False, user=user).first()
 
+    @classmethod
+    def find_last_session_of(cls, user):
+        return cls.detail_queryset().filter(user=user).order_by("-started_at", "-id").first()
+
     @staticmethod
     def lock_open_session_of(user):
         """Open session of the user, locked for the rest of the transaction."""

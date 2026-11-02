@@ -166,6 +166,11 @@ def close_active_session(user):
         return close(session) if session else None
 
 
+def get_last_session(user):
+    """The user's most recently started session in any state, or None."""
+    return WorkSessionRepository.find_last_session_of(user)
+
+
 def get_active_session(user, core_module_id=None):
     """
     The user's open session, or None. Also None when it belongs to another
