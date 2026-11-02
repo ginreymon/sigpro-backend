@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -7,6 +8,7 @@ from apps.production.repositories.work_session_repository import WorkSessionRepo
 from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
 from apps.production.services import work_session_service
+from apps.production.services.exceptions import SessionRuleError
 from apps.production.views.session_rule_error_mixin import SessionRuleErrorMixin
 
 
@@ -48,6 +50,27 @@ class WorkSessionViewSet(SessionRuleErrorMixin, AuditModelViewSet):
     def close(self, request, pk=None):
         session = work_session_service.close(self.get_object())
         return Response(self.get_serializer(session).data)
+
+    # /work-sessions/{id}/clone/
+    # Closes session {id} if it is still open (same logic as /close/), then runs the
+    # POST /work-sessions/ flow with the payload rebuilt from it. One transaction:
+    # if the close or the creation fails, nothing is persisted.
+    @action(detail=True, methods=["post"])
+    def clone(self, request, pk=None):
+        original = self.get_object()  # object-level lookup/permissions
+
+        with transaction.atomic():
+            session = WorkSessionRepository.lock_by_id(original.pk)
+            if not session.is_closed:
+                session = work_session_service.close(session)
+                if not session.is_closed:
+                    raise SessionRuleError({"detail": "No se pudo cerrar la jornada (sesión) original."})
+
+            serializer = self.get_serializer(data=work_session_service.clone_payload(session))
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+
+        return Response(serializer.data, status=201)
 
     # /work-sessions/close-active/
     @action(detail=False, methods=["post"], url_path="close-active")

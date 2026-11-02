@@ -146,6 +146,23 @@ def open_session(user, target_module_id, create):
         return create()
 
 
+def clone_payload(session) -> dict:
+    """
+    The POST /work-sessions/ payload that recreates `session`: its shift plus the
+    module and employees of its latest activity (none when it never had one).
+    """
+    payload = {"work_shift_id": session.work_shift_id}
+
+    activity = session.work_session_activities.order_by("-started_at", "-id").first()
+    if activity:
+        snapshots = list(activity.employee_snapshots.values("employee_id", "is_apprentice"))
+        payload["module_id"] = activity.module_id
+        payload["employee_ids"] = [s["employee_id"] for s in snapshots]
+        payload["apprentice_ids"] = [s["employee_id"] for s in snapshots if s["is_apprentice"]]
+
+    return payload
+
+
 def close(session):
     """Closes `session` and returns it reloaded with its related data."""
     if session.is_closed:
