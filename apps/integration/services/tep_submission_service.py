@@ -195,8 +195,10 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
 
     if not errors:
         op_rowid = next((r["op_rowid"] for r in records.values() if r["op_rowid"] is not None), None)
-        available = _erp_available_quantity(origin_id, op_rowid, detail.get("operation_work_center_id"))
-        if available is not None and sent - available > QUANTITY_TOLERANCE:
+        operation_completed, available = _erp_state(origin_id, op_rowid, detail.get("operation_work_center_id"))
+        if operation_completed:
+            errors.append(f"{label}: la operación ya está completada en el ERP, no se puede integrar")
+        elif available is not None and sent - available > QUANTITY_TOLERANCE:
             errors.append(
                 f"{label}: 'completed_quantity' ({sent.normalize():f}) supera la cantidad disponible de la "
                 f"operación en el ERP. Cantidad máxima disponible: {max(available, Decimal(0)).normalize():f}"
@@ -205,25 +207,28 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
     return errors
 
 
-def _erp_available_quantity(origin_id: int, op_rowid: int | None, work_center_id) -> Decimal | None:
-    """Quantity the ERP still lets this OP / work center execute:
-    `erp_execution_quantity - erp_completed_quantity` (same row, same origin, of
-    `sp_estado_integracion_op`, so Confección and Estampación go through the one
-    rule). None when the ERP reports nothing to compare against: the check is skipped.
+def _erp_state(origin_id: int, op_rowid: int | None, work_center_id) -> tuple[bool, Decimal | None]:
+    """ERP state of this OP / work center, from the same row and origin of
+    `sp_estado_integracion_op` for Confección and Estampación:
+    (operation already completed, quantity the ERP still lets it execute).
 
-    `erp_completed_operation` is deliberately not read: 0 means the operation is NOT
-    completed yet and never blocks a submission."""
+    A TEP can be sent only when `erp_completed_operation` is false and
+    `erp_completed_quantity + completed_quantity <= erp_execution_quantity`, i.e. the
+    quantity sent is at most `erp_execution_quantity - erp_completed_quantity`
+    (the second value). The completed flag is False and the available quantity None
+    when the ERP reports nothing to compare against: that check is skipped."""
     if op_rowid is None:
-        return None
+        return False, None
     code = str(work_center_id or "").strip()
     for row in OPTotalsRepository.get_estado_integracion(op_rowid):
         if row["origin_id"] != origin_id or (row["code"] or "").strip() != code:
             continue
+        completed_operation = bool(row.get("erp_completed_operation"))
         execution, completed = row["erp_execution_quantity"], row["erp_completed_quantity"]
         if execution is None or completed is None:
-            return None
-        return Decimal(str(execution)) - Decimal(str(completed))
-    return None
+            return completed_operation, None
+        return completed_operation, Decimal(str(execution)) - Decimal(str(completed))
+    return False, None
 
 
 def _pick_records_sequentially(origin_id: int, ids: list[int], quantity: Decimal) -> list[int]:
