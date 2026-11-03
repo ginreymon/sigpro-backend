@@ -21,7 +21,12 @@ Backend (apps/integration/views/siesa_tep_view.py, SiesaTepViewSet.send)
   3. Valida el documento (build_tep_document, con número placeholder 0) -> 400 si falla.
   4. Verifica configuración SIESA_WSUNOEE_* -> 503 si falta.
   5. register_submission (transacción atómica):
-       a. valida register_ids / time_mode / real_seconds_by_unit de cada item;
+       a. valida register_ids / time_mode / real_seconds_by_unit de cada item y que
+          completed_quantity <= erp_execution_quantity - erp_completed_quantity de la OP
+          (fila de sp_estado_integracion_op del mismo origen y centro de trabajo; Confección
+          y Estampación igual). Si se supera: 400 con la cantidad máxima disponible. Sin
+          cantidades del ERP no se valida. erp_completed_operation NO se lee: 0 = operación
+          aún no completada y nunca bloquea el envío;
        b. asigna el número de documento (sección 3);
        c. arma las líneas planas con ese número;
        d. guarda TepSubmission + TepDetail + TepDetailRecord con status `pending`
@@ -102,8 +107,14 @@ Columnas nuevas de TepDetail, guardadas UNA vez al confirmar y nunca recalculada
   time_mode              'real' | 'standard'. Tipo de tiempo con el que integró el usuario
                          (el que muestra el modal: "Tipo de tiempo (Real/Estándar)",
                          según TEP_TIME_CALCULATION_MODE; Estampación siempre 'standard').
-  sent_seconds_per_unit  Segundos por unidad realmente enviados a SIESA =
-                         hours x 3600 / completed_quantity (calculado en el backend).
+  sent_seconds_per_unit  Segundos por unidad del tiempo que el usuario envió (lo manda el
+                         frontend: (horas x 3600 + minutos x 60) / unidades). Si no llega,
+                         el backend usa hours x 3600 / completed_quantity.
+  Records asociados      TEMPORAL: _pick_records_sequentially toma los register_ids por id hasta
+                         completar completed_quantity, sin superarla (un record que no cabe se
+                         omite y queda pendiente). No se exige que la suma coincida; la cantidad
+                         ya no bloquea el envío. _mark_records marca tep_submission/tep_processed
+                         y es el punto a sustituir por la asignación exacta.
   real_seconds_by_unit   Foto de seconds_by_unit de la OP (endpoint by-work-center) al momento
                          del envío. Separado del enviado: si el usuario edita el tiempo o el
                          valor cambia después, ambos quedan como estaban.

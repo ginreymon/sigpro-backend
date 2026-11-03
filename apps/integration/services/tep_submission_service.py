@@ -20,6 +20,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.integration.builders.tep import build_tep_document
+from apps.integration.repositories.op_totals_repository import OPTotalsRepository
 from apps.integration.models import (
     TepDetail,
     TepDetailRecord,
@@ -51,13 +52,13 @@ _PIECES_FIELD = {1: None, 2: "stamping_reference_sam__stamped_pieces"}
 # Llaves de cada item de `details` que no son de SIESA: se separan antes de
 # armar el documento TEP. `time_mode` y `real_seconds_by_unit` son la
 # trazabilidad de tiempos (se guardan en `TepDetail`, no van a SIESA).
-RECORD_KEYS = ("register_ids", "origin_id", "time_mode", "real_seconds_by_unit")
+RECORD_KEYS = ("register_ids", "origin_id", "time_mode", "real_seconds_by_unit", "sent_seconds_per_unit")
 
 # TPW numbers are 8 digits in the SIESA layout (`consec_docto`).
 MAX_DOCUMENT_NUMBER = 99_999_999
 
-# Diferencia máxima admitida entre la cantidad enviada y la de los registros.
-QUANTITY_TOLERANCE = Decimal("0.01")
+# Rounding slack when comparing the quantity sent with what the ERP still has to execute.
+QUANTITY_TOLERANCE = Decimal("0.0001")
 
 
 class RecordValidationError(Exception):
@@ -154,13 +155,15 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
     real_seconds = reference.get("real_seconds_by_unit")
     if real_seconds is not None and ((_to_decimal(real_seconds) or Decimal(-1)) < 0):
         errors.append(f"{label}: 'real_seconds_by_unit' debe ser un número mayor o igual a 0")
+    sent_seconds = reference.get("sent_seconds_per_unit")
+    if sent_seconds is not None and ((_to_decimal(sent_seconds) or Decimal(-1)) < 0):
+        errors.append(f"{label}: 'sent_seconds_per_unit' debe ser un número mayor o igual a 0")
     if errors:
         return errors
 
-    pieces_field = _PIECES_FIELD[origin_id]
-    fields = ["id", "op_number", "op_type", "end_time", "completed_quantity", "tep_submission__status"]
-    if pieces_field:
-        fields.append(pieces_field)
+    # The quantity sent is not compared with the records: they are picked up to that quantity later
+    # (`_pick_records_sequentially`), so a difference never blocks the submission.
+    fields = ["id", "op_rowid", "op_number", "op_type", "end_time", "tep_submission__status"]
     records = {
         record["id"]: record
         for record in record_model(origin_id).objects.select_for_update().filter(id__in=ids).values(*fields)
@@ -186,17 +189,68 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
     if already_sent:
         errors.append(f"{label}: los registros {already_sent} ya fueron enviados")
 
-    if not missing:
-        pieces = max([(r.get(pieces_field) if pieces_field else 1) or 1 for r in records.values()])
-        expected = sum((r["completed_quantity"] for r in records.values()), Decimal("0")) / Decimal(pieces)
-        sent = _to_decimal(detail.get("completed_quantity", 0))
-        if sent is None or abs(sent - expected) > QUANTITY_TOLERANCE:
+    sent = _to_decimal(detail.get("completed_quantity", 0))
+    if sent is None or sent < 0:
+        errors.append(f"{label}: 'completed_quantity' debe ser un número mayor o igual a 0")
+
+    if not errors:
+        op_rowid = next((r["op_rowid"] for r in records.values() if r["op_rowid"] is not None), None)
+        available = _erp_available_quantity(origin_id, op_rowid, detail.get("operation_work_center_id"))
+        if available is not None and sent - available > QUANTITY_TOLERANCE:
             errors.append(
-                f"{label}: 'completed_quantity' ({detail.get('completed_quantity', 0)}) no coincide con "
-                f"la de los registros ({expected.quantize(Decimal('0.0001'))})"
+                f"{label}: 'completed_quantity' ({sent.normalize():f}) supera la cantidad disponible de la "
+                f"operación en el ERP. Cantidad máxima disponible: {max(available, Decimal(0)).normalize():f}"
             )
 
     return errors
+
+
+def _erp_available_quantity(origin_id: int, op_rowid: int | None, work_center_id) -> Decimal | None:
+    """Quantity the ERP still lets this OP / work center execute:
+    `erp_execution_quantity - erp_completed_quantity` (same row, same origin, of
+    `sp_estado_integracion_op`, so Confección and Estampación go through the one
+    rule). None when the ERP reports nothing to compare against: the check is skipped.
+
+    `erp_completed_operation` is deliberately not read: 0 means the operation is NOT
+    completed yet and never blocks a submission."""
+    if op_rowid is None:
+        return None
+    code = str(work_center_id or "").strip()
+    for row in OPTotalsRepository.get_estado_integracion(op_rowid):
+        if row["origin_id"] != origin_id or (row["code"] or "").strip() != code:
+            continue
+        execution, completed = row["erp_execution_quantity"], row["erp_completed_quantity"]
+        if execution is None or completed is None:
+            return None
+        return Decimal(str(execution)) - Decimal(str(completed))
+    return None
+
+
+def _pick_records_sequentially(origin_id: int, ids: list[int], quantity: Decimal) -> list[int]:
+    """TEMPORARY assignment: walks the records by id and takes each whole record
+    that still fits in the remaining quantity (units = completed_quantity / pieces,
+    same rule as `_PIECES_FIELD`). A record that exceeds what is left is skipped
+    (records are not split), so the total never goes over `quantity` and may fall
+    short of it. Skipped records stay pending for a later TEP.
+    """
+    pieces_field = _PIECES_FIELD[origin_id]
+    fields = ["id", "completed_quantity"] + ([pieces_field] if pieces_field else [])
+    rows = record_model(origin_id).objects.filter(id__in=ids).order_by("id").values(*fields)
+    remaining, picked = quantity, []
+    for row in rows:
+        units = row["completed_quantity"] / Decimal((row.get(pieces_field) if pieces_field else 1) or 1)
+        if units <= remaining:
+            picked.append(row["id"])
+            remaining -= units
+    return picked
+
+
+def _mark_records(origin_id: int, ids: list[int], submission: TepSubmission) -> None:
+    """Marks the records with the TEP they were sent in (`tep_submission`) and as
+    processed. Isolated from the submission flow on purpose: the exact assignment
+    algorithm replaces `_pick_records_sequentially` + this function only.
+    `update()` skips `OpRecord.save`, which would reset both fields."""
+    record_model(origin_id).objects.filter(id__in=ids).update(tep_submission=submission, tep_processed=True)
 
 
 def _next_document_number(header: dict) -> int:
@@ -226,8 +280,12 @@ def _next_document_number(header: dict) -> int:
     return number
 
 
-def _sent_seconds_per_unit(detail: dict) -> Decimal | None:
-    """Seconds per unit actually sent to SIESA: `hours` x 3600 / `completed_quantity`."""
+def _sent_seconds_per_unit(detail: dict, reference: dict) -> Decimal | None:
+    """Seconds per unit of the time the user sent: the value the frontend sends,
+    or `hours` x 3600 / `completed_quantity` when it does not."""
+    sent = _to_decimal(reference.get("sent_seconds_per_unit"))
+    if sent is not None:
+        return sent.quantize(Decimal("0.0001"))
     quantity = _to_decimal(detail.get("completed_quantity", 0))
     hours = _to_decimal(detail.get("hours", 0))
     if not quantity or hours is None:
@@ -275,19 +333,20 @@ def register_submission(
         saved = TepDetail.objects.create(
             **{"record_number": number, **_model_values(TepDetail, detail)},
             time_mode=reference["time_mode"],
-            sent_seconds_per_unit=_sent_seconds_per_unit(detail),
+            sent_seconds_per_unit=_sent_seconds_per_unit(detail, reference),
             real_seconds_by_unit=_to_decimal(reference.get("real_seconds_by_unit")),
             submission=submission,
             created_by=user,
             updated_by=user,
         )
-        ids = reference["register_ids"]
+        origin_id = reference["origin_id"]
+        ids = _pick_records_sequentially(
+            origin_id, reference["register_ids"], _to_decimal(detail.get("completed_quantity", 0))
+        )
         TepDetailRecord.objects.bulk_create(
-            [TepDetailRecord(detail=saved, origin_id=reference["origin_id"], record_id=i) for i in ids]
+            [TepDetailRecord(detail=saved, origin_id=origin_id, record_id=i) for i in ids]
         )
-        record_model(reference["origin_id"]).objects.filter(id__in=ids).update(
-            tep_submission=submission, tep_processed=True
-        )
+        _mark_records(origin_id, ids, submission)
     return submission
 
 

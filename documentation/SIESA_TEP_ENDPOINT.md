@@ -79,6 +79,7 @@ Cada item de `details` puede (y desde Approval debe) traer, además de los campo
 | `origin_id` | 1 o 2 | 1 = producción, 2 = estampación; define en qué tabla se buscan los ids |
 | `time_mode` | `real` o `standard` | Obligatorio. Tipo de tiempo con el que se integró (trazabilidad) |
 | `real_seconds_by_unit` | número o null | `seconds_by_unit` de la OP al enviar (trazabilidad) |
+| `sent_seconds_per_unit` | número o null (opcional) | segundos por unidad del tiempo ingresado por el usuario; si falta se deriva de `hours` y `completed_quantity` |
 
 Estas llaves no van al archivo plano de SIESA. Antes de enviar, el backend valida en una transacción (con los registros bloqueados) que, por item:
 
