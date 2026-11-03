@@ -232,6 +232,8 @@ SIESA_WSUNOEE_PASSWORD = env('SIESA_WSUNOEE_PASSWORD', default='')
 # SIESA_WSUNOEE_COMPANY_ID si no se define.
 SIESA_TEP_COMPANY_ID = env('SIESA_TEP_COMPANY_ID', default=SIESA_WSUNOEE_COMPANY_ID)
 SIESA_TEP_OPERATION_CENTER_ID = env('SIESA_TEP_OPERATION_CENTER_ID', default='001')
+# Minimum TEP consecutive: the next document number is max(last stored + 1, this value).
+SIESA_TEP_DOCUMENT_NUMBER_START = env.int('SIESA_TEP_DOCUMENT_NUMBER_START', default=1)
 
 # runserver's autoreload spawns a child process (RUN_MAIN=true); the pre-fork
 # parent never serves requests but would otherwise open the same log file too,
