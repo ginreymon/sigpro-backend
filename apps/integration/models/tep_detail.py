@@ -5,6 +5,11 @@ from core.models import TimeAuditModel, UserAuditModel
 from .tep_submission import TepSubmission
 
 
+class TepTimeMode(models.TextChoices):
+    REAL = "real", "Real"
+    STANDARD = "standard", "Estándar"
+
+
 class TepDetail(UserAuditModel, TimeAuditModel):
     """Detalle/movimiento (registro 880) de un `TepSubmission`.
 
@@ -40,6 +45,15 @@ class TepDetail(UserAuditModel, TimeAuditModel):
     stop_reason_id = models.CharField(max_length=2, blank=True, default="")
     notes = models.CharField(max_length=255, blank=True, default="")
     operator_count = models.SmallIntegerField(default=1)
+
+    # Time traceability, saved once when the submission is registered and never
+    # recalculated (null on rows created before this was tracked):
+    # - time_mode: which time the user integrated with.
+    # - sent_seconds_per_unit: seconds per unit actually sent to SIESA (`hours` x 3600 / `completed_quantity`).
+    # - real_seconds_by_unit: `seconds_by_unit` of the OP when it was sent (snapshot), kept apart from the sent one.
+    time_mode = models.CharField(max_length=10, choices=TepTimeMode.choices, null=True, blank=True)
+    sent_seconds_per_unit = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
+    real_seconds_by_unit = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
 
     class Meta:
         db_table = "integration_tep_detail"

@@ -1,0 +1,125 @@
+TEP -> SIESA: integración manual (flujo completo)
+=================================================
+
+Fuente del formato: assets/TP (Trabajo En Proceso).xlsm (hojas "Encabezado" 347
+caracteres y "Detalle" 562). Layout declarativo en apps/integration/builders/tep.py
+(HEADER_LAYOUT / DETAIL_LAYOUT; los FieldSpec conservan el nombre SIESA del plano).
+Detalle del endpoint y del cambio de nombres es/en: SIESA_TEP_ENDPOINT.md.
+
+
+1. FLUJO
+--------
+Frontend (Integración manual, modal "Integrar OPs")
+  1. Lista OPs por centro de trabajo:  GET /api/v1/integration/orders-to-be-outbound/by-work-center/
+     (cada OP trae seconds_by_unit y additional_seconds_by_unit).
+  2. El usuario elige unidades/SKUs y ajusta el tiempo (HH:MM). tep-payload.ts arma el body.
+  3. Confirma -> POST /api/v1/integration/tep/send/   (JWT, síncrono, hasta ~30 s).
+
+Backend (apps/integration/views/siesa_tep_view.py, SiesaTepViewSet.send)
+  1. Valida header/details y completa valores fijos (with_header_defaults).
+  2. Separa las llaves que no son de SIESA (split_record_references).
+  3. Valida el documento (build_tep_document, con número placeholder 0) -> 400 si falla.
+  4. Verifica configuración SIESA_WSUNOEE_* -> 503 si falta.
+  5. register_submission (transacción atómica):
+       a. valida register_ids / time_mode / real_seconds_by_unit de cada item;
+       b. asigna el número de documento (sección 3);
+       c. arma las líneas planas con ese número;
+       d. guarda TepSubmission + TepDetail + TepDetailRecord con status `pending`
+          y marca los registros (tep_submission, tep_processed=True).
+  6. Envía submission.flat_file_lines a SIESA (siesa_webservice_client.send_flat_file_lines).
+  7. mark_submission_result: `sent` / `failed` (+ error_type, error_detail, sent_at).
+
+
+2. ENDPOINTS
+------------
+POST /api/v1/integration/tep/send/
+  Body:
+    {
+      "header":  { "work_center_id": "CF005", "date": "2026-11-03"  (opcional, default hoy) },
+      "details": [{
+        "op_document_type_id": "OP",  "op_document_number": 40478,
+        "operation_number": 30,       "operation_work_center_id": "CF005",
+        "completed_quantity": 120.5,  "hours": 1.5,            (horas decimales)
+        "operation_completed": 0,
+        "register_ids": [10, 11],     "origin_id": 1,          (1 producción, 2 estampación)
+        "time_mode": "real",          "real_seconds_by_unit": 38.2   (trazabilidad, ver sección 5)
+      }]
+    }
+  register_ids, origin_id, time_mode y real_seconds_by_unit NO van al archivo de SIESA.
+  Respuestas: 200 {submission_id, document_number, ok, error_type, error_detail_xml};
+  422 SIESA rechazó (mismo payload en `extra`); 400 body/registros/time_mode inválidos;
+  502 red/SOAP; 503 sin configuración.
+
+GET /api/v1/integration/tep-submissions/  (solo lectura, historial; filtros: status,
+  document_number, work_center_id, date). Incluye details con time_mode,
+  sent_seconds_per_unit y real_seconds_by_unit.
+
+GET /api/v1/integration/orders-to-be-outbound/by-work-center/  (origen de seconds_by_unit).
+
+
+3. NÚMERO DE DOCUMENTO (consec_docto)
+-------------------------------------
+- Lo asigna el backend: tep_submission_service._next_document_number.
+- header.auto_consecutive = 0 (manual): según el xlsm, SIESA respeta el consecutivo del
+  plano (con 1 lo recalcularía y la BD no sabría cuál quedó).
+- Número = max(último TepSubmission.document_number del mismo tipo/compañía/centro de
+  operación + 1, SIESA_TEP_DOCUMENT_NUMBER_START (default 1)). El último registro se lee con
+  select_for_update dentro de la transacción para evitar duplicados concurrentes.
+- Los envíos fallidos conservan su número (nunca se reutiliza uno ya enviado).
+- Se guarda en TepSubmission.document_number y las líneas con ESE número se guardan en
+  TepSubmission.flat_file_lines; lo que se envía a SIESA es exactamente flat_file_lines.
+  Cada TepDetail hereda el número del encabezado (consec_docto_tep).
+- Máximo 8 dígitos (ancho del campo). Si SIESA ya tiene TPW creados fuera de SIESA PRO,
+  subir SIESA_TEP_DOCUMENT_NUMBER_START por encima del último consecutivo de SIESA.
+- Registros anteriores a este cambio tienen document_number 0 (SIESA los numeró): se ignoran.
+
+
+4. TABLAS
+---------
+integration_tep_submission (TepSubmission) - 1 fila por POST, encabezado (registro 450)
+  company_id, operation_center_id, document_type_id (TPW), document_number (consecutivo
+  enviado), auto_consecutive, date, document_class_id (731), work_center_id, shift, ...
+  flat_file_lines (JSON, líneas enviadas), status (pending/sent/failed), error_type,
+  error_detail, sent_at, auditoría (created_by/updated_by, created_at/updated_at).
+
+integration_tep_detail (TepDetail) - 1 fila por item de details (registro 880), FK submission
+  op_document_type_id/number, operation_number, operation_work_center_id,
+  completed_quantity (cantidad integrada), hours (horas decimales enviadas),
+  operation_completed, ... y la trazabilidad de tiempos (sección 5).
+
+integration_tep_detail_record (TepDetailRecord) - FK detail; origin_id + record_id del
+  ProductionRecord / StampingRecord que respalda el item. Evita enviar un registro dos veces
+  (los registros también guardan tep_submission y tep_processed).
+
+Migración 0007_tepdetail_time_traceability: solo agrega 3 columnas NULL a integration_tep_detail
+(no toca filas existentes). Aplicarla manualmente: python manage.py migrate integration.
+
+
+5. TIEMPOS: ESTÁNDAR vs REAL vs ENVIADO
+---------------------------------------
+Columnas nuevas de TepDetail, guardadas UNA vez al confirmar y nunca recalculadas
+(null en históricos):
+  time_mode              'real' | 'standard'. Tipo de tiempo con el que integró el usuario
+                         (el que muestra el modal: "Tipo de tiempo (Real/Estándar)",
+                         según TEP_TIME_CALCULATION_MODE; Estampación siempre 'standard').
+  sent_seconds_per_unit  Segundos por unidad realmente enviados a SIESA =
+                         hours x 3600 / completed_quantity (calculado en el backend).
+  real_seconds_by_unit   Foto de seconds_by_unit de la OP (endpoint by-work-center) al momento
+                         del envío. Separado del enviado: si el usuario edita el tiempo o el
+                         valor cambia después, ambos quedan como estaban.
+  completed_quantity     (columna existente) cantidad integrada.
+  hours                  (columna existente) horas decimales enviadas; a SIESA van como HH.MM
+                         (decimal_hours_to_hhmm).
+Diferencia: "enviado" es lo que se le dijo a SIESA; "real calculado" es lo que decía
+seconds_by_unit; time_mode dice qué modo se usó.
+
+
+6. ESTADOS, ERRORES Y TRAZABILIDAD
+----------------------------------
+pending  guardado antes de llamar a SIESA (si el proceso muere aquí queda pending).
+sent     SIESA respondió printTipoError 0/None; sent_at = ahora.
+failed   SIESA rechazó (422, error_type + error_detail con el dataset) o falló la red
+         (502, error_detail = excepción). También quedan guardados, con su número.
+Errores previos al guardado (400/503) no crean registro. Los registros de un envío `sent`
+no pueden volver a enviarse; los de uno `failed`/`pending` sí (se re-asocian al nuevo envío).
+Trazabilidad completa por envío: número, líneas exactas, tiempos, registros, resultado.

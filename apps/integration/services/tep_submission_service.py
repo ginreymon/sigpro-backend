@@ -19,11 +19,13 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.integration.builders.tep import build_tep_document
 from apps.integration.models import (
     TepDetail,
     TepDetailRecord,
     TepSubmission,
     TepSubmissionStatus,
+    TepTimeMode,
 )
 
 # settings.TIME_ZONE es UTC: la fecha del documento se calcula en hora local
@@ -47,8 +49,12 @@ def record_model(origin_id: int):
 _PIECES_FIELD = {1: None, 2: "stamping_reference_sam__stamped_pieces"}
 
 # Llaves de cada item de `details` que no son de SIESA: se separan antes de
-# armar el documento TEP.
-RECORD_KEYS = ("register_ids", "origin_id")
+# armar el documento TEP. `time_mode` y `real_seconds_by_unit` son la
+# trazabilidad de tiempos (se guardan en `TepDetail`, no van a SIESA).
+RECORD_KEYS = ("register_ids", "origin_id", "time_mode", "real_seconds_by_unit")
+
+# TPW numbers are 8 digits in the SIESA layout (`consec_docto`).
+MAX_DOCUMENT_NUMBER = 99_999_999
 
 # Diferencia máxima admitida entre la cantidad enviada y la de los registros.
 QUANTITY_TOLERANCE = Decimal("0.01")
@@ -70,7 +76,10 @@ def with_header_defaults(header: dict) -> dict:
     defaults: dict = {
         "document_type_id": "TPW",
         "document_class_id": "731",
-        "auto_consecutive": 1,
+        # Manual consecutive: SIESA respects the number in the file, which the
+        # backend assigns in `register_submission` (0 here is only a placeholder
+        # so the document can be validated before it is saved).
+        "auto_consecutive": 0,
         "document_number": 0,
     }
     company_id = str(getattr(settings, "SIESA_TEP_COMPANY_ID", "") or "")
@@ -95,7 +104,7 @@ def _model_values(model, values: dict, aliases: dict | None = None) -> dict:
 
 
 def split_record_references(details: list) -> tuple[list, list[dict]]:
-    """Separa de cada item de `details` las llaves `register_ids`/`origin_id`.
+    """Separa de cada item de `details` las llaves que no son de SIESA (`RECORD_KEYS`).
 
     Devuelve (items sin esas llaves, referencias por item). Un item que no es
     objeto se deja tal cual; lo rechaza la validación posterior.
@@ -139,6 +148,12 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
         errors.append(f"{label}: 'register_ids' es requerido (lista de enteros no vacía)")
     elif len(set(ids)) != len(ids):
         errors.append(f"{label}: 'register_ids' tiene ids repetidos")
+    time_mode = reference.get("time_mode")
+    if time_mode not in TepTimeMode.values:
+        errors.append(f"{label}: 'time_mode' debe ser {' o '.join(TepTimeMode.values)}")
+    real_seconds = reference.get("real_seconds_by_unit")
+    if real_seconds is not None and ((_to_decimal(real_seconds) or Decimal(-1)) < 0):
+        errors.append(f"{label}: 'real_seconds_by_unit' debe ser un número mayor o igual a 0")
     if errors:
         return errors
 
@@ -184,20 +199,60 @@ def _validate_item(index: int, detail, reference: dict) -> list[str]:
     return errors
 
 
+def _next_document_number(header: dict) -> int:
+    """Next TEP consecutive for the document type / company / operation center.
+
+    Reuses `TepSubmission.document_number` as the only sequence (failed
+    submissions keep theirs, so a number is never sent twice). The last row is
+    read with `select_for_update` inside the caller's transaction so two
+    concurrent submissions do not get the same number. Rows saved before this
+    numbering (document_number 0) are ignored by the floor.
+    """
+    last = (
+        TepSubmission.objects.select_for_update()
+        .filter(
+            document_type_id=header["document_type_id"],
+            company_id=header["company_id"],
+            operation_center_id=header["operation_center_id"],
+        )
+        .order_by("-document_number")
+        .values_list("document_number", flat=True)
+        .first()
+    )
+    floor = int(getattr(settings, "SIESA_TEP_DOCUMENT_NUMBER_START", 1) or 1)
+    number = max((last or 0) + 1, floor)
+    if number > MAX_DOCUMENT_NUMBER:
+        raise ValueError("Se agotó el consecutivo de documentos TEP (máximo 8 dígitos)")
+    return number
+
+
+def _sent_seconds_per_unit(detail: dict) -> Decimal | None:
+    """Seconds per unit actually sent to SIESA: `hours` x 3600 / `completed_quantity`."""
+    quantity = _to_decimal(detail.get("completed_quantity", 0))
+    hours = _to_decimal(detail.get("hours", 0))
+    if not quantity or hours is None:
+        return None
+    return (hours * 3600 / quantity).quantize(Decimal("0.0001"))
+
+
 @transaction.atomic
 def register_submission(
     header: dict,
     details: list[dict],
-    flat_file_lines: list[str],
     user=None,
     references: list[dict] | None = None,
 ) -> TepSubmission:
-    """Valida los `register_ids` y guarda el encabezado (con `date` ya como
+    """Valida los `register_ids`, asigna el número de documento, arma el
+    archivo plano con ese número y guarda el encabezado (con `date` ya como
     `datetime.date`), sus detalles y los registros que los respaldan, con
     status `pending`. Marca cada registro con el envío (`tep_submission`) y
     como procesado (`tep_processed`).
 
-    Lanza RecordValidationError (sin guardar nada) si algún id no es válido.
+    `submission.flat_file_lines` es exactamente lo que se envía a SIESA y
+    `submission.document_number` el consecutivo que lleva ese archivo.
+
+    Lanza RecordValidationError (sin guardar nada) si algún id no es válido y
+    ValueError si el documento no se puede armar.
     """
     references = references or [{}] * len(details)
 
@@ -207,15 +262,21 @@ def register_submission(
     if errors:
         raise RecordValidationError(errors)
 
+    header = {**header, "document_number": _next_document_number(header)}
+    lines = build_tep_document(header, details)
+
     submission = TepSubmission.objects.create(
         **_model_values(TepSubmission, header, _HEADER_FIELD_ALIASES),
-        flat_file_lines=flat_file_lines,
+        flat_file_lines=lines,
         created_by=user,
         updated_by=user,
     )
     for number, (detail, reference) in enumerate(zip(details, references), start=1):
         saved = TepDetail.objects.create(
             **{"record_number": number, **_model_values(TepDetail, detail)},
+            time_mode=reference["time_mode"],
+            sent_seconds_per_unit=_sent_seconds_per_unit(detail),
+            real_seconds_by_unit=_to_decimal(reference.get("real_seconds_by_unit")),
             submission=submission,
             created_by=user,
             updated_by=user,

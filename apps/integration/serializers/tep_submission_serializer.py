@@ -23,6 +23,9 @@ class TepDetailSerializer(serializers.ModelSerializer):
             'operation_completed',
             'completed_quantity',
             'hours',
+            'time_mode',
+            'sent_seconds_per_unit',
+            'real_seconds_by_unit',
             'origin_id',
             'register_ids',
         ]

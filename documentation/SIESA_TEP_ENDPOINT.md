@@ -77,8 +77,10 @@ Cada item de `details` puede (y desde Approval debe) traer, además de los campo
 |---|---|---|
 | `register_ids` | lista de enteros | Ids de los registros que respaldan el item (`ProductionRecord` o `StampingRecord`) |
 | `origin_id` | 1 o 2 | 1 = producción, 2 = estampación; define en qué tabla se buscan los ids |
+| `time_mode` | `real` o `standard` | Obligatorio. Tipo de tiempo con el que se integró (trazabilidad) |
+| `real_seconds_by_unit` | número o null | `seconds_by_unit` de la OP al enviar (trazabilidad) |
 
-Estas dos llaves no van al archivo plano de SIESA. Antes de enviar, el backend valida en una transacción (con los registros bloqueados) que, por item:
+Estas llaves no van al archivo plano de SIESA. Antes de enviar, el backend valida en una transacción (con los registros bloqueados) que, por item:
 
 1. `register_ids` sea una lista no vacía de enteros sin repetidos, y `origin_id` sea 1 o 2.
 2. Todos los ids existan.
@@ -89,11 +91,11 @@ Estas dos llaves no van al archivo plano de SIESA. Antes de enviar, el backend v
 
 Si alguna falla: `400` con `{"error": "register_ids invalidos", "details": ["details[0]: ..."]}` y no se guarda ni se envía nada.
 
-Si todo es válido se guarda el envío como `pending` (`TepSubmission` + `TepDetail` + `TepDetailRecord`), se marca cada registro con `tep_submission`, se envía a SIESA y se actualiza el estado a `sent` o `failed`. La respuesta incluye `submission_id`. Los envíos rechazados por SIESA (`422`) o con error de red (`502`) también quedan guardados como `failed`.
+Si todo es válido se guarda el envío como `pending` (`TepSubmission` + `TepDetail` + `TepDetailRecord`), se marca cada registro con `tep_submission`, se envía a SIESA y se actualiza el estado a `sent` o `failed`. La respuesta incluye `submission_id` y `document_number`. Los envíos rechazados por SIESA (`422`) o con error de red (`502`) también quedan guardados como `failed`.
 
 ### Valores fijos del encabezado
 
-Si `header` no los trae, el backend completa: `document_type_id="TPW"`, `document_class_id="731"`, `auto_consecutive=1`, `document_number=0`, y desde `backend/.env`: `company_id` (`SIESA_TEP_COMPANY_ID`, por defecto `SIESA_WSUNOEE_COMPANY_ID` si es numérico) y `operation_center_id` (`SIESA_TEP_OPERATION_CENTER_ID`, por defecto `001`). Si falta algún campo obligatorio del layout, el endpoint responde `400` indicando cuál (antes se enviaba en blanco y lo rechazaba SIESA). Lo que venga en `header` tiene prioridad.
+Si `header` no los trae, el backend completa: `document_type_id="TPW"`, `document_class_id="731"`, `auto_consecutive=0`, y asigna siempre `document_number` (consecutivo automático del backend, el mismo que se guarda y se envía; ver `TEP_SIESA_FLUJO.readme`), y desde `backend/.env`: `company_id` (`SIESA_TEP_COMPANY_ID`, por defecto `SIESA_WSUNOEE_COMPANY_ID` si es numérico) y `operation_center_id` (`SIESA_TEP_OPERATION_CENTER_ID`, por defecto `001`). Si falta algún campo obligatorio del layout, el endpoint responde `400` indicando cuál (antes se enviaba en blanco y lo rechazaba SIESA). Lo que venga en `header` tiene prioridad.
 
 ## Cambio de nombres: antes (español) → ahora (inglés)
 

@@ -63,8 +63,10 @@ class SiesaTepViewSet(viewsets.ViewSet):
         # register_ids/origin_id no son de SIESA: se separan antes de armar el documento.
         details, references = split_record_references(details)
 
+        # Early validation of the document (the number is a placeholder here: the
+        # real one is assigned in register_submission, which rebuilds the file).
         try:
-            lines = build_tep_document(header, details)
+            build_tep_document(header, details)
         except ValueError as exc:
             return error_response(str(exc), code="invalid_tep_document", legacy={"error": str(exc)})
 
@@ -76,12 +78,13 @@ class SiesaTepViewSet(viewsets.ViewSet):
                 legacy={"error": str(exc)},
             )
 
-        # Valida los register_ids y guarda antes de llamar a SIESA: queda
-        # registro aunque falle el envío.
+        # Valida los register_ids, asigna el número de documento y guarda antes
+        # de llamar a SIESA: queda registro aunque falle el envío. Lo que se
+        # envía es exactamente `submission.flat_file_lines`.
         try:
-            submission = register_submission(
-                header, details, lines, user=request.user, references=references
-            )
+            submission = register_submission(header, details, user=request.user, references=references)
+        except ValueError as exc:
+            return error_response(str(exc), code="invalid_tep_document", legacy={"error": str(exc)})
         except RecordValidationError as exc:
             return error_response(
                 "register_ids invalidos", code="invalid_register_ids",
@@ -90,7 +93,7 @@ class SiesaTepViewSet(viewsets.ViewSet):
             )
 
         try:
-            result = send_flat_file_lines(lines, cfg=cfg)
+            result = send_flat_file_lines(submission.flat_file_lines, cfg=cfg)
         except SiesaWebserviceError as exc:
             mark_submission_result(submission, ok=False, error_detail=str(exc))
             return error_response(
@@ -104,6 +107,7 @@ class SiesaTepViewSet(viewsets.ViewSet):
 
         payload = {
             "submission_id": submission.id,
+            "document_number": submission.document_number,
             "ok": result.ok,
             "error_type": result.error_type,
             "error_detail_xml": result.error_detail_xml,
