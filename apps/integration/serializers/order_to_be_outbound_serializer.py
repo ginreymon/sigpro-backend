@@ -19,7 +19,7 @@ class OrderToBeOutboundDetailSerializer(serializers.Serializer):
     pieces = serializers.FloatField(allow_null=True)
     times_on_route = serializers.IntegerField(allow_null=True)
     operation_number = serializers.IntegerField(allow_null=True)
-    erp_completed_operation = serializers.IntegerField(allow_null=True)
+    erp_completed_operation = serializers.BooleanField(allow_null=True)
     erp_execution_quantity = serializers.FloatField(allow_null=True)
     erp_completed_quantity = serializers.FloatField(allow_null=True)
     recorded_quantity_per_piece = serializers.FloatField(allow_null=True)
@@ -97,7 +97,7 @@ class OrderIntegrationStatusSerializer(serializers.Serializer):
     pending_quantity = serializers.FloatField(allow_null=True)
     erp_execution_quantity = serializers.FloatField(allow_null=True)
     erp_completed_quantity = serializers.FloatField(allow_null=True)
-    erp_completed_operation = serializers.IntegerField(allow_null=True)
+    erp_completed_operation = serializers.BooleanField(allow_null=True)
     missing_quantity = serializers.FloatField()
 
     first_start = serializers.DateTimeField(allow_null=True)
