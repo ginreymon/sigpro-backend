@@ -15,7 +15,7 @@ INTEGRATION_STATUSES = (STATUS_PENDING, STATUS_MISSING, STATUS_INTEGRATED)
 class OPTotalsService:
 
     @staticmethod
-    def get_totales_registrados_por_op(
+    def get_recorded_totals_by_op(
         date_from: date | None = None,
         date_to: date | None = None,
         op_rowid: int | None = None,
@@ -46,14 +46,14 @@ class OPTotalsService:
         return rows
 
     @staticmethod
-    def get_detalle_sku_op(op_type: str, op_number: int) -> dict:
+    def get_op_sku_detail(op_type: str, op_number: int) -> dict:
         """Color x size detail of one Confección OP, `{"colorRows": [...]}`, with the keys translated
         like production-orders/detail and by-work-center. Includes SKUs already integrated."""
         color_rows = OPTotalsRepository.get_detalle_integracion_op_produccion_json(op_type, op_number)
         return translate_keys({"ColorRows": color_rows})
 
     @staticmethod
-    def get_estado_integracion(
+    def get_integration_status(
         op_rowid: int | None = None,
         first_start_from: datetime | None = None,
         last_end_to: datetime | None = None,
@@ -72,13 +72,13 @@ class OPTotalsService:
         return [{"id": index + 1, **row} for index, row in enumerate(rows)]
 
     @staticmethod
-    def get_resumen_integracion(
+    def get_integration_summary(
         op_rowid: int | None = None,
         first_start_from: datetime | None = None,
         last_end_to: datetime | None = None,
     ):
         """Counters for the integration dashboard: rows (OP / work center) and
-        quantities per status, over the same filters as get_estado_integracion."""
+        quantities per status, over the same filters as get_integration_status."""
         rows = OPTotalsRepository.get_estado_integracion(op_rowid, first_start_from, last_end_to)
 
         summary = {
@@ -92,7 +92,7 @@ class OPTotalsService:
         return summary
 
     @staticmethod
-    def get_totales_por_work_center(
+    def get_totals_by_work_center(
         op_rowid: int | None = None,
         first_start_from: datetime | None = None,
         last_end_to: datetime | None = None,

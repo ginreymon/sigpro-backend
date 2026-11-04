@@ -46,7 +46,7 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
 
         self._validate_date_range(date_from, date_to)
 
-        data = OPTotalsService.get_totales_registrados_por_op(
+        data = OPTotalsService.get_recorded_totals_by_op(
             date_from,
             date_to,
             int(op_rowid) if op_rowid else None,
@@ -72,7 +72,7 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         (ISO datetimes, UTC) to keep the work centers whose `last_end` falls in that window."""
         op_rowid, first_start_from, last_end_to = self._parse_period_filters(request)
 
-        data = OPTotalsService.get_totales_por_work_center(
+        data = OPTotalsService.get_totals_by_work_center(
             op_rowid, first_start_from, last_end_to
         )
 
@@ -108,7 +108,7 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         if errors:
             raise ValidationError(errors)
 
-        return Response(OPTotalsService.get_detalle_sku_op(op_type, int(op_number)))
+        return Response(OPTotalsService.get_op_sku_detail(op_type, int(op_number)))
 
     @action(detail=False, methods=["get"], url_path="integration-status",
             serializer_class=OrderIntegrationStatusSerializer)
@@ -127,7 +127,7 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
                 {"status": f"status debe ser uno de: {', '.join(INTEGRATION_STATUSES)}."}
             )
 
-        data = OPTotalsService.get_estado_integracion(
+        data = OPTotalsService.get_integration_status(
             op_rowid, first_start_from, last_end_to, status
         )
 
@@ -142,7 +142,7 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
         filters (and the same required period) except `status`."""
         op_rowid, first_start_from, last_end_to = self._parse_bounded_period_filters(request)
 
-        data = OPTotalsService.get_resumen_integracion(op_rowid, first_start_from, last_end_to)
+        data = OPTotalsService.get_integration_summary(op_rowid, first_start_from, last_end_to)
         return Response(self.get_serializer(data).data)
 
     @staticmethod

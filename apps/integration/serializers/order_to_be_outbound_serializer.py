@@ -106,7 +106,7 @@ class OrderIntegrationStatusSerializer(serializers.Serializer):
 
 
 class OrderIntegrationSummarySerializer(serializers.Serializer):
-    """Counters of the integration dashboard (OPTotalsService.get_resumen_integracion):
+    """Counters of the integration dashboard (OPTotalsService.get_integration_summary):
     rows (OP / work center) and quantities per status."""
 
     total = serializers.IntegerField()
