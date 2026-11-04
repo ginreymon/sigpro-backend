@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 
 from django.apps import apps as django_apps
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.integration.builders.tep import build_tep_document
@@ -32,6 +32,9 @@ from apps.integration.models import (
 # settings.TIME_ZONE es UTC: la fecha del documento se calcula en hora local
 # para que un envío en la noche no salga con la fecha del día siguiente.
 SUBMISSION_TIME_ZONE = ZoneInfo("America/Bogota")
+
+# Attempts to obtain a unique document number before giving up.
+_NUMBER_RETRIES = 3
 
 # El `status` del encabezado de SIESA (0/1/2) se guarda como `document_status`.
 _HEADER_FIELD_ALIASES = {"status": "document_status"}
@@ -325,15 +328,24 @@ def register_submission(
     if errors:
         raise RecordValidationError(errors)
 
-    header = {**header, "document_number": _next_document_number(header)}
-    lines = build_tep_document(header, details)
-
-    submission = TepSubmission.objects.create(
-        **_model_values(TepSubmission, header, _HEADER_FIELD_ALIASES),
-        flat_file_lines=lines,
-        created_by=user,
-        updated_by=user,
-    )
+    # The unique (document_type_id, document_number) constraint is the real
+    # guarantee: if a concurrent submission took the same number, the nested
+    # savepoint rolls back and the number is recalculated.
+    for attempt in range(_NUMBER_RETRIES):
+        try:
+            with transaction.atomic():
+                numbered_header = {**header, "document_number": _next_document_number(header)}
+                lines = build_tep_document(numbered_header, details)
+                submission = TepSubmission.objects.create(
+                    **_model_values(TepSubmission, numbered_header, _HEADER_FIELD_ALIASES),
+                    flat_file_lines=lines,
+                    created_by=user,
+                    updated_by=user,
+                )
+            break
+        except IntegrityError:
+            if attempt == _NUMBER_RETRIES - 1:
+                raise
     for number, (detail, reference) in enumerate(zip(details, references), start=1):
         saved = TepDetail.objects.create(
             **{"record_number": number, **_model_values(TepDetail, detail)},
