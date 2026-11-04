@@ -57,7 +57,8 @@ class TepSubmission(UserAuditModel, TimeAuditModel):
             # Every real document number must be unique per document type.
             models.UniqueConstraint(
                 fields=["document_type_id", "document_number"],
-                condition=~models.Q(document_number=0),
+                # SQL Server filtered indexes reject NOT; use a positive predicate.
+                condition=models.Q(document_number__gt=0),
                 name="uq_tep_submission_doc_type_number",
             )
         ]

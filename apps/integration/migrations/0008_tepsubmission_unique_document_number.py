@@ -19,6 +19,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='tepsubmission',
-            constraint=models.UniqueConstraint(condition=models.Q(('document_number', 0), _negated=True), fields=('document_type_id', 'document_number'), name='uq_tep_submission_doc_type_number'),
+            constraint=models.UniqueConstraint(condition=models.Q(('document_number__gt', 0)), fields=('document_type_id', 'document_number'), name='uq_tep_submission_doc_type_number'),
         ),
     ]
