@@ -33,6 +33,7 @@ class SiesaTepViewSet(viewsets.ViewSet):
 
     permission_classes = [IsAuthenticated]
 
+    ## integration/tep/send/
     @action(detail=False, methods=["post"], url_path="tep/send")
     def send(self, request):
         header = request.data.get("header")
