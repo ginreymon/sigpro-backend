@@ -99,21 +99,18 @@ class OPTotalsService:
     ):
         """One row per work center of sp_totales_registrados_por_op_work_center_json,
         with `documents_count` and its `documents` sorted by OP type and number. `id` is
-        sequential within the response: the table's row key, not an entity."""
+        sequential within the response: the table's row key, not an entity.
+
+        Each document's `detail` is left raw (as the SQL function returns it): the heavy
+        key translation is done only for the returned page, see `translate_documents_detail`."""
         groups = OPTotalsRepository.get_totales_por_work_center_json(
             op_rowid, first_start_from, last_end_to
         )
 
         rows = []
         for group in groups:
-            # `detail` comes straight from the SQL function: {"ColorRows": [...]} (Confección,
-            # Spanish keys translated like production-orders/detail does) or {"referenceSams": [...]}
-            # (Estampación, already in snake_case; translate_keys leaves it unchanged).
             documents = sorted(
-                (
-                    {**item, DETAIL_KEY: translate_keys(item.get(DETAIL_KEY))}
-                    for item in group[DOCUMENTS_KEY]
-                ),
+                group[DOCUMENTS_KEY],
                 key=lambda item: (item["op_type"], item["op_number"]),
             )
             rows.append({
@@ -122,3 +119,20 @@ class OPTotalsService:
                 "documents_count": len(documents),
             })
         return rows
+
+    @staticmethod
+    def translate_documents_detail(rows):
+        """Translate the `detail` of every document of `rows` (the paginated page).
+        `detail` is {"ColorRows": [...]} (Confección, Spanish keys translated like
+        production-orders/detail does) or {"referenceSams": [...]} (Estampación, already in
+        snake_case; translate_keys leaves it unchanged)."""
+        return [
+            {
+                **row,
+                DOCUMENTS_KEY: [
+                    {**item, DETAIL_KEY: translate_keys(item.get(DETAIL_KEY))}
+                    for item in row[DOCUMENTS_KEY]
+                ],
+            }
+            for row in rows
+        ]

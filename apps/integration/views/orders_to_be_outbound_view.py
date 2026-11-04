@@ -87,6 +87,8 @@ class OrdersToBeOutboundViewSet(viewsets.GenericViewSet):
             data = [row for row in data if self._matches_work_center(row, search)]
 
         page = self.paginate_queryset(data)
+        # Translate the heavy document details only for the rows actually returned.
+        page = OPTotalsService.translate_documents_detail(page)
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 
