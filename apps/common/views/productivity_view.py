@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.common.http import build_export_filename
 from apps.common.views.productivity_params import parse_required_dates, parse_optional_int
 from core.exceptions import error_response
 
@@ -141,5 +142,7 @@ class BaseProductivityViewSet(viewsets.ViewSet):
             xlsx,
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        response["Content-Disposition"] = f'attachment; filename="eficiencia_{start_date}_{end_date}.xlsx"'
+        area_name = self.service.get_area_name(filters["core_module_id"])
+        filename = build_export_filename(area_name, start_date, end_date, fallback="eficiencia")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response

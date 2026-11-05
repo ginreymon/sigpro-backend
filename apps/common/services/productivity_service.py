@@ -10,6 +10,7 @@ class BaseProductivityService:
 
     repository = None
     module_model = None
+    area_model = None  # ProductionArea; set by subclasses (`common` must not import `production`)
     is_stamping: bool = False
 
     @classmethod
@@ -86,3 +87,9 @@ class BaseProductivityService:
             cls.module_model.objects.values_list("id", "location__core_module_id")
         )
         return [row for row in data if core_module_by_id.get(row.get("module_id")) == core_module_id]
+
+    @classmethod
+    def get_area_name(cls, core_module_id: int | None) -> str | None:
+        if core_module_id is None:
+            return None
+        return cls.area_model.objects.filter(core_module_id=core_module_id).values_list("name", flat=True).first()

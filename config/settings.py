@@ -112,6 +112,9 @@ CORS_ALLOWED_ORIGINS = [
     *env.list("CORS_ALLOWED_ORIGINS_EXTRA", default=[]),
 ]
 
+# The frontend reads the generated file name from this header on downloads.
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
+
 CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
