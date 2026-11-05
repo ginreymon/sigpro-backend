@@ -91,7 +91,7 @@
     "ultima_total_completada":      "last_worked_total_completed",
     "ultima_eficiencia":            "last_worked_efficiency",
     "ultima_productividad":         "last_worked_productivity",
-    # fn_eficiencia_detallada / sp_reporte_eficiencia_detallada
+    # fn_eficiencia_detallada_confeccion / sp_reporte_eficiencia_detallada_confeccion
     "cantidad_pausas":              "pause_count",
     "work_shift_start_utc":         "shift_start_utc",
     # sp_tiempos_operacion_modulo (indicadores)

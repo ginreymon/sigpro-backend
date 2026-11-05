@@ -1,5 +1,5 @@
 """
-Column definitions for sp_reporte_eficiencia_detallada Excel export.
+Column definitions for sp_reporte_eficiencia_detallada_confeccion Excel export.
 Each entry: (field_key_after_translate_keys, "Excel header label")
 """
 

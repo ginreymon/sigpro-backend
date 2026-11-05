@@ -5,5 +5,5 @@ from apps.stamping.services.stamping_productivity_service import StampingProduct
 
 class StampingProductivityViewSet(BaseProductivityViewSet):
     service = StampingProductivityService
-    # Same columns as the production report: fn_eficiencia_detallada_estampacion mirrors fn_eficiencia_detallada.
+    # Same columns as the production report: fn_eficiencia_detallada_estampacion mirrors fn_eficiencia_detallada_confeccion.
     efficiency_report_export_builder = staticmethod(build_efficiency_report_excel)

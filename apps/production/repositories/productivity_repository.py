@@ -13,7 +13,7 @@ class ProductivityRepository(BaseProductivityRepository):
     module_efficiency_sp = "sp_eficiencia_modulos_produccion"
     shift_summary_sp = "sp_resumen_produccion_turno"
     balance_summary_sp = "sp_resumen_produccion"
-    efficiency_report_sp = "sp_reporte_eficiencia_detallada"
+    efficiency_report_sp = "sp_reporte_eficiencia_detallada_confeccion"
 
     @staticmethod
     def get_tiempos_operacion_modulo(fecha_inicio, module_id, shift_id, tipo_modulo='production'):
