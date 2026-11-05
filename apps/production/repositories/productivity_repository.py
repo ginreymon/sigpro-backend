@@ -1,4 +1,3 @@
-import json
 from django.db import connection
 from apps.common.mappers.recursive_mapper import translate_keys
 from apps.common.repositories.productivity_repository import BaseProductivityRepository
@@ -14,22 +13,7 @@ class ProductivityRepository(BaseProductivityRepository):
     module_efficiency_sp = "sp_eficiencia_modulos_produccion"
     shift_summary_sp = "sp_resumen_produccion_turno"
     balance_summary_sp = "sp_resumen_produccion"
-
-    @staticmethod
-    def get_efficiency_report(start_date, end_date, module_id=None, shift_id=None, employee_id=None):
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "EXEC sp_reporte_eficiencia_detallada %s, %s, %s, %s, %s",
-                [start_date, end_date, module_id, shift_id, employee_id],
-            )
-            columns = [col[0] for col in cursor.description]
-            rows = cursor.fetchall()
-            result = translate_keys([dict(zip(columns, row)) for row in rows])
-            for record in result:
-                for field in ("breaks", "employees"):
-                    if isinstance(record.get(field), str):
-                        record[field] = json.loads(record[field])
-            return result
+    efficiency_report_sp = "sp_reporte_eficiencia_detallada"
 
     @staticmethod
     def get_tiempos_operacion_modulo(fecha_inicio, module_id, shift_id, tipo_modulo='production'):

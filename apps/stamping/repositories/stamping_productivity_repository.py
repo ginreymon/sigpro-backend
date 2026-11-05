@@ -7,3 +7,4 @@ class StampingProductivityRepository(BaseProductivityRepository):
     module_efficiency_sp = "sp_eficiencia_modulos_estampacion"
     shift_summary_sp = "sp_resumen_estampacion_turno"
     balance_summary_sp = "sp_resumen_estampacion_periodo"
+    efficiency_report_sp = "sp_reporte_eficiencia_detallada_estampacion"

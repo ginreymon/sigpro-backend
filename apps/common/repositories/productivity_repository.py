@@ -31,6 +31,7 @@ class BaseProductivityRepository:
     module_efficiency_sp: str
     shift_summary_sp: str
     balance_summary_sp: str
+    efficiency_report_sp: str
 
     @classmethod
     def get_balance_summary(cls, start_date, end_date, module_id=None):
@@ -51,6 +52,22 @@ class BaseProductivityRepository:
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
             return translate_keys([dict(zip(columns, row))])[0] if row else {}
+
+    @classmethod
+    def get_efficiency_report(cls, start_date, end_date, module_id=None, shift_id=None, employee_id=None):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"EXEC {cls.efficiency_report_sp} %s, %s, %s, %s, %s",
+                [start_date, end_date, module_id, shift_id, employee_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result = translate_keys([dict(zip(columns, row)) for row in rows])
+            for record in result:
+                for field in ("breaks", "employees"):
+                    if isinstance(record.get(field), str):
+                        record[field] = json.loads(record[field])
+            return result
 
     @classmethod
     def get_module_shift_summary(cls) -> list[dict]:
