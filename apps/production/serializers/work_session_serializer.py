@@ -1,3 +1,4 @@
+from django.utils.duration import duration_string
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from apps.production.models.work_shift import WorkShift
@@ -19,6 +20,7 @@ class WorkSessionSerializer(AuditSerializer):
     modules = serializers.SerializerMethodField()
     employees_snapshot = serializers.SerializerMethodField()
     active_activity = serializers.SerializerMethodField()
+    total_time = serializers.SerializerMethodField()
 
     module_id = serializers.PrimaryKeyRelatedField(
         queryset=Module.objects.all(), write_only=True, required=False, allow_null=True,
@@ -31,7 +33,13 @@ class WorkSessionSerializer(AuditSerializer):
     class Meta:
         model = WorkSession
         fields = "__all__"
-        read_only_fields = ("user", "total_time", "is_closed")
+        read_only_fields = ("user", "is_closed")
+
+    def get_total_time(self, obj):
+        # Same contract as the former stored field: "HH:MM:SS" once closed, null while open.
+        if obj.ended_at is None:
+            return None
+        return duration_string(obj.total_time)
 
     def validate(self, attrs):
         employee_ids = attrs.get("employee_ids")

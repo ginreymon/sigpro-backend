@@ -104,10 +104,9 @@ def finalize_expired_session(session, expires_at: datetime) -> None:
         ended_at = max(expires_at, session.started_at)
 
         session.ended_at = ended_at
-        session.total_time = ended_at - session.started_at
         session.is_closed = True
         session.editing_finalized = True
-        session.save(update_fields=["ended_at", "total_time", "is_closed", "editing_finalized"])
+        session.save(update_fields=["ended_at", "is_closed", "editing_finalized"])
 
 
 def open_session(user, target_module_id, create):

@@ -427,7 +427,6 @@ class SessionCloseTests(SimpleTestCase):
             started_at=started_at,
             is_closed=is_closed,
             ended_at=None,
-            total_time=None,
             editing_finalized=False,
             get_active_activity=MagicMock(),
             save=MagicMock(),
@@ -441,8 +440,9 @@ class SessionCloseTests(SimpleTestCase):
         session.get_active_activity.return_value.close.assert_called_once_with()
         self.assertTrue(session.is_closed)
         self.assertFalse(session.editing_finalized)
-        self.assertEqual(session.total_time, session.ended_at - session.started_at)
-        session.save.assert_called_once_with(update_fields=["ended_at", "total_time", "is_closed"])
+        self.assertIsNotNone(session.ended_at)
+        self.assertGreaterEqual(session.ended_at, session.started_at)
+        session.save.assert_called_once_with(update_fields=["ended_at", "is_closed"])
 
     def test_manual_close_is_idempotent(self):
         session = self.fake_session(timezone.now(), is_closed=True)
@@ -462,11 +462,11 @@ class SessionCloseTests(SimpleTestCase):
 
         session.get_active_activity.return_value.close.assert_called_once_with()
         self.assertEqual(session.ended_at, expires_at)
-        self.assertEqual(session.total_time, timedelta(hours=12))
+        self.assertEqual(session.ended_at - session.started_at, timedelta(hours=12))
         self.assertTrue(session.is_closed)
         self.assertTrue(session.editing_finalized)
         session.save.assert_called_once_with(
-            update_fields=["ended_at", "total_time", "is_closed", "editing_finalized"]
+            update_fields=["ended_at", "is_closed", "editing_finalized"]
         )
 
     def test_expiry_before_start_is_clamped_to_started_at(self):
@@ -477,4 +477,4 @@ class SessionCloseTests(SimpleTestCase):
             work_session_service.finalize_expired_session(session, started - timedelta(hours=1))
 
         self.assertEqual(session.ended_at, started)
-        self.assertEqual(session.total_time, timedelta(0))
+        self.assertEqual(session.ended_at - session.started_at, timedelta(0))
