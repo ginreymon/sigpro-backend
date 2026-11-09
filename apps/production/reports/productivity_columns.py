@@ -29,7 +29,11 @@ _SHARED_COLUMNS = [
     ("breaks_text",        "Detalle Pausas"),
     ("total_break_minutes","Min. Pausas"),   
     ("efficiency",         "Eficiencia (%)"),
+    ("employees_text",     "Operarios"),
 ]
+
+# Stamping only: appended when the report rows carry `additional_times`.
+ADDITIONAL_TIMES_COLUMN = ("additional_times_text", "Tiempos Adicionales")
 
 SUMMARY_COLUMNS  = _SHARED_COLUMNS
 EMPLOYEE_COLUMNS = _EMPLOYEE_FIELDS + _SHARED_COLUMNS
@@ -44,4 +48,4 @@ ROUND_FIELDS = {
 UTC_FIELDS = {"shift_start_utc", "ended_at"}
 
 # Fields computed from other fields (not present in raw record)
-COMPUTED_FIELDS = {"breaks_text"}
+COMPUTED_FIELDS = {"breaks_text", "employees_text", "additional_times_text"}

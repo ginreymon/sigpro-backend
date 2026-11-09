@@ -64,9 +64,12 @@ class BaseProductivityRepository:
             rows = cursor.fetchall()
             result = translate_keys([dict(zip(columns, row)) for row in rows])
             for record in result:
-                for field in ("breaks", "employees"):
+                for field in ("breaks", "employees", "additional_times"):
                     if isinstance(record.get(field), str):
-                        record[field] = json.loads(record[field])
+                        try:
+                            record[field] = json.loads(record[field])
+                        except ValueError:
+                            record[field] = []
             return result
 
     @classmethod

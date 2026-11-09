@@ -18,12 +18,39 @@ def fmt_datetime_local(value) -> str:
     return local.strftime("%Y-%m-%d %H:%M") if local else ""
 
 
-def fmt_breaks_text(breaks: list) -> str:
-    if not breaks:
+def _fmt_list_text(items, render) -> str:
+    """Joins render(item) with "; ". Null/empty/non-list input or malformed items give ""."""
+    if not isinstance(items, list):
         return ""
     parts = []
-    for b in breaks:
-        name = (b.get("name") or "").strip()
-        desc = (b.get("description") or b.get("custom_reason") or "").strip()
-        parts.append(name or desc)
-    return " ; ".join(parts)
+    for item in items:
+        if isinstance(item, dict):
+            text = render(item).strip()
+            if text:
+                parts.append(text)
+    return "; ".join(parts)
+
+
+def _join(*values) -> str:
+    return " ".join(str(v).strip() for v in values if v not in (None, ""))
+
+
+def fmt_breaks_text(breaks) -> str:
+    return _fmt_list_text(
+        breaks,
+        lambda b: (b.get("name") or "").strip() or (b.get("description") or b.get("custom_reason") or ""),
+    )
+
+
+def fmt_employees_text(employees) -> str:
+    return _fmt_list_text(employees, lambda e: _join(e.get("full_name"), e.get("id_number")))
+
+
+def fmt_additional_times_text(additional_times) -> str:
+    return _fmt_list_text(
+        additional_times,
+        lambda t: _join(
+            t.get("code_number"), t.get("process"),
+            f"x{t['quantity']}" if t.get("quantity") is not None else None,
+        ),
+    )
