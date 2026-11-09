@@ -41,6 +41,11 @@ REPORT_COLUMNS = [
     ("production_orders",    "Órdenes de Producción",
      "Órdenes (OP/PS) trabajadas en la jornada, tomadas de los registros de producción o estampación finalizados "
      "del mismo módulo y turno, sin repetir. Formato: OP 40056; PS 40789."),
+    ("references",          "Referencias",
+     "Referencias de las órdenes trabajadas en la jornada, sin repetir y separadas por punto y coma. "
+     "Corresponden a la referencia del SAM usado en los cálculos: Confección = referencia del SKU "
+     "(production_sku_item_local) ligado a production_reference_sam por rowid_item; "
+     "Estampación = reference_code de stamping_stamping_reference_sam."),
 
     # Quantities
     ("total_ordered",        "Ordenadas",          "Suma de unidades ordenadas de los grupos de registros de la jornada."),

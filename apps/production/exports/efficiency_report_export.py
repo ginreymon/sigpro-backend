@@ -11,7 +11,7 @@ from apps.production.reports.productivity_columns import (
 )
 from apps.production.helpers.excel_formatters import (
     fmt_datetime_local, fmt_breaks_text, fmt_employees_text, fmt_additional_times_text,
-    fmt_production_orders_text,
+    fmt_production_orders_text, fmt_references_text,
 )
 
 DICTIONARY_SHEET = "Descripción de columnas"
@@ -34,6 +34,7 @@ _TEXT_FORMATTERS = {
     "employees":         fmt_employees_text,
     "additional_times":  fmt_additional_times_text,
     "production_orders": fmt_production_orders_text,
+    "references":        fmt_references_text,
 }
 
 

@@ -50,6 +50,17 @@ def fmt_production_orders_text(orders) -> str:
     return _fmt_list_text(orders, lambda o: _join(o.get("op_type"), o.get("op_number")))
 
 
+def fmt_references_text(references) -> str:
+    """Unique references of the row's orders (several orders may share one reference)."""
+    if not isinstance(references, list):
+        return ""
+    unique = dict.fromkeys(
+        str(r["reference"]).strip() for r in references
+        if isinstance(r, dict) and r.get("reference") not in (None, "")
+    )
+    return "; ".join(unique)
+
+
 def fmt_additional_times_text(additional_times) -> str:
     return _fmt_list_text(
         additional_times,
