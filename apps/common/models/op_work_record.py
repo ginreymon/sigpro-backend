@@ -11,8 +11,8 @@ class OpWorkRecord(TimeAuditModel, UserAuditModel):
     `related_name` uses `app_label` to keep `production_records` /
     `stamping_records` without declaring the FK in each child.
 
-    It must be inherited together with `OpRecord` (common/models/op_record.py), before it:
-    `close()` calls `save()`, which resolves to `OpRecord.save` (TEP reset).
+    It must be inherited together with `TepIntegrationRecord` (common/models/tep_integration_record.py), before it:
+    `close()` calls `save()`, which resolves to `TepIntegrationRecord.save` (TEP reset).
     """
 
     work_session_activity = models.ForeignKey(

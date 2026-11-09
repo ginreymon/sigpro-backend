@@ -1,10 +1,10 @@
 from django.db import models
-from apps.common.models.op_record import OpRecord
+from apps.common.models.tep_integration_record import TepIntegrationRecord
 from apps.common.models.op_work_record import OpWorkRecord
 from .stamping_reference_sam import StampingReferenceSam
 
 
-class StampingRecord(OpWorkRecord, OpRecord):
+class StampingRecord(OpWorkRecord, TepIntegrationRecord):
 
     stamping_reference_sam = models.ForeignKey(
         StampingReferenceSam,

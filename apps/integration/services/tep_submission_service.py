@@ -257,7 +257,7 @@ def _mark_records(origin_id: int, ids: list[int], submission: TepSubmission) -> 
     """Marks the records with the TEP they were sent in (`tep_submission`) and as
     processed. Isolated from the submission flow on purpose: the exact assignment
     algorithm replaces `_pick_records_sequentially` + this function only.
-    `update()` skips `OpRecord.save`, which would reset both fields."""
+    `update()` skips `TepIntegrationRecord.save`, which would reset both fields."""
     record_model(origin_id).objects.filter(id__in=ids).update(tep_submission=submission, tep_processed=True)
 
 

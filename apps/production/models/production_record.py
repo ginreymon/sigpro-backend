@@ -1,9 +1,9 @@
 from django.db import models
-from apps.common.models.op_record import OpRecord
+from apps.common.models.tep_integration_record import TepIntegrationRecord
 from apps.common.models.op_work_record import OpWorkRecord
 
 
-class ProductionRecord(OpWorkRecord, OpRecord):
+class ProductionRecord(OpWorkRecord, TepIntegrationRecord):
 
     sku_rowid = models.BigIntegerField()
 

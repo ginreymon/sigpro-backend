@@ -2,7 +2,7 @@ from django.db import models
 from core.models.audit_model import TimeAuditModel, UserAuditModel
 
 
-class OpRecord(TimeAuditModel, UserAuditModel):
+class TepIntegrationRecord(TimeAuditModel, UserAuditModel):
     """Common TEP state of the records of a production order (ProductionRecord
     and StampingRecord). The work data lives in
     `apps.common.models.op_work_record.OpWorkRecord`.
