@@ -14,6 +14,7 @@ from apps.user.models import PasswordResetToken
 from core.models.option import Option
 from core.exceptions import error_response
 from core.models.role_home_view import RoleHomeView
+from core.permissions import has_option_access
 
 
 class AuthViewSet(viewsets.ViewSet):
@@ -28,6 +29,12 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path='register')
     def register(self, request):
+
+        if not has_option_access(request.user, "users"):
+            return error_response(
+                "No tiene permisos para realizar esta acción.", status_code=status.HTTP_403_FORBIDDEN,
+                code="permission_denied", legacy={"message": "No tiene permisos para realizar esta acción."},
+            )
 
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
