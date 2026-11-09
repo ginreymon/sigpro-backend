@@ -61,6 +61,18 @@ def fmt_references_text(references) -> str:
     return "; ".join(unique)
 
 
+def fmt_sam_text(references) -> str:
+    """SAM of each unique reference, in the same order as fmt_references_text."""
+    if not isinstance(references, list):
+        return ""
+    unique = {}
+    for r in references:
+        if isinstance(r, dict) and r.get("reference") not in (None, ""):
+            unique.setdefault(str(r["reference"]).strip(), r.get("sam"))
+    # An empty slot keeps the Nth SAM aligned with the Nth reference.
+    return "; ".join("" if s is None else f"{float(s):g}" for s in unique.values())
+
+
 def fmt_additional_times_text(additional_times) -> str:
     return _fmt_list_text(
         additional_times,

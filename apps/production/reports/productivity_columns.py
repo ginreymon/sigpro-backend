@@ -4,9 +4,12 @@ Column catalog for the efficiency report Excel (Confección and Estampación).
 Each entry: (technical_name, "Excel header", "Spanish description").
 `technical_name` is the key of the record returned by
 fn_eficiencia_detallada_confeccion / fn_eficiencia_detallada_estampacion
-(after translate_keys). The Excel only includes the columns that have at least
-one value in the exported period, in the order defined here; keys the catalog
-does not know are appended at the end so no SQL column is silently dropped.
+(after translate_keys) plus the derived keys added by the exporter's
+`_preprocess` (`sam`, `additional_minutes`). Only the technical name is internal:
+the Excel shows the header and the description. The Excel only includes the
+columns that have at least one value in the exported period, in the order defined
+here; keys the catalog does not know are appended at the end so no SQL column is
+silently dropped.
 """
 
 REPORT_COLUMNS = [
@@ -23,33 +26,30 @@ REPORT_COLUMNS = [
     ("ended_at",             "Fin Jornada",        "Fecha y hora local (UTC-5) de fin de la jornada. Vacío si la jornada sigue abierta."),
     ("module_number",        "N° Módulo",          "Número del módulo (Confección) o máquina (Estampación)."),
     ("module_name",          "Módulo",             "Nombre del módulo o máquina."),
-    ("module_id",            "ID Módulo",          "Identificador interno del módulo o máquina."),
     ("module_location",      "Ubicación Módulo",   "Área de producción a la que pertenece el módulo."),
-    ("module_operator_count","Operarios Módulo",   "Capacidad de operarios configurada en el catálogo del módulo. No es el número de empleados efectivos."),
-    ("work_center_id",       "ID Centro Trabajo",  "Identificador del centro de trabajo asociado al módulo."),
     ("shift_name",           "Turno",              "Nombre del turno de trabajo."),
-    ("work_shift_id",        "ID Turno",           "Identificador interno del turno de trabajo."),
     ("shift_start_time",     "Inicio Turno",       "Hora de inicio del turno, tomada del horario congelado al abrir la sesión."),
     ("shift_end_time",       "Fin Turno",          "Hora de fin del turno, tomada del horario congelado al abrir la sesión."),
     ("total_registers",      "N° Registros",       "Cantidad de asignaciones de módulo (actividades) que componen la jornada."),
 
-    # People and orders
+    # People
     ("equivalent_employees", "Empleados Efectivos",
      "Número de empleados efectivos de la jornada: promedio ponderado por tiempo del peso de cada empleado "
      "(considera aprendices y minutos trabajados por hora). Es el valor usado en las metas de eficiencia y "
      "productividad; puede ser decimal y no es el conteo de personas."),
+    ("employees",            "Operarios",
+     "Empleados que participaron en la jornada, con su documento. Formato: NOMBRE DOCUMENTO; NOMBRE DOCUMENTO."),
+
+    # Orders, references and SAM
     ("production_orders",    "Órdenes de Producción",
-     "Órdenes (OP/PS) trabajadas en la jornada, tomadas de los registros de producción o estampación finalizados "
-     "del mismo módulo y turno, sin repetir. Formato: OP 40056; PS 40789."),
-    ("references",          "Referencias",
-     "Referencias de las órdenes trabajadas en la jornada, sin repetir y separadas por punto y coma. "
-     "Corresponden a la referencia del SAM usado en los cálculos: Confección = referencia del SKU "
-     "(production_sku_item_local) ligado a production_reference_sam por rowid_item; "
-     "Estampación = reference_code de stamping_stamping_reference_sam."),
+     "Órdenes (OP/PS) trabajadas en la jornada, sin repetir y separadas por punto y coma. Formato: OP 40056; PS 40789."),
+    ("references",           "Referencias",
+     "Referencias de las órdenes trabajadas en la jornada, sin repetir y separadas por punto y coma."),
+    ("sam",                  "SAM",
+     "Minutos estándar (SAM) de cada referencia, en el mismo orden que la columna Referencias y separados por punto y coma."),
 
     # Quantities
     ("total_ordered",        "Ordenadas",          "Suma de unidades ordenadas de los grupos de registros de la jornada."),
-    ("total_planned",        "Planeadas",          "Suma de unidades planeadas de los grupos de registros de la jornada."),
     ("total_completed",      "Completadas",        "Suma de unidades completadas (buenas)."),
     ("total_scrap",          "Bajas",              "Suma de unidades desechadas (bajas)."),
     ("total_rejected",       "Saldos",             "Suma de unidades rechazadas (saldos)."),
@@ -59,34 +59,37 @@ REPORT_COLUMNS = [
 
     # Targets, time and efficiency
     ("unit_target",          "Meta Unidades",      "Unidades que se debían producir según tiempo neto, SAM y empleados efectivos."),
-    ("net_seconds",          "Segundos Netos",     "Tiempo neto trabajado en segundos: intervalo menos pausas, paros de módulo y (en Estampación) tiempos adicionales."),
-    ("additional_time_seconds", "Segundos Tiempos Adicionales",
-     "Estampación: total de tiempos adicionales (setup o tareas manuales extra) en segundos, descontados del tiempo disponible."),
-    ("additional_times",     "Tiempos Adicionales",
-     "Estampación: detalle de los tiempos adicionales declarados en los registros de la jornada. "
-     "Formato: código proceso xCantidad."),
     ("minutos_producidos",   "Minutos Producidos", "Unidades completadas multiplicadas por el SAM (minutos estándar)."),
     ("minutos_instalados",   "Minutos Instalados", "Tiempo neto disponible en minutos multiplicado por los empleados efectivos."),
     ("productividad",        "Productividad",      "Minutos producidos / minutos instalados (razón; 1 = 100 %)."),
+    ("efficiency",           "Eficiencia (%)",     "Producción x 100 / meta de unidades. Confección: producción = completadas + bajas + saldos; Estampación: producción = completadas."),
+
+    # Additional times and breaks
+    ("additional_times",     "Tiempos Adicionales",
+     "Estampación: tiempos adicionales (preparación o tareas manuales extra) declarados en los registros de la jornada, "
+     "separados por punto y coma. Formato: código proceso xCantidad."),
+    ("additional_minutes",   "Total Minutos Adicionales",
+     "Estampación: total de tiempos adicionales en minutos, descontados del tiempo disponible."),
     ("breaks",               "Detalle Pausas",     "Pausas registradas en la jornada (nombre o motivo), separadas por punto y coma."),
     ("total_break_minutes",  "Min. Pausas",        "Total de minutos de pausa registrados en la jornada."),
-    ("efficiency",           "Eficiencia (%)",     "Producción x 100 / meta de unidades. Confección: producción = completadas + bajas + saldos; Estampación: producción = completadas."),
-    ("employees",            "Operarios",
-     "Empleados que participaron en la jornada, con su documento. Formato: NOMBRE DOCUMENTO; NOMBRE DOCUMENTO."),
 ]
 
 CATALOG = {key: (label, desc) for key, label, desc in REPORT_COLUMNS}
 
-# Returned by the SQL functions but redundant with other columns (the period
-# is the jornada itself and shift_id equals work_shift_id).
-EXCLUDED_FIELDS = {"period_start", "period_end", "shift_id"}
+# Returned by the SQL functions but not shown in the Excel: redundant ids, the
+# period/shift duplicates, and values replaced by a derived column
+# (additional_time_seconds -> additional_minutes).
+EXCLUDED_FIELDS = {
+    "period_start", "period_end", "shift_id",
+    "module_id", "work_center_id", "work_shift_id", "module_operator_count",
+    "net_seconds", "total_planned", "additional_time_seconds",
+}
 
 # Fields that need rounding: field -> decimal places
 ROUND_FIELDS = {
     "equivalent_employees":    2,
     "unit_target":             0,
-    "net_seconds":             0,
-    "additional_time_seconds": 0,
+    "additional_minutes":      2,
     "avg_stamped_pieces":      2,
     "minutos_producidos":      2,
     "minutos_instalados":      2,

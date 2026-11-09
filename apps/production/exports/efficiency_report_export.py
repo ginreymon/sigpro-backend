@@ -11,7 +11,7 @@ from apps.production.reports.productivity_columns import (
 )
 from apps.production.helpers.excel_formatters import (
     fmt_datetime_local, fmt_breaks_text, fmt_employees_text, fmt_additional_times_text,
-    fmt_production_orders_text, fmt_references_text,
+    fmt_production_orders_text, fmt_references_text, fmt_sam_text,
 )
 
 DICTIONARY_SHEET = "Descripción de columnas"
@@ -40,6 +40,9 @@ _TEXT_FORMATTERS = {
 
 def _preprocess(record: dict) -> dict:
     out = dict(record)
+    out["sam"] = fmt_sam_text(out.get("references"))  # before references becomes text
+    if out.get("additional_time_seconds") is not None:
+        out["additional_minutes"] = float(out["additional_time_seconds"]) / 60
     for field in UTC_FIELDS:
         out[field] = fmt_datetime_local(out.get(field))
     for field, formatter in _TEXT_FORMATTERS.items():
@@ -116,15 +119,14 @@ def build_efficiency_report_excel(data: list[dict], has_employee: bool = False) 
     # ── Data dictionary (only the columns present in the main sheet) ─────────
     dic = wb.create_sheet(DICTIONARY_SHEET)
     dic.freeze_panes = "A2"
-    _style_header(dic, ["Nombre técnico", "Nombre descriptivo", "Descripción"])
+    _style_header(dic, ["Nombre", "Descripción"])
     for row_idx, field in enumerate(fields, start=2):
         label, desc = CATALOG.get(field, (field, UNKNOWN_COLUMN_DESCRIPTION))
-        for col_idx, value in enumerate((field, label, desc), start=1):
+        for col_idx, value in enumerate((label, desc), start=1):
             cell = dic.cell(row=row_idx, column=col_idx, value=value)
             cell.font, cell.border, cell.alignment = _CELL_FONT, _CELL_BORDER, _WRAP
-    dic.column_dimensions["A"].width = 28
-    dic.column_dimensions["B"].width = 30
-    dic.column_dimensions["C"].width = 100
+    dic.column_dimensions["A"].width = 30
+    dic.column_dimensions["B"].width = 100
 
     buf = io.BytesIO()
     wb.save(buf)
