@@ -46,6 +46,10 @@ def fmt_employees_text(employees) -> str:
     return _fmt_list_text(employees, lambda e: _join(e.get("full_name"), e.get("id_number")))
 
 
+def fmt_production_orders_text(orders) -> str:
+    return _fmt_list_text(orders, lambda o: _join(o.get("op_type"), o.get("op_number")))
+
+
 def fmt_additional_times_text(additional_times) -> str:
     return _fmt_list_text(
         additional_times,
