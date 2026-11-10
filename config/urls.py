@@ -9,7 +9,6 @@ urlpatterns = [
     path("api/v1/production/", include("apps.production.urls")),
     path("api/v1/stamping/", include("apps.stamping.urls")),
     path("api/v1/integration/", include("apps.integration.urls")),
-    path("api/v1/dashboard/", include("apps.common.urls")),
 ]
 
 handler404 = "core.exceptions.api_not_found"
