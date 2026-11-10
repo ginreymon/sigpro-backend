@@ -2,8 +2,6 @@ from core.views.base_model_view import BaseModelViewSet
 from django.contrib.auth.models import Group
 from django.db.models import Count
 from apps.user.serializers.group_serializer import GroupSerializer
-from rest_framework.response import Response
-from rest_framework import status
 from core.exceptions import error_response
 
 
