@@ -31,8 +31,7 @@ Target architecture: **View -> Service -> Repository -> DB/SP**. Serializers onl
 1. `apps/user/views/auth_view.py` `password-reset-request` (AllowAny) returns `reset_token` in the response; username + employee id_number is enough to take over an account.
 2. `password_reset_confirm` skips `AUTH_PASSWORD_VALIDATORS`, only catches `DoesNotExist`, no rate limit.
 3. Invalid reset returns 200 "Datos inválidos"; uncaught `UserEmployeeLink.DoesNotExist` -> 500 leaks which employees have accounts.
-4. No DRF throttling configured (login + reset unthrottled). Swagger/ReDoc exposed unauthenticated.
-
+4. No DRF throttling configured (login + reset unthrottled).
 ### High (structure)
 - **Cycles:** integration <-> production/stamping (`OpRecord` in integration, FK back); `common` -> `production` hidden via lazy imports (`op_record_batch_service`); `user` -> production internals; stamping <-> production.
 - **Business logic in views:** `work_session_activity_view`, `work_session_view`, `sku_item_local_view`, `reference_sam_view`, `productivity_view`, stamping `audit_record_view`, `stamping_record_view`, catalog `technical_sheet_view`, `auth_view`, `core/views/menu_view`.
@@ -70,8 +69,7 @@ Per project rules, each phase needs approval before code; DB/API/shared-base cha
 ### Phase 1 — Security (do before growth)
 - Remove `reset_token` from response; deliver out of band (email) or drop the flow; generic response for unknown user/employee.
 - Run `validate_password` in reset confirm; catch all lookup errors.
-- Add DRF throttles (login, reset). Gate Swagger/ReDoc behind DEBUG/IsAdminUser.
-- Settings hardening: middleware order, secure cookies/HSTS, env-driven CORS/DB options, loggers for all apps.
+- Add DRF throttles (login, reset).- Settings hardening: middleware order, secure cookies/HSTS, env-driven CORS/DB options, loggers for all apps.
 
 ### Phase 2 — Shared kernel in `core` (unblocks everything)
 - Move `LocalBaseModelViewSet` to `core/views`; keep a re-export shim in production until imports are updated.

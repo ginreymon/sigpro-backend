@@ -24,32 +24,6 @@
 
 ---
 
-## Acceder a la documentación
-
-Con el servidor en `localhost:8000`, abrir en el navegador:
-
-| Interfaz | URL | Descripción |
-|---|---|---|
-| Swagger UI | http://localhost:8000/api/docs/ | Interactiva — permite probar endpoints |
-| ReDoc | http://localhost:8000/api/redoc/ | Solo lectura — mejor para compartir |
-| Schema JSON | http://localhost:8000/api/schema/ | OpenAPI 3.0 en formato descargable |
-
----
-
-## Autenticar en Swagger UI
-
-1. Abrir `http://localhost:8000/api/docs/`
-2. Obtener token en `POST /api/v1/auth/token/` con usuario y contraseña
-3. Copiar el valor de `access` del response
-4. Hacer clic en **Authorize** (botón arriba a la derecha)
-5. Pegar el token con el prefijo `Bearer`:
-   ```
-   Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-   ```
-6. Confirmar con **Authorize** — todos los endpoints quedan autenticados
-
----
-
 ## Logs
 
 El servidor genera logs automáticamente en `backend/logs/`:
@@ -67,7 +41,7 @@ Formato de `api_requests.log`:
 
 - Campos: método, ruta + query, `status`, `duration_ms`, `user` (`id:username` o `anonymous`), `ip` (respeta `X-Forwarded-For`), `bytes` de la respuesta.
 - Nivel según el status: `INFO` (< 400), `WARNING` (4xx), `ERROR` (5xx). Las excepciones no controladas también quedan como `ERROR` con status 500; el traceback completo queda en `django.log`.
-- Solo se registran rutas bajo `/api/v1/`. No se registran `/admin/`, `/api/docs/`, `/api/schema/` ni `/api/redoc/`.
+- Solo se registran rutas bajo `/api/v1/`. No se registra `/admin/`.
 - Nunca se registran cuerpos de request/response (login y tokens llevan credenciales).
 - Para omitir rutas de alta frecuencia: `API_REQUEST_LOG_EXCLUDED_PATHS` en `config/settings.py` (rutas exactas).
 - Rotación: 5 MB, 5 respaldos.

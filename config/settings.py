@@ -52,8 +52,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'drf_spectacular',
-    'drf_spectacular_sidecar',
     'core',
     'apps.people',
     'apps.user',
@@ -78,7 +76,6 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
 }
 
@@ -209,16 +206,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-SPECTACULAR_SETTINGS = {
-    "TITLE": "SIGPRO API",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    "SWAGGER_UI_DIST": "SIDECAR",
-    "REDOC_DIST": "SIDECAR",
-    "COMPONENT_SPLIT_REQUEST": True,
-    "SCHEMA_COERCE_PATH_PK_SUFFIX": True,
-}
 
 # SIESA UNO EE WSUNOEE webservice (ImportarXML) — used by
 # apps.integration.services.siesa_webservice_client. Empty by default:

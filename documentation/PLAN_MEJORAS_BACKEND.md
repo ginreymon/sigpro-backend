@@ -29,7 +29,6 @@ Target: View -> Service -> Repository -> DB/SP. Serializers validate/transform. 
 2. **`password-reset-request` is `AllowAny` and returns `reset_token` in the response** (`auth_view.py`). Username + id_number is enough to take over an account. `password-reset-confirm` skips `AUTH_PASSWORD_VALIDATORS`.
 3. **No throttling** (login, reset, refresh) — nothing under `DEFAULT_THROTTLE_*`.
 4. `password-reset-request` returns 200 "Datos inválidos" for unknown employee, but an uncaught `UserEmployeeLink.DoesNotExist` gives 500: leaks which employees have accounts.
-5. Swagger/ReDoc exposed without auth in `config/urls.py`.
 
 ### 2.2 High (structure)
 1. `work_session_view.py` / `work_session_activity_view.py` hold business logic (see table). Two different "close session" paths: `close_session()` (model) vs `finalize_expired_session()` (service).
@@ -66,7 +65,7 @@ Target: View -> Service -> Repository -> DB/SP. Serializers validate/transform. 
 |---|---|---|---|---|
 | 1 | **Server-side permissions**: `OptionPermission` DRF class using `Option`/`GroupOption`; per-ViewSet `required_option` (config, not code); start in log-only mode, then enforce | `core/permissions.py`, ViewSets | Med (can lock users out) — roll out per module | Closes 2.1.1 |
 | 2 | **Auth hardening**: stop returning `reset_token` (deliver out of band), run password validators on confirm, uniform response for unknown user, catch `UserEmployeeLink.DoesNotExist` | `auth_view.py` (+ `AuthService`) | Med (frontend flow changes) | 2.1.2 / 2.1.4 |
-| 3 | **Throttling**: `ScopedRateThrottle` on login/refresh/reset; protect Swagger behind auth | `settings.py`, `urls.py` | Low | 2.1.3 / 2.1.5 |
+| 3 | **Throttling**: `ScopedRateThrottle` on login/refresh/reset | `settings.py`, `urls.py` | Low | 2.1.3 / 2.1.5 |
 | 4 | **Error contract**: one DRF `EXCEPTION_HANDLER` normalising to `{detail, code, errors}`; replace bare-list/`error`/`message` responses | `core/exceptions.py`, views | Med (frontend parsing) — do together with a frontend change | 2.3.1 |
 | 5 | **Input serializers for params**: `PeriodQuerySerializer`, `OpQuerySerializer`, `PauseInputSerializer`; remove hand-written 400s and make invalid ints a 400 | `common/views/productivity_params.py`, `audit_record_view.py`, `work_session_activity_view.py` | Low | 2.2.5 / 2.3.2 / 2.3.3 |
 | 6 | **`WorkSessionService` + `WorkBreakService`**: move pause/resume/rotate/close/create-guard out of views; unify `close_session`/`finalize_expired_session`; serializer `create/update` calls the service | `production/services/`, `work_session_*_view.py`, `work_session_serializer.py` | **High** (core flow) — needs characterization tests first | 2.2.1 / 2.2.2 |
