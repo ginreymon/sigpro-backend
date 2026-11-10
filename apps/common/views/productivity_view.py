@@ -136,7 +136,10 @@ class BaseProductivityViewSet(viewsets.ViewSet):
         start_date, end_date, filters = parsed
 
         data = self.service.get_efficiency_report(start_date, end_date, **filters)
-        xlsx = self.efficiency_report_export_builder(data, has_employee=filters["employee_id"] is not None)
+        records = self.service.get_records_report(start_date, end_date, **filters)
+        xlsx = self.efficiency_report_export_builder(
+            data, has_employee=filters["employee_id"] is not None, records=records,
+        )
 
         response = HttpResponse(
             xlsx,

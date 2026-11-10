@@ -25,11 +25,11 @@ def ok_or_404(data, message="No data found"):
 
 def build_export_filename(area_name, start_date, end_date, extension="xlsx", fallback="exportacion"):
     """
-    Export file name `<area>_<DDMMYYYY>_<DDMMYYYY>.<ext>`: the area is lowercased,
+    Export file name `sigpro_<area>_<DDMMYYYY>_<DDMMYYYY>.<ext>`: the area is lowercased,
     stripped of accents/special characters and joined with underscores; dates
     arrive as YYYY-MM-DD.
     """
     area = slugify(area_name or "").replace("-", "_") or fallback
     start = datetime.strptime(start_date, "%Y-%m-%d").strftime("%d%m%Y")
     end = datetime.strptime(end_date, "%Y-%m-%d").strftime("%d%m%Y")
-    return f"{area}_{start}_{end}.{extension}"
+    return f"sigpro_{area}_{start}_{end}.{extension}"

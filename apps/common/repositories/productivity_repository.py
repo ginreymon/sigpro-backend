@@ -73,6 +73,17 @@ class BaseProductivityRepository:
             return result
 
     @classmethod
+    def get_records_report(cls, start_date, end_date, module_id=None, shift_id=None, employee_id=None):
+        """One row per record (dbo.fn_reporte_registros); same params as the efficiency report."""
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM dbo.fn_reporte_registros(%s, %s, %s, %s, %s, NULL)",
+                [start_date, end_date, module_id, shift_id, employee_id],
+            )
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    @classmethod
     def get_module_shift_summary(cls) -> list[dict]:
         with connection.cursor() as cursor:
             cursor.execute(f"EXEC {cls.module_shift_summary_sp}")
