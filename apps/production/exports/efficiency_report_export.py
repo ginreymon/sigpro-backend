@@ -8,7 +8,7 @@ from openpyxl.utils import get_column_letter
 
 from apps.production.reports.productivity_columns import (
     CATALOG, REPORT_COLUMNS, EXCLUDED_FIELDS, ROUND_FIELDS, UTC_FIELDS, UNKNOWN_COLUMN_DESCRIPTION,
-    RECORD_COLUMNS, RECORD_LABELS, RECORD_DESCRIPTIONS, RECORD_EXCLUDED_FIELDS, RECORD_UTC_FIELDS, RECORD_ROUND_FIELDS,
+    RECORD_COLUMNS, RECORD_LABELS, RECORD_DESCRIPTIONS, RECORD_EXCLUDED_FIELDS, RECORD_UTC_FIELDS,
 )
 from apps.production.helpers.excel_formatters import (
     fmt_datetime_local, fmt_breaks_text, fmt_employees_text, fmt_additional_times_text,
@@ -122,13 +122,7 @@ def _record_value(field: str, value):
         return fmt_datetime_local(value)
     if field == "horario":
         return _fmt_record_schedule(value)
-    return _fmt(field, value) if field not in RECORD_ROUND_FIELDS else _fmt_rounded(value, RECORD_ROUND_FIELDS[field])
-
-
-def _fmt_rounded(value, places: int):
-    if value is None or value == "":
-        return ""
-    return round(float(value), places)
+    return _fmt(field, value)
 
 
 def _prepare_records(rows: list[dict]):
@@ -158,6 +152,8 @@ def _build_records_sheet(wb, fields: list[str], values: list[dict]):
             cell.font      = _CELL_FONT
             cell.border    = _CELL_BORDER
             cell.alignment = _CENTER if isinstance(value, (int, float)) else _LEFT
+            if isinstance(value, float):
+                cell.number_format = "General"  # shows every available decimal
     for col_idx, label in enumerate(labels, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = max(len(label) + 4, 14)
 
@@ -194,6 +190,8 @@ def build_efficiency_report_excel(data: list[dict], has_employee: bool = False, 
             cell.font      = _CELL_FONT
             cell.border    = _CELL_BORDER
             cell.alignment = _CENTER if isinstance(value, (int, float)) else _LEFT
+            if isinstance(value, float):
+                cell.number_format = "General"  # shows every available decimal
 
     # ── Column widths ────────────────────────────────────────────────────────
     for col_idx, field in enumerate(fields, start=1):

@@ -85,17 +85,11 @@ EXCLUDED_FIELDS = {
     "net_seconds", "total_planned", "additional_time_seconds",
 }
 
-# Fields that need rounding: field -> decimal places
+# Fields that need rounding: field -> decimal places.
+# Decimal metrics (SAM, effective operators, minutes, productivity, efficiency...)
+# are intentionally NOT listed: they are exported with full precision.
 ROUND_FIELDS = {
-    "equivalent_employees":    2,
-    "unit_target":             0,
-    "additional_minutes":      2,
-    "avg_stamped_pieces":      2,
-    "minutos_producidos":      2,
-    "minutos_instalados":      2,
-    "productividad":           4,
-    "total_break_minutes":     2,
-    "efficiency":              2,
+    "unit_target": 0,
 }
 
 # Fields that need UTC→local datetime conversion
@@ -135,6 +129,5 @@ RECORD_LABELS = {key: label for key, label, _ in RECORD_COLUMNS}
 RECORD_DESCRIPTIONS = {key: desc for key, _, desc in RECORD_COLUMNS}
 RECORD_EXCLUDED_FIELDS = {"id_modulo"}
 RECORD_UTC_FIELDS = {"fecha", "hora_registro"}
-RECORD_ROUND_FIELDS = {"sam": 2, "minutos_pausas": 2, "total_minutos_adicionales": 2}
 
 UNKNOWN_COLUMN_DESCRIPTION = "Columna devuelta por la función SQL del reporte, sin descripción catalogada."
