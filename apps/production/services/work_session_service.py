@@ -86,7 +86,7 @@ def session_core_module_id(session):
     return activity.module.location.core_module_id
 
 
-def finalize_expired_session(session, expires_at: datetime) -> None:
+def finalize_expired_session(session, expires_at: datetime) -> bool:
     """
     Closes a session that exceeded its shift window and leaves it finalized.
 
@@ -95,18 +95,30 @@ def finalize_expired_session(session, expires_at: datetime) -> None:
     instead of by the user must lock the hourly editing, which is what the flag
     does in the frontend and in the SQL functions. WorkSession.close_session
     (manual close) does not finalize.
+
+    Idempotent: the row is locked and re-read, and nothing happens if it was
+    already closed (manual close or another run). Returns True only when this
+    call closed it.
     """
     with transaction.atomic():
-        activity = session.get_active_activity()
+        locked = WorkSessionRepository.lock_by_id(session.pk)
+        if locked.is_closed:
+            return False
+
+        activity = locked.get_active_activity()
         if activity:
             activity.close()
 
-        ended_at = max(expires_at, session.started_at)
+        locked.ended_at = max(expires_at, locked.started_at)
+        locked.is_closed = True
+        locked.editing_finalized = True
+        locked.save(update_fields=["ended_at", "is_closed", "editing_finalized"])
 
-        session.ended_at = ended_at
-        session.is_closed = True
-        session.editing_finalized = True
-        session.save(update_fields=["ended_at", "is_closed", "editing_finalized"])
+    # Keep the caller's instance in sync with what was persisted.
+    session.ended_at = locked.ended_at
+    session.is_closed = True
+    session.editing_finalized = True
+    return True
 
 
 def open_session(user, target_module_id, create):
