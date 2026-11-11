@@ -1,8 +1,9 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from apps.production.views.op_record_view import OpRecordViewSet
 from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
 from apps.stamping.models.stamping_record import StampingRecord
+from apps.stamping.models.stamping_reference_sam import StampingReferenceSam
 from apps.stamping.serializers import StampingRecordSerializer
 
 
@@ -57,3 +58,24 @@ class StampingRecordViewSet(OpRecordViewSet):
         """
         records = request.data.get('records')
         return _additional_times_extra_seconds(records) if isinstance(records, list) else 0.0
+
+    def get_batch_efficiency_lines(self, records) -> list:
+        """SAM per record: stamping_reference_sam (id) -> StampingReferenceSam.sam.
+        Stamping has no scrap/rejected: total == completed."""
+        ids = {r.get('stamping_reference_sam') for r in records if isinstance(r, dict)}
+        sam_by_id = dict(
+            StampingReferenceSam.objects.filter(id__in=[x for x in ids if x is not None])
+            .values_list('id', 'sam')
+        )
+        lines = []
+        for r in records:
+            try:
+                completed = float(Decimal(str(r.get('completed_quantity') or 0)))
+            except InvalidOperation:
+                completed = 0.0
+            lines.append({
+                'sam': float(sam_by_id.get(r.get('stamping_reference_sam')) or 0),
+                'completed': completed,
+                'total': completed,
+            })
+        return lines
