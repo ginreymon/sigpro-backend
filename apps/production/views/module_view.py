@@ -1,5 +1,9 @@
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
+from rest_framework.response import Response
+
 from core.views.audit_model_view import AuditModelViewSet
-from apps.production.models import Module
+from apps.production.models import Module, ModuleAssignee
 from apps.production.serializers import ModuleSerializer
 
 
@@ -32,3 +36,12 @@ class ModuleViewSet(AuditModelViewSet):
                 queryset = queryset.filter(pk=assigned_module.module_id)
 
         return queryset
+
+    # DELETE /modules/{id}/employees/{employee_id}/ — used when the user has no open
+    # session; with one, the work session PUT keeps the session consistent.
+    @action(detail=True, methods=["delete"], url_path=r"employees/(?P<employee_id>\d+)")
+    def remove_employee(self, request, pk=None, employee_id=None):
+        deleted, _ = ModuleAssignee.objects.filter(module=self.get_object(), employee_id=employee_id).delete()
+        if not deleted:
+            raise NotFound("El empleado no está asignado a este módulo.")
+        return Response(status=204)
