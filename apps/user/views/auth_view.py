@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.utils.crypto import get_random_string
@@ -97,7 +97,11 @@ class AuthViewSet(viewsets.ViewSet):
             )
 
         try:
-            refresh = RefreshToken(refresh_token)
+            refresh = RefreshToken(refresh_token)  # also rejects blacklisted tokens
+
+            # A deactivated user must not obtain new access tokens.
+            if not get_user_model().objects.filter(pk=refresh.get("user_id"), is_active=True).exists():
+                raise TokenError("User inactive")
 
             return Response({"access": str(refresh.access_token)})
 
@@ -106,6 +110,19 @@ class AuthViewSet(viewsets.ViewSet):
                 "Refresh token inválido o expirado", status_code=status.HTTP_401_UNAUTHORIZED,
                 code="invalid_refresh_token", legacy={"error": "Refresh token inválido o expirado"},
             )
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='logout')
+    def logout(self, request):
+        # AllowAny: the access token may already be expired (idle expiry). Possession of the
+        # refresh token is what authorizes blacklisting it. Always answers 200 so the client
+        # can finish its local logout regardless of the token state.
+        refresh_token = request.data.get("refresh")
+        if refresh_token:
+            try:
+                RefreshToken(refresh_token).blacklist()
+            except TokenError:
+                pass  # already expired or blacklisted: nothing left to invalidate
+        return Response({"message": "Sesión cerrada"})
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path="change-password")
     def change_password(self, request):
