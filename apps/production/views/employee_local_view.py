@@ -1,4 +1,8 @@
-from apps.production.models import ProductionAreaCostCenter
+from django.db.models import Prefetch
+from apps.production.models import ModuleAssignee, ProductionAreaCostCenter
+from apps.production.serializers.employee_last_module_serializer import (
+    EmployeeWithLastModuleSerializer,
+)
 from apps.people.models import EmployeeLocal
 from apps.people.serializers import EmployeeLocalSerializer
 from .local_base_model_view import LocalBaseModelViewSet
@@ -30,4 +34,19 @@ class EmployeeLocalViewSet(LocalBaseModelViewSet):
         if not cost_centers:
             return queryset.none()
 
-        return queryset.filter(cost_center_rowid__in=cost_centers)
+        # One extra query for all employees: latest active-module assignment first.
+        return queryset.filter(cost_center_rowid__in=cost_centers).prefetch_related(
+            Prefetch(
+                "moduleassignee_set",
+                queryset=ModuleAssignee.objects.filter(module__is_active=True)
+                .select_related("module")
+                .order_by("-updated_at", "-created_at", "-id"),
+                to_attr="last_module_assignments",
+            )
+        )
+
+    def get_serializer_class(self):
+        # `last_module` is added only when core_module_id is sent (list/all).
+        if self.request and self.request.query_params.get("core_module_id"):
+            return EmployeeWithLastModuleSerializer
+        return super().get_serializer_class()
