@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import ValidationError
 
 from apps.production.repositories.work_session_repository import WorkSessionRepository
 from apps.production.services.employee_assignment_service import (
@@ -245,54 +245,3 @@ def rotate_activity(session_id, user, read_input):
         raise SessionRuleError(["La jornada (sesión) ha expirado."])
 
     return new_activity
-
-def remove_module_employee(module, employee_id, user):
-    """
-    Removes `employee_id` from the assignees of `module`.
-
-    When the module has an open session, its employees are updated too: the
-    session is closed (existing close_session) if nobody is left, otherwise a new
-    activity with the remaining employees keeps it going. Everything runs in one
-    transaction. Returns True when the session was closed.
-    """
-    from apps.production.models import ModuleAssignee, WorkSessionActivity
-
-    with transaction.atomic():
-        deleted, _ = ModuleAssignee.objects.filter(module=module, employee_id=employee_id).delete()
-        if not deleted:
-            raise NotFound("El empleado no está asignado a este módulo.")
-
-        activity = (
-            WorkSessionActivity.objects.filter(
-                module=module,
-                is_active=True,
-                ended_at__isnull=True,
-                work_session__is_closed=False,
-            )
-            .order_by("-started_at", "-id")
-            .first()
-        )
-        if not activity:
-            return False
-
-        session = WorkSessionRepository.lock_by_id(activity.work_session_id)
-        if session.is_closed:
-            return False
-
-        current_ids = WorkSessionRepository.active_employee_ids(activity)
-        if employee_id not in current_ids:
-            return False
-
-        remaining_ids = current_ids - {employee_id}
-        if not remaining_ids:
-            session.close_session()
-            return True
-
-        apprentice_ids = WorkSessionRepository.active_apprentice_ids(activity) - {employee_id}
-        new_activity = session.restart_activity(
-            employee_ids=list(remaining_ids),
-            created_by=user,
-            apprentice_ids=list(apprentice_ids),
-        )
-        sync_module_assignees(new_activity.module, user)
-        return False

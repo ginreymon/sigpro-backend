@@ -122,6 +122,12 @@ def update_session(instance, validated_data: dict):
 
         instance = WorkSessionRepository.update(instance, validated_data)
 
+        # An explicit empty employee list leaves the activity without staff: close the
+        # session through the usual close_session (it also closes the active activity).
+        if employee_ids is not None and not employee_ids and current_activity:
+            instance.close_session()
+            return instance
+
         if work_shift_changed:
             snapshot_shift(instance, new_work_shift, validated_data.get("updated_by"))
 

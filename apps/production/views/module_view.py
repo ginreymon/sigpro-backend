@@ -1,10 +1,6 @@
-from rest_framework.decorators import action
-from rest_framework.response import Response
-
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import Module
 from apps.production.serializers import ModuleSerializer
-from apps.production.services import work_session_service
 
 
 class ModuleViewSet(AuditModelViewSet):
@@ -36,11 +32,3 @@ class ModuleViewSet(AuditModelViewSet):
                 queryset = queryset.filter(pk=assigned_module.module_id)
 
         return queryset
-
-    # DELETE /modules/{id}/employees/{employee_id}/
-    @action(detail=True, methods=["delete"], url_path=r"employees/(?P<employee_id>\d+)")
-    def remove_employee(self, request, pk=None, employee_id=None):
-        session_closed = work_session_service.remove_module_employee(
-            self.get_object(), int(employee_id), request.user
-        )
-        return Response({"session_closed": session_closed})
