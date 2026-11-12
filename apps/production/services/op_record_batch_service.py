@@ -252,6 +252,64 @@ def simulate_manual_duration_batch(request, tipo_modulo: str, lines, extra_avail
     return result
 
 
+def simulate_single_record(request, tipo_modulo: str, lines, extra_seconds: float = 0):
+    """
+    Read-only efficiency check of ONE regular (non-manual) record, before it is
+    saved. Its duration is the shift time available since the last record
+    (manual_duration_budget_seconds, the same budget the manual batch uses)
+    minus extra_seconds (additional_times, non-productive). The efficiency and
+    target come from the same formulas as the manual batch (_batch_efficiency /
+    _batch_target), so nothing is duplicated.
+
+    Returns {efficiency, max_efficiency, max_quantity, duration_seconds,
+    allowed, message}; `message` explains the block (None when allowed).
+    Raises ValidationError when there is no active work session.
+    """
+    work_session, activity = active_work_session_and_activity(request)
+    indicators = manual_duration_indicators(work_session, activity, tipo_modulo)
+    if not indicators:
+        raise ValidationError({'non_field_errors': 'No hay una jornada (sesión) activa.'})
+
+    budget = manual_duration_budget_seconds(indicators, timezone.now())
+    duration = max(0.0, budget - extra_seconds)
+    employee_count = _activity_employee_count(activity)
+    exact = _batch_efficiency(lines, duration, employee_count, tipo_modulo, rounded=False)
+    target = _batch_target(lines, duration, employee_count, tipo_modulo)
+    max_quantity = math.floor(target * MAX_EFFICIENCY_PCT / 100)
+
+    message = None
+    if exact is None:
+        # No productive time since the last record: any quantity is above the target.
+        if budget > 0 and extra_seconds > 0:
+            message = (
+                f'Los tiempos adicionales ({extra_seconds / 60:.1f} min) consumen todo el tiempo disponible '
+                f'({budget / 60:.1f} min). Quítalos o espera más tiempo.'
+            )
+        else:
+            message = 'No ha pasado tiempo productivo desde el último registro. Espera un momento e intenta de nuevo.'
+    elif exact > MAX_EFFICIENCY_PCT + 1e-9:
+        message = (
+            f'La cantidad supera la meta: en {duration / 60:.1f} min con {employee_count:g} operario(s) '
+            f'la meta es {target:.1f} unidades (eficiencia {exact:.2f} % > {MAX_EFFICIENCY_PCT:.0f} %). '
+            f'Máximo permitido: {max_quantity}.'
+        )
+    return {
+        'efficiency': None if exact is None else round(exact, 2),
+        'max_efficiency': MAX_EFFICIENCY_PCT,
+        'max_quantity': max_quantity,
+        'duration_seconds': duration,
+        'allowed': message is None,
+        'message': message,
+    }
+
+
+def assert_single_record_within_cap(request, tipo_modulo: str, lines, extra_seconds: float = 0) -> None:
+    """Save-time enforcement of simulate_single_record (cannot be skipped by calling the API directly)."""
+    result = simulate_single_record(request, tipo_modulo, lines, extra_seconds)
+    if not result['allowed']:
+        raise ValidationError({'non_field_errors': result['message']})
+
+
 def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_available_seconds: float = 0):
     """
     Shared body of POST .../manual-duration-batch/ for
