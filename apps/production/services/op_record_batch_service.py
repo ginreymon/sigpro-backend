@@ -289,9 +289,10 @@ def simulate_single_record(request, tipo_modulo: str, lines, extra_seconds: floa
             message = 'No ha pasado tiempo productivo desde el último registro. Espera un momento e intenta de nuevo.'
     elif exact > MAX_EFFICIENCY_PCT + 1e-9:
         message = (
-            f'La cantidad supera la meta: en {duration / 60:.1f} min con {employee_count:g} operario(s) '
-            f'la meta es {target:.1f} unidades (eficiencia {exact:.2f} % > {MAX_EFFICIENCY_PCT:.0f} %). '
-            f'Máximo permitido: {max_quantity}.'
+            'No puedes ingresar esta cantidad porque supera la capacidad productiva disponible. '
+            f'La eficiencia resultante sería del {exact:.0f}%, pero el máximo permitido es del '
+            f'{MAX_EFFICIENCY_PCT:.0f}%. La cantidad máxima que puedes registrar actualmente es '
+            f'{max_quantity} unidades.'
         )
     return {
         'efficiency': None if exact is None else round(exact, 2),
