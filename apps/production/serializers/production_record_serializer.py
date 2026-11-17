@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum, F
 from apps.production.models.production_record import ProductionRecord
+from apps.production.models.reference_sam import ReferenceSam
+from apps.production.models.sku_item_local import SkuItemLocal
 from apps.production.models.work_session_activity import WorkSessionActivity
 from apps.production.models.work_session_activity_employee import WorkSessionActivityEmployee
 from apps.common.serializers.op_record_serializer import OpRecordSerializer, to_decimal
@@ -16,7 +18,7 @@ class ProductionRecordSerializer(OpRecordSerializer):
 
     class Meta(OpRecordSerializer.Meta):
         model = ProductionRecord
-        read_only_fields = [*OpRecordSerializer.Meta.read_only_fields, "server_now", "is_paused"]
+        read_only_fields = [*OpRecordSerializer.Meta.read_only_fields, "server_now", "is_paused", "applied_sam"]
 
     def get_server_now(self, obj):
         return timezone.now()
@@ -78,7 +80,27 @@ class ProductionRecordSerializer(OpRecordSerializer):
                 )
             })
 
+    @staticmethod
+    def _current_reference_sam(sku_rowid):
+        """Current master SAM of the SKU's reference (sku -> rowid_item -> ReferenceSam) in one query."""
+        return (
+            ReferenceSam.objects
+            .filter(rowid_item__in=SkuItemLocal.objects.filter(rowid=sku_rowid).values("rowid_item"))
+            .values_list("sam", flat=True)
+            .first()
+        )
+
     def prepare_create(self, validated_data):
+        sam = self._current_reference_sam(validated_data["sku_rowid"])
+        if not sam or sam <= 0:
+            raise ValidationError({
+                "non_field_errors": (
+                    "La referencia de este SKU no tiene un SAM válido configurado. "
+                    "No se puede registrar producción hasta que se configure."
+                )
+            })
+        validated_data["applied_sam"] = sam
+
         activity = (
             WorkSessionActivity.objects
             .select_for_update()

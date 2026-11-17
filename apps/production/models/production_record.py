@@ -11,6 +11,9 @@ class ProductionRecord(OpWorkRecord, TepIntegrationRecord):
     scrap_quantity = models.DecimalField(max_digits=10, decimal_places=2)
     rejected_quantity = models.DecimalField(max_digits=10, decimal_places=2)
 
+    # SAM snapshot of the SKU's reference taken when the record was created; never recalculated from the master.
+    applied_sam = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+
     class Meta:
         db_table = "production_production_record"
         ordering = [
