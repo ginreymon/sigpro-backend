@@ -53,6 +53,7 @@ class ProductionRecordSerializer(OpRecordSerializer):
                 employee=rel.employee,
                 created_by=rel.created_by,
                 is_apprentice=rel.is_apprentice,
+                worked_minutes_per_hour=rel.worked_minutes_per_hour,
             )
             for rel in old_employees
         ])

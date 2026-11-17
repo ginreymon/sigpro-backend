@@ -81,8 +81,12 @@ class WorkSession(TimeAuditModel, UserAuditModel):
             apprentice_ids = []
 
         if employee_ids:
+            from apps.production.services.employee_assignment_service import get_continuous_work_minutes_map
+
             employees = EmployeeLocal.objects.filter(id__in=employee_ids)
             apprentice_set = set(apprentice_ids or [])
+            # Same snapshot as assign_employees: the continuous work minutes of each employee at this moment.
+            minutes_per_hour = get_continuous_work_minutes_map(employee_ids)
 
             activity.employee_snapshots.bulk_create(
                 [
@@ -90,6 +94,7 @@ class WorkSession(TimeAuditModel, UserAuditModel):
                         work_session_activity=activity,
                         employee=emp,
                         is_apprentice=emp.id in apprentice_set,
+                        worked_minutes_per_hour=minutes_per_hour.get(emp.id),
                         created_by=resolved_created_by,
                     )
                     for emp in employees
