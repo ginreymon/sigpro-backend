@@ -32,6 +32,22 @@ class StampingRecordSerializer(OpRecordSerializer):
 
     class Meta(OpRecordSerializer.Meta):
         model = StampingRecord
+        read_only_fields = [*OpRecordSerializer.Meta.read_only_fields, "applied_sam", "applied_stamped_pieces"]
+
+    @staticmethod
+    def _sam_snapshot(reference_sam):
+        """Values of the reference SAM that the calculations read from the record itself."""
+        if reference_sam is None or not reference_sam.sam or reference_sam.sam <= 0:
+            raise ValidationError({
+                "non_field_errors": (
+                    "La referencia SAM seleccionada no tiene un SAM válido configurado. "
+                    "No se puede registrar estampación hasta que se configure."
+                )
+            })
+        return {
+            "applied_sam": reference_sam.sam,
+            "applied_stamped_pieces": reference_sam.stamped_pieces,
+        }
 
     @staticmethod
     def _validate_within_pending(completed, op_type, op_number, sam, already_counted=Decimal("0")):
@@ -72,6 +88,7 @@ class StampingRecordSerializer(OpRecordSerializer):
         )
 
         validated_data["completed_quantity"] = completed
+        validated_data.update(self._sam_snapshot(validated_data.get("stamping_reference_sam")))
 
         return validated_data
 
@@ -113,6 +130,11 @@ class StampingRecordSerializer(OpRecordSerializer):
             )
 
             validated_data["completed_quantity"] = completed
+
+        new_reference = validated_data.get("stamping_reference_sam")
+        if new_reference is not None and new_reference.pk != instance.stamping_reference_sam_id:
+            # The record now points to another reference: refresh its SAM snapshot.
+            validated_data.update(self._sam_snapshot(new_reference))
 
         instance = super().update(instance, validated_data)
 

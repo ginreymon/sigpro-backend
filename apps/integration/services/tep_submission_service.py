@@ -50,7 +50,7 @@ def record_model(origin_id: int):
 
 # Piezas por unidad de cada registro (misma regla que fn_totales_registrados_por_op:
 # producción 1, estampación stamped_pieces del SAM, 1 si es nulo).
-_PIECES_FIELD = {1: None, 2: "stamping_reference_sam__stamped_pieces"}
+_PIECES_FIELD = {1: None, 2: "applied_stamped_pieces"}
 
 # Llaves de cada item de `details` que no son de SIESA: se separan antes de
 # armar el documento TEP. `time_mode` y `real_seconds_by_unit` son la
