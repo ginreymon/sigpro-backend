@@ -1,6 +1,5 @@
 from django.db import models
 from django.db.models import Q, CheckConstraint
-from django.core.exceptions import ValidationError
 from core.models.audit_model import TimeAuditModel, UserAuditModel
 from apps.production.models.module import Module
 from apps.production.models.production_record import ProductionRecord
@@ -33,8 +32,8 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
         related_name="module_downtimes",
     )
 
-    name = models.CharField(max_length=255, null=True, blank=True)
-    custom_reason = models.TextField(null=True, blank=True)
+    # Reason of the downtime (free text, or a fixed name for the auto-generated batch downtime).
+    name = models.CharField(max_length=255)
 
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
@@ -51,18 +50,6 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
                 ),
             ),
         ]
-
-    def clean(self):
-        if not self.custom_reason or not self.custom_reason.strip():
-            raise ValidationError("El motivo personalizado no puede estar vacío.")
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        # `name` can be set explicitly (e.g. the manual-duration-batch downtime uses a fixed
-        # name); otherwise it is derived from custom_reason.
-        self.name = self.name or self.custom_reason.strip()
-
-        super().save(*args, **kwargs)
 
     @property
     def duration(self):

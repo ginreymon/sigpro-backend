@@ -379,7 +379,6 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_availab
         # following records follow that rotation.
         current_activity_id = activity.id if activity else None
         first_instance = None
-        record_ids = []
         for record in records:
             if current_activity_id is not None:
                 record = {**record, 'work_session_activity': current_activity_id}
@@ -390,7 +389,6 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_availab
             current_activity_id = serializer.instance.work_session_activity_id
             if first_instance is None:
                 first_instance = serializer.instance
-            record_ids.append(serializer.instance.id)
 
             data = dict(serializer.data)
             data['duration_seconds'] = duration_seconds
@@ -398,7 +396,6 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_availab
 
         create_manual_duration_batch_downtime(
             record=first_instance,
-            record_ids=record_ids,
             indicators=indicators,
             duration_seconds=duration_seconds,
             user=request.user,
@@ -409,16 +406,14 @@ def perform_manual_duration_batch(view, request, tipo_modulo: str, extra_availab
 
 
 def create_manual_duration_batch_downtime(
-    *, record, record_ids, indicators: dict, duration_seconds: float, user, extra_seconds: float = 0,
+    *, record, indicators: dict, duration_seconds: float, user, extra_seconds: float = 0,
 ):
     """
     Creates the ModuleDowntime that covers the manual duration of a whole batch
     (manual-duration-batch): there is a single downtime per batch, linked only
     to the first created record (production_record or stamping_record,
-    depending on the type of `record`). custom_reason stores
-    {"record_ids": [...]} with the ids of ALL the records in the batch
-    (serialized to JSON), not just the linked one —
-    ModuleDowntime.save() derives `name` from custom_reason automatically.
+    depending on the type of `record`). Its name is the fixed
+    MANUAL_DURATION_BATCH_DOWNTIME_NAME.
 
     extra_seconds: additional time that is added to duration_seconds both for
     the shift budget validation and for the downtime's own span
@@ -468,7 +463,6 @@ def create_manual_duration_batch_downtime(
     return ModuleDowntime.objects.create(
         module=record.work_session_activity.module,
         name=MANUAL_DURATION_BATCH_DOWNTIME_NAME,
-        custom_reason=json.dumps({'record_ids': record_ids}),
         start_time=start_time,
         end_time=end_time,
         created_by=user,
