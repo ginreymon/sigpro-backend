@@ -17,7 +17,7 @@ from core.utils.date_utils import to_utc_naive
 
 # Shared by ProductionRecordViewSet and StampingRecordViewSet. It lives in
 # `apps.production` (stamping depends on production, never the reverse).
-MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'PRODUCTION RECORD DOWNTIME'
+MANUAL_DURATION_BATCH_DOWNTIME_NAME = 'DURACIÓN MANUAL'
 
 
 def active_work_session_and_activity(request):
@@ -412,8 +412,9 @@ def create_manual_duration_batch_downtime(
     Creates the ModuleDowntime that covers the manual duration of a whole batch
     (manual-duration-batch): there is a single downtime per batch, linked only
     to the first created record (production_record or stamping_record,
-    depending on the type of `record`). Its name is the fixed
-    MANUAL_DURATION_BATCH_DOWNTIME_NAME.
+    depending on the type of `record`). Its name is
+    "MANUAL_DURATION_BATCH_DOWNTIME_NAME - <AREA>" (the module's production
+    area), or just the fixed name when the module has no area.
 
     extra_seconds: additional time that is added to duration_seconds both for
     the shift budget validation and for the downtime's own span
@@ -460,9 +461,16 @@ def create_manual_duration_batch_downtime(
 
     link_field = "production_record" if isinstance(record, ProductionRecord) else "stamping_record"
 
+    module = record.work_session_activity.module
+    area = module.location
+    name = (
+        f"{MANUAL_DURATION_BATCH_DOWNTIME_NAME} - {area.name.upper()}"
+        if area else MANUAL_DURATION_BATCH_DOWNTIME_NAME
+    )
+
     return ModuleDowntime.objects.create(
-        module=record.work_session_activity.module,
-        name=MANUAL_DURATION_BATCH_DOWNTIME_NAME,
+        module=module,
+        name=name,
         start_time=start_time,
         end_time=end_time,
         created_by=user,
