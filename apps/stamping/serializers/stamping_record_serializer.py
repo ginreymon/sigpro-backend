@@ -103,6 +103,7 @@ class StampingRecordSerializer(OpRecordSerializer):
                 stamping_record=instance,
                 additional_stamping_time=item["id"],
                 count=item["count"],
+                standard_time_minutes=item["id"].standard_time_minutes,
                 created_by=validated_data.get("created_by"),
                 updated_by=validated_data.get("updated_by"),
             )
@@ -158,6 +159,7 @@ class StampingRecordSerializer(OpRecordSerializer):
                         stamping_record=instance,
                         additional_stamping_time=additional_stamping_time,
                         count=item["count"],
+                        standard_time_minutes=additional_stamping_time.standard_time_minutes,
                         created_by=validated_data.get("updated_by"),
                         updated_by=validated_data.get("updated_by"),
                     )

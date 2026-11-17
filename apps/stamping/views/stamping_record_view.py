@@ -40,7 +40,7 @@ def _additional_times_extra_seconds(records) -> float:
 
     standard_times = dict(
         AdditionalStampingTime.objects.filter(id__in=counts_by_id.keys())
-        .values_list('id', 'standard_time')
+        .values_list('id', 'standard_time_minutes')
     )
     total_minutes = sum(
         (Decimal(str(standard_times.get(item_id) or 0)) * count for item_id, count in counts_by_id.items()),

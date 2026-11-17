@@ -16,6 +16,10 @@ class StampingRecordAdditionalTime(TimeAuditModel, UserAuditModel):
 
     count = models.PositiveIntegerField(default=1)
 
+    # Snapshot of AdditionalStampingTime.standard_time_minutes (minutes per unit) taken when the
+    # selection is created; never recalculated from the master.
+    standard_time_minutes = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+
     class Meta:
         db_table = "stamping_stamping_record_additional_time"
         constraints = [

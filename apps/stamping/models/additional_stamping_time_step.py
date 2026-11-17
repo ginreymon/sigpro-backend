@@ -9,7 +9,7 @@ class AdditionalStampingTimeStep(AuditModel):
     )
     order = models.PositiveIntegerField()
     description = models.CharField(max_length=255)
-    standard_time = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    standard_time_minutes = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
 
     class Meta:
         db_table = "stamping_additional_stamping_time_step"

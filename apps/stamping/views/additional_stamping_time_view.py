@@ -9,5 +9,5 @@ class AdditionalStampingTimeViewSet(BaseModelViewSet):
     search_fields = ['code_number', 'engineering_code', 'process', 'machine__name']
     filterset_fields = [
         'code_number', 'engineering_code', 'machine', 'process',
-        'standard_time', 'is_active', 'created_by', 'updated_by',
+        'standard_time_minutes', 'is_active', 'created_by', 'updated_by',
     ]
