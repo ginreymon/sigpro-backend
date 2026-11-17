@@ -471,7 +471,6 @@ def create_manual_duration_batch_downtime(
         custom_reason=json.dumps({'record_ids': record_ids}),
         start_time=start_time,
         end_time=end_time,
-        resumed_at=None,
         created_by=user,
         updated_by=user,
         **{link_field: record},

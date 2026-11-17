@@ -2,7 +2,6 @@ from django.db import models
 from django.db.models import Q, CheckConstraint
 from django.core.exceptions import ValidationError
 from core.models.audit_model import TimeAuditModel, UserAuditModel
-from apps.production.models.work_break import WorkBreak
 from apps.production.models.module import Module
 from apps.production.models.production_record import ProductionRecord
 
@@ -11,14 +10,6 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
 
     module = models.ForeignKey(
         Module, on_delete=models.CASCADE, related_name="module_downtimes"
-    )
-
-    work_break = models.ForeignKey(
-        WorkBreak,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="module_downtimes",
     )
 
     # Paro auto-generado al registrar producción/estampación con hora inicial/
@@ -47,23 +38,11 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
 
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
-    resumed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "production_module_downtime"
         ordering = ["start_time", "end_time"]
         constraints = [
-            CheckConstraint(
-                name="module_work_break_or_custom_reason",
-                condition=(
-                    (Q(work_break__isnull=False) & Q(custom_reason__isnull=True))
-                    | (
-                        Q(work_break__isnull=True)
-                        & Q(custom_reason__isnull=False)
-                        & ~Q(custom_reason="")
-                    )
-                ),
-            ),
             CheckConstraint(
                 name="module_downtime_single_record_link",
                 condition=~(
@@ -74,25 +53,14 @@ class ModuleDowntime(TimeAuditModel, UserAuditModel):
         ]
 
     def clean(self):
-        if not self.work_break:
-            if not self.custom_reason or not self.custom_reason.strip():
-                raise ValidationError("El motivo personalizado no puede estar vacío.")
+        if not self.custom_reason or not self.custom_reason.strip():
+            raise ValidationError("El motivo personalizado no puede estar vacío.")
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        if self.work_break:
-            self.name = self.work_break.name
-            self.custom_reason = None
-
-            if self.start_time and not self.end_time:
-                self.end_time = self.start_time + self.work_break.duration
-
-        else:
-            # Permite fijar `name` explícitamente en create() (ej. el downtime
-            # de manual-duration-batch, que quiere un nombre fijo distinto
-            # del contenido de custom_reason) sin afectar el resto de
-            # downtimes con custom_reason, que siguen derivando `name` de él.
-            self.name = self.name or self.custom_reason.strip()
+        # `name` can be set explicitly (e.g. the manual-duration-batch downtime uses a fixed
+        # name); otherwise it is derived from custom_reason.
+        self.name = self.name or self.custom_reason.strip()
 
         super().save(*args, **kwargs)
 
