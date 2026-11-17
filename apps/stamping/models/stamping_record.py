@@ -9,8 +9,10 @@ class StampingRecord(OpWorkRecord, TepIntegrationRecord):
     stamping_reference_sam = models.ForeignKey(
         StampingReferenceSam,
         on_delete=models.PROTECT,
-        related_name="stamping_records",     
+        related_name="stamping_records",
     )
+    # SAM snapshot taken when the record was registered; never recalculated from the master.
+    applied_sam = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
 
     class Meta:
         db_table = "stamping_stamping_record"
