@@ -1,4 +1,7 @@
+from django.conf import settings
+from django.middleware.csrf import get_token
 from rest_framework import viewsets, status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -15,6 +18,32 @@ from core.models.option import Option
 from core.exceptions import error_response
 from core.models.role_home_view import RoleHomeView
 from core.permissions import has_option_access
+
+
+def _set_refresh_cookie(response, refresh_token: str):
+    """Stores the refresh token in an HttpOnly cookie scoped to the auth endpoints."""
+    response.set_cookie(
+        settings.REFRESH_COOKIE_NAME,
+        refresh_token,
+        max_age=settings.REFRESH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=settings.REFRESH_COOKIE_SECURE,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+        path=settings.REFRESH_COOKIE_PATH,
+    )
+
+
+def _delete_refresh_cookie(response):
+    response.delete_cookie(
+        settings.REFRESH_COOKIE_NAME,
+        path=settings.REFRESH_COOKIE_PATH,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+    )
+
+
+def _enforce_csrf(request):
+    """Double-submit CSRF check (csrftoken cookie + X-CSRFToken header); raises 403 on failure."""
+    SessionAuthentication().enforce_csrf(request)
 
 
 class AuthViewSet(viewsets.ViewSet):
@@ -78,17 +107,25 @@ class AuthViewSet(viewsets.ViewSet):
         refresh["groups"] = groups
         refresh["home_view"] = self._resolve_home_view(group_ids)
 
-        return Response(
+        # DUAL MODE: the refresh token is also returned in the body for clients that still
+        # keep it in localStorage. Remove "refresh" from the body once they are migrated.
+        response = Response(
             {
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
             }
         )
+        _set_refresh_cookie(response, str(refresh))
+        get_token(request._request)  # makes the CSRF middleware set the csrftoken cookie
+        return response
 
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='token/refresh')
     def refresh_token(self, request):
 
-        refresh_token = request.data.get("refresh")
+        # The cookie takes precedence; the body is the DUAL MODE fallback for legacy clients.
+        cookie_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+        from_cookie = bool(cookie_token)
+        refresh_token = cookie_token or request.data.get("refresh")
 
         if not refresh_token:
             return error_response(
@@ -96,16 +133,42 @@ class AuthViewSet(viewsets.ViewSet):
                 legacy={"error": "Refresh token requerido"},
             )
 
+        # Only a cookie is sent automatically by the browser, so only it needs CSRF protection.
+        if from_cookie:
+            _enforce_csrf(request)
+
         try:
             refresh = RefreshToken(refresh_token)
+            access = str(refresh.access_token)
 
-            return Response({"access": str(refresh.access_token)})
+            # ROTATE_REFRESH_TOKENS: issue a new refresh token on every refresh.
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+
+            data = {"access": access}
+            if not from_cookie:
+                data["refresh"] = str(refresh)  # legacy clients store it themselves
+
+            response = Response(data)
+            _set_refresh_cookie(response, str(refresh))  # also migrates legacy clients to the cookie
+            get_token(request._request)
+            return response
 
         except TokenError:
-            return error_response(
+            response = error_response(
                 "Refresh token inválido o expirado", status_code=status.HTTP_401_UNAUTHORIZED,
                 code="invalid_refresh_token", legacy={"error": "Refresh token inválido o expirado"},
             )
+            _delete_refresh_cookie(response)
+            return response
+
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='logout')
+    def logout(self, request):
+        # Only clears the cookie, so it needs neither authentication nor CSRF protection.
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        _delete_refresh_cookie(response)
+        return response
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated], url_path="change-password")
     def change_password(self, request):
