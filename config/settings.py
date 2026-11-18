@@ -115,7 +115,26 @@ CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
+    "x-csrftoken",
 ]
+
+# The refresh token travels in an HttpOnly cookie, so cross-origin calls need credentials.
+CORS_ALLOW_CREDENTIALS = True
+
+# Refresh-token cookie. Keep REFRESH_COOKIE_SECURE=False while the API is served over
+# plain HTTP (a Secure cookie is never stored over HTTP); set it to True once HTTPS exists.
+REFRESH_COOKIE_NAME = "refresh_token"
+REFRESH_COOKIE_SECURE = env.bool("REFRESH_COOKIE_SECURE", default=False)
+REFRESH_COOKIE_SAMESITE = "Lax"
+REFRESH_COOKIE_PATH = "/api/v1/auth/"
+REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
+
+# CSRF (double-submit cookie) protects the endpoint that reads the refresh cookie.
+# The frontend must read the cookie to echo it in the X-CSRFToken header, so it is not HttpOnly.
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = REFRESH_COOKIE_SECURE
+CSRF_TRUSTED_ORIGINS = [*CORS_ALLOWED_ORIGINS]
 
 ROOT_URLCONF = 'config.urls'
 
