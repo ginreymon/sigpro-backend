@@ -85,6 +85,11 @@ class WorkSessionActivity(TimeAuditModel, UserAuditModel, ActiveModel):
 
     @property
     def last_production_record(self):
+        cache = getattr(self, "_prefetched_objects_cache", None)
+        if isinstance(cache, dict) and "production_records" in cache:
+            # shortcut: the prefetch holds only the active activity's records (see
+            # WorkSessionRepository.detail_queryset); a closed activity needs the query below.
+            return max((r for r in self.production_records.all()), key=lambda r: r.start_time, default=None)
         return (
             self.production_records
             .order_by("-start_time")

@@ -1,6 +1,9 @@
+from django.db.models import Prefetch
+
 from apps.people.models import EmployeeLocal
 from apps.production.models import (
     Module,
+    ProductionRecord,
     WorkBreak,
     WorkBreakRecord,
     WorkSession,
@@ -15,14 +18,34 @@ class WorkSessionRepository:
 
     @staticmethod
     def detail_queryset():
+        # The serializers read the audit users and the module/area/shift trees: join them here so
+        # each is one query instead of one per field (the endpoint is round-trip bound).
+        area_tree = ("created_by", "updated_by", "core_module")
         return (
             WorkSession.objects.all()
-            .select_related("work_shift", "user")
+            .select_related(
+                "work_shift", "user", "created_by", "updated_by",
+                "work_shift__created_by", "work_shift__updated_by",
+                *(f"work_shift__location__{f}" for f in area_tree), "work_shift__location",
+            )
             .prefetch_related(
-                "work_session_activities__module",
+                Prefetch(
+                    "work_session_activities",
+                    queryset=WorkSessionActivity.objects.select_related(
+                        "module", "module__created_by", "module__updated_by", "module__work_center",
+                        "module__location", *(f"module__location__{f}" for f in area_tree),
+                    ),
+                ),
                 "work_session_activities__employee_snapshots__employee",
                 "work_session_activities__work_break_records",
-                "work_session_activities__production_records",
+                # Only the active activity's records are ever serialized (last open / last record).
+                Prefetch(
+                    "work_session_activities__production_records",
+                    queryset=ProductionRecord.objects.filter(
+                        work_session_activity__ended_at__isnull=True,
+                        work_session_activity__is_active=True,
+                    ).select_related("created_by", "updated_by"),
+                ),
             )
         )
 

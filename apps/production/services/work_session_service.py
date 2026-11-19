@@ -80,7 +80,16 @@ def shift_start_utc(session, shift_start_time, shift_end_time) -> datetime:
 
 def session_core_module_id(session):
     """core_module_id (process) of the session's active activity, or None if it has none/unassigned location."""
-    activity = session.get_active_activity()
+    cache = getattr(session, "_prefetched_objects_cache", None)
+    if isinstance(cache, dict) and "work_session_activities" in cache:
+        # Loaded by detail_queryset: same pick as get_active_activity, without another query.
+        activity = max(
+            (a for a in session.work_session_activities.all() if a.ended_at is None and a.is_active),
+            key=lambda a: (a.started_at, a.id),
+            default=None,
+        )
+    else:
+        activity = session.get_active_activity()
     if not activity or not activity.module.location_id:
         return None
     return activity.module.location.core_module_id
