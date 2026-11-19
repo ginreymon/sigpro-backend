@@ -3,9 +3,12 @@ from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkBreak
 from apps.production.serializers import WorkBreakSerializer
 from django.db import models  # type: ignore
+from core import option_keys as opt
 
 
 class WorkBreakViewSet(AuditModelViewSet):
+    write_options = (opt.WORK_BREAKS, opt.GENERAL_CONFIG)
+
     queryset = WorkBreak.objects.all()
     serializer_class = WorkBreakSerializer
 

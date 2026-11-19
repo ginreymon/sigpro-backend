@@ -18,6 +18,7 @@ from apps.stamping.serializers.audit_record_serializer import (
     validate_query_params,
 )
 from apps.stamping.services.audit_record_service import AuditRecordService
+from core import option_keys as opt
 
 
 class AuditRecordDetailFilterSet(filters.FilterSet):
@@ -54,6 +55,8 @@ class AuditRecordViewSet(AuditModelViewSet):
     La vista solo interpreta la petición y serializa la respuesta; las reglas
     viven en AuditRecordService y el acceso a datos en AuditRecordRepository.
     """
+
+    write_options = (opt.AUDITORY,)
 
     queryset = AuditRecordRepository.details_queryset()
     serializer_class = AuditRecordSerializer

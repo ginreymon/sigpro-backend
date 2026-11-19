@@ -4,9 +4,12 @@ from rest_framework.response import Response
 from apps.production.models import SkuItemLocal, ReferenceSam
 from apps.production.serializers import SkuItemLocalSerializer, SkuItemReferenceSerializer
 from .local_base_model_view import LocalBaseModelViewSet
+from core import option_keys as opt
 
 
 class SkuItemLocalViewSet(LocalBaseModelViewSet):
+    write_options = (opt.SEWING_CONFIG,)
+
     queryset = SkuItemLocal.objects.filter(is_deleted=False).annotate(
         sam_value=Subquery(
             ReferenceSam.objects.filter(rowid_item=OuterRef("rowid_item")).values("sam")[:1]

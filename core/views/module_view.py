@@ -3,9 +3,12 @@ from rest_framework.response import Response
 from core.views.base_model_view import BaseModelViewSet
 from core.models.module import Module
 from core.serializers.module_serializer import ModuleSerializer, ModuleWithOptionsSerializer
+from core import option_keys as opt
 
 
 class ModuleViewSet(BaseModelViewSet):
+    write_options = (opt.ROLES,)
+
     queryset = Module.objects.all()
     serializer_class = ModuleSerializer
 

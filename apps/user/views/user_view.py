@@ -1,14 +1,14 @@
 from django.contrib.auth.models import User
-from core.permissions import OptionWritePermission
 from core.views.base_model_view import BaseModelViewSet
 from apps.user.serializers.user_update_serializer import UserUpdateSerializer
 from rest_framework.response import Response
 from rest_framework import status
+from core import option_keys as opt
 
 
 class UserViewSet(BaseModelViewSet):
-    permission_classes = [OptionWritePermission]
-    option_url = "users"
+    write_options = (opt.USERS,)
+
     queryset = User.objects.select_related("employee_link__employee_local").prefetch_related("groups").order_by("username")
     search_fields = [
         "username",

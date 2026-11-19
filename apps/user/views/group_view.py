@@ -3,9 +3,12 @@ from django.contrib.auth.models import Group
 from django.db.models import Count
 from apps.user.serializers.group_serializer import GroupSerializer
 from core.exceptions import error_response
+from core import option_keys as opt
 
 
 class GroupViewSet(BaseModelViewSet):
+    write_options = (opt.ROLES,)
+
     queryset = Group.objects.prefetch_related(
         "permissions", "group_options__option"
     ).select_related(

@@ -3,9 +3,12 @@ from core.views.base_model_view import BaseModelViewSet
 from apps.production.models import SkuItemLocal
 from apps.stamping.models import StampingReferenceSam
 from apps.stamping.serializers import StampingReferenceSamSerializer
+from core import option_keys as opt
 
 
 class StampingReferenceSamViewSet(BaseModelViewSet):
+    write_options = (opt.MACHINES_CONFIG,)
+
     queryset = StampingReferenceSam.objects.annotate(
         reference=SkuItemLocal.reference_subquery(),
     )

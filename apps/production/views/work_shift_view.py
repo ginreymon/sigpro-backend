@@ -1,9 +1,12 @@
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import WorkShift
 from apps.production.serializers import WorkShiftSerializer
+from core import option_keys as opt
 
 
 class WorkShiftViewSet(AuditModelViewSet):
+    write_options = (opt.WORK_SHIFTS, opt.GENERAL_CONFIG, opt.SEWING_CONFIG)
+
     queryset = WorkShift.objects.select_related("location", "location__core_module").all()
     serializer_class = WorkShiftSerializer
 

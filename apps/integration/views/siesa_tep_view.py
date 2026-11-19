@@ -2,7 +2,6 @@ import datetime as dt
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from core.exceptions import error_response
 
@@ -20,6 +19,7 @@ from apps.integration.services.siesa_webservice_client import (
     SiesaWebserviceError,
     send_flat_file_lines,
 )
+from core import option_keys as opt
 
 
 class SiesaTepViewSet(viewsets.ViewSet):
@@ -31,7 +31,7 @@ class SiesaTepViewSet(viewsets.ViewSet):
     advertencia en `siesa_webservice_client.py`).
     """
 
-    permission_classes = [IsAuthenticated]
+    write_options = opt.INTEGRATION
 
     ## integration/tep/send/
     @action(detail=False, methods=["post"], url_path="tep/send")

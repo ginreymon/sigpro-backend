@@ -8,6 +8,7 @@ from apps.production.serializers import WorkSessionSerializer
 from apps.production.serializers.work_session_activity_serializer import WorkSessionActivitySerializer
 from apps.production.services import work_session_service
 from apps.production.views.session_rule_error_mixin import SessionRuleErrorMixin
+from core import option_keys as opt
 
 
 class ContinueInputSerializer(drf_serializers.Serializer):
@@ -22,6 +23,8 @@ class ContinueInputSerializer(drf_serializers.Serializer):
 class WorkSessionViewSet(SessionRuleErrorMixin, AuditModelViewSet):
     """The session rules (single open session per user, expiry, rotation) live
     in work_session_service; this view only reads the request and serializes."""
+
+    write_options = (opt.PROD_DAY_OPERATION, opt.PROD_SHIFT_CYCLES, opt.STAMP_DAY_OPERATION, opt.STAMP_SHIFT_CYCLES, *opt.SESSION_EDITORS_ADMIN)
 
     queryset = WorkSession.objects.all()
     serializer_class = WorkSessionSerializer

@@ -12,6 +12,7 @@ from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
 from apps.stamping.models.stamping_record import StampingRecord
 from apps.stamping.models.stamping_reference_sam import StampingReferenceSam
 from apps.stamping.serializers import StampingRecordSerializer
+from core import option_keys as opt
 
 
 def _additional_times_extra_seconds(records) -> float:
@@ -50,6 +51,8 @@ def _additional_times_extra_seconds(records) -> float:
 
 
 class StampingRecordViewSet(OpRecordViewSet):
+    write_options = (opt.STAMP_SHIFT_CYCLES, *opt.SESSION_EDITORS_ADMIN)
+
     queryset = StampingRecord.objects.all()
     serializer_class = StampingRecordSerializer
     module_type = 'stamping'

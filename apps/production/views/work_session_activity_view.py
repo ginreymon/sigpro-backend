@@ -8,11 +8,14 @@ from apps.production.serializers.work_session_activity_serializer import WorkSes
 from apps.production.serializers.work_break_record_serializer import WorkBreakRecordSerializer
 from apps.production.services import work_break_service
 from apps.production.views.session_rule_error_mixin import SessionRuleErrorMixin
+from core import option_keys as opt
 
 
 class WorkSessionActivityViewSet(SessionRuleErrorMixin, AuditModelViewSet):
     """Pause/resume rules live in work_break_service; this view only reads the
     request and serializes."""
+
+    write_options = (opt.PROD_DAY_OPERATION, opt.PROD_SHIFT_CYCLES, opt.STAMP_DAY_OPERATION, opt.STAMP_SHIFT_CYCLES, *opt.SESSION_EDITORS_ADMIN)
 
     queryset = WorkSessionActivity.objects.all()
     serializer_class = WorkSessionActivitySerializer

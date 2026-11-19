@@ -4,9 +4,12 @@ from rest_framework.response import Response
 from core.models.app_setting import AppSetting
 from core.serializers.app_setting_serializer import AppSettingSerializer
 from core.views.audit_model_view import AuditModelViewSet
+from core import option_keys as opt
 
 
 class AppSettingViewSet(AuditModelViewSet):
+    write_options = (opt.APP_SETTINGS,)
+
     queryset = AppSetting.objects.all()
     serializer_class = AppSettingSerializer
 

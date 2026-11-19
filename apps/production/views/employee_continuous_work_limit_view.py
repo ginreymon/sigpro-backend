@@ -1,9 +1,12 @@
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import EmployeeContinuousWorkLimit
 from apps.production.serializers import EmployeeContinuousWorkLimitSerializer
+from core import option_keys as opt
 
 
 class EmployeeContinuousWorkLimitViewSet(AuditModelViewSet):
+    write_options = (opt.MODULES, opt.GENERAL_CONFIG, opt.SEWING_CONFIG)
+
     queryset = EmployeeContinuousWorkLimit.objects.select_related("employee").all()
     serializer_class = EmployeeContinuousWorkLimitSerializer
 

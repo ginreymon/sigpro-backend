@@ -3,9 +3,12 @@ from decimal import Decimal, InvalidOperation
 from apps.production.models import ProductionRecord, ReferenceSam, SkuItemLocal
 from apps.production.serializers import ProductionRecordSerializer
 from apps.production.views.op_record_view import OpRecordViewSet
+from core import option_keys as opt
 
 
 class ProductionRecordViewSet(OpRecordViewSet):
+    write_options = (opt.PROD_SHIFT_CYCLES, *opt.SESSION_EDITORS_ADMIN)
+
     queryset = ProductionRecord.objects.all()
     serializer_class = ProductionRecordSerializer
     module_type = 'production'

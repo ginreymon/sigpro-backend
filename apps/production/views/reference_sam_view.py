@@ -5,9 +5,12 @@ from django.db.models import Count, IntegerField, OuterRef, Subquery
 from apps.production.models import ReferenceSam, SkuItemLocal
 from apps.production.serializers import ReferenceSamSerializer
 from core.views.base_model_view import BaseModelViewSet
+from core import option_keys as opt
 
 
 class ReferenceSamViewSet(BaseModelViewSet):
+    write_options = (opt.SEWING_CONFIG,)
+
     queryset = ReferenceSam.objects.annotate(
         skus_count=Subquery(
             SkuItemLocal.objects.filter(

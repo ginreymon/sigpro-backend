@@ -6,9 +6,12 @@ from apps.production.serializers.employee_last_module_serializer import (
 from apps.people.models import EmployeeLocal
 from apps.people.serializers import EmployeeLocalSerializer
 from .local_base_model_view import LocalBaseModelViewSet
+from core import option_keys as opt
 
 
 class EmployeeLocalViewSet(LocalBaseModelViewSet):
+    write_options = (opt.MODULES, opt.GENERAL_CONFIG, opt.SEWING_CONFIG)
+
     queryset = EmployeeLocal.objects.filter(is_deleted=False).select_related(
         "user_link__auth_user"
     )

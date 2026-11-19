@@ -5,9 +5,12 @@ from rest_framework.response import Response
 from core.views.audit_model_view import AuditModelViewSet
 from apps.production.models import Module, ModuleAssignee
 from apps.production.serializers import ModuleSerializer
+from core import option_keys as opt
 
 
 class ModuleViewSet(AuditModelViewSet):
+    write_options = (opt.MODULES, opt.GENERAL_CONFIG, opt.SEWING_CONFIG)
+
     queryset = Module.objects.select_related(
         "work_center", "location", "stamping_machine_assignment", "stamping_machine_assignment__machine"
     ).prefetch_related("assigned_users__user")
