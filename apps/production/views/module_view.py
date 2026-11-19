@@ -10,6 +10,10 @@ from core import option_keys as opt
 
 class ModuleViewSet(AuditModelViewSet):
     write_options = (opt.MODULES, opt.GENERAL_CONFIG, opt.SEWING_CONFIG)
+    # Day operation users remove employees from their module list (no open session).
+    write_options_by_action = {
+        "remove_employee": (opt.PROD_DAY_OPERATION, opt.STAMP_DAY_OPERATION, *write_options),
+    }
 
     queryset = Module.objects.select_related(
         "work_center", "location", "stamping_machine_assignment", "stamping_machine_assignment__machine"
