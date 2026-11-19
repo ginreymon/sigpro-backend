@@ -6,6 +6,7 @@ from core import option_keys as opt
 
 class GroupOptionViewSet(BaseModelViewSet):
     write_options = (opt.ROLES,)
+    read_options = (opt.ROLES,)
 
     queryset = GroupOption.objects.all()
     serializer_class = GroupOptionSerializer

@@ -8,6 +8,7 @@ from core import option_keys as opt
 
 class UserViewSet(BaseModelViewSet):
     write_options = (opt.USERS,)
+    read_options = (opt.USERS,)
 
     queryset = User.objects.select_related("employee_link__employee_local").prefetch_related("groups").order_by("username")
     search_fields = [

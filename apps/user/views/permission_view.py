@@ -6,6 +6,7 @@ from core import option_keys as opt
 
 class PermissionViewSet(BaseModelViewSet):
     write_options = (opt.ROLES,)
+    read_options = (opt.ROLES,)
 
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer

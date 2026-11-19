@@ -6,10 +6,13 @@ from core.permissions import has_option_access
 from core.views.base_model_view import BaseModelViewSet
 from apps.people.models import EmployeeLocal
 from apps.people.serializers import EmployeeLocalSerializer
+from core import option_keys as opt
 
 
 class EmployeeDirectoryViewSet(BaseModelViewSet):
     """Employee directory without cost-center filter, used for account administration."""
+
+    read_options = (opt.USERS,)
 
     queryset = (
         EmployeeLocal.objects.filter(is_deleted=False).select_related("user_link__auth_user")

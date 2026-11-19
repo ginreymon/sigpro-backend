@@ -8,6 +8,7 @@ from core import option_keys as opt
 
 class GroupViewSet(BaseModelViewSet):
     write_options = (opt.ROLES,)
+    read_options = (opt.ROLES,)
 
     queryset = Group.objects.prefetch_related(
         "permissions", "group_options__option"

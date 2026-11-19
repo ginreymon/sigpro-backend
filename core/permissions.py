@@ -30,12 +30,15 @@ def has_option_access(user, option_url: str) -> bool:
 
 
 class RoleOptionPermission(BasePermission):
-    """Default permission: reads need only authentication; writes are denied unless
-    the view declares `write_options` and the user's role holds at least one of them.
+    """Default permission. Writes are denied unless the view declares `write_options`
+    and the user's role holds at least one of them. Reads need only authentication,
+    unless the view declares `read_options` (any one of them is then required).
 
     View attributes:
       write_options            tuple of option keys that enable every write action.
       write_options_by_action  optional {action_name: tuple} override per action.
+      read_options             tuple of option keys required to read (default () = open).
+      read_options_by_action   optional {action_name: tuple} override per action.
     """
 
     message = "No tiene permisos para realizar esta acción."
@@ -43,13 +46,19 @@ class RoleOptionPermission(BasePermission):
     def has_permission(self, request, view):
         if not (request.user and request.user.is_authenticated):
             return False
+        action = getattr(view, "action", None)
         if request.method in SAFE_METHODS:
-            return True
-        required = getattr(view, "write_options_by_action", {}).get(
-            getattr(view, "action", None), getattr(view, "write_options", ())
-        )
-        if not required:
-            return False  # default deny
+            required = getattr(view, "read_options_by_action", {}).get(
+                action, getattr(view, "read_options", ())
+            )
+            if not required:
+                return True  # reads are open by default
+        else:
+            required = getattr(view, "write_options_by_action", {}).get(
+                action, getattr(view, "write_options", ())
+            )
+            if not required:
+                return False  # writes are denied by default
         return not user_option_keys(request.user, request).isdisjoint(required)
 
 

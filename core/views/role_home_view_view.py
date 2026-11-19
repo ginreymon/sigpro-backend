@@ -6,6 +6,7 @@ from core import option_keys as opt
 
 class RoleHomeViewViewSet(AuditModelViewSet):
     write_options = (opt.ROLES,)
+    read_options = (opt.ROLES,)
 
     queryset = RoleHomeView.objects.select_related('group', 'home_view').all()
     serializer_class = RoleHomeViewSerializer
