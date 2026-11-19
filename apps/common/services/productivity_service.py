@@ -32,7 +32,7 @@ class BaseProductivityService:
         )
 
     @classmethod
-    def get_module_shift_summary(cls, core_module_id: int | None = None) -> list[dict]:
+    def get_module_shift_summary(cls, core_module_id: int | None = None, module_id: int | None = None) -> list[dict]:
         data = cls.repository.get_module_shift_summary()
 
         module_ids = cls.module_ids()
@@ -43,6 +43,10 @@ class BaseProductivityService:
         )
         for row in data:
             row["core_module_id"] = core_module_by_id.get(row.get("module_id"))
+
+        # The SP returns every module; module_id narrows to one (still within this area's modules).
+        if module_id is not None:
+            data = [row for row in data if row.get("module_id") == module_id]
 
         if core_module_id is None:
             return data
