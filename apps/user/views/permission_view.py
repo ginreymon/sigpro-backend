@@ -5,7 +5,8 @@ from core import option_keys as opt
 
 
 class PermissionViewSet(BaseModelViewSet):
-    write_options = (opt.ROLES,)
+    # Django permissions do not authorize the API (menu options do): read-only catalog.
+    http_method_names = ["get", "head", "options"]
     read_options = (opt.ROLES,)
 
     queryset = Permission.objects.all()

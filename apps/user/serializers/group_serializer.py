@@ -2,6 +2,8 @@ from rest_framework import serializers
 from apps.user.serializers.permission_serializer import PermissionSerializer
 from core.serializers.option_serializer import OptionSerializer
 from core.models.group_option import GroupOption
+from core.models.option import Option
+from core.permissions import other_role_managers, roles_option_ids
 from core.models.role_home_view import RoleHomeView
 from django.contrib.auth.models import Group
 from django.db import transaction
@@ -21,6 +23,43 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = "__all__"
+
+    def validate_option_ids(self, value):
+        """Drop duplicates and reject unknown/inactive options (already assigned ones are tolerated)."""
+        ids = list(dict.fromkeys(value))
+        allowed = set(
+            Option.objects.filter(id__in=ids, state=True, module__state=True).values_list("id", flat=True)
+        )
+        if self.instance is not None:
+            allowed |= set(
+                GroupOption.objects.filter(group=self.instance, option_id__in=ids).values_list("option_id", flat=True)
+            )
+        invalid = [i for i in ids if i not in allowed]
+        if invalid:
+            raise serializers.ValidationError(f"Opciones inexistentes o inactivas: {invalid}")
+        return ids
+
+    def validate(self, attrs):
+        """Never let a role edit remove the last access to the roles screen (or the editor's own)."""
+        ids = attrs.get("option_ids")
+        if self.instance is None or ids is None:
+            return attrs
+        roles_ids = set(roles_option_ids())
+        holds_now = GroupOption.objects.filter(group=self.instance, option_id__in=roles_ids).exists()
+        if not holds_now or roles_ids & set(ids):
+            return attrs
+        others = other_role_managers(self.instance)
+        if not others.exists():
+            raise serializers.ValidationError(
+                {"option_ids": "Debe existir al menos otro rol activo con acceso a Roles."}
+            )
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is not None and user.groups.filter(pk=self.instance.pk).exists()                 and not others.filter(group__user=user).exists():
+            raise serializers.ValidationError(
+                {"option_ids": "No puede quitarse a sí mismo el acceso a Roles."}
+            )
+        return attrs
 
     def get_options(self, obj):
         options = [go.option for go in obj.group_options.all()]
