@@ -106,6 +106,11 @@ MIDDLEWARE = [
 
 # Allowed origins come only from the environment, so production lists just its own domains.
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS_EXTRA", default=[])
+if DEBUG:
+    # Angular dev server: always allowed in development, never when DEBUG is off (production).
+    CORS_ALLOWED_ORIGINS += [
+        o for o in ("http://localhost:4200", "http://127.0.0.1:4200") if o not in CORS_ALLOWED_ORIGINS
+    ]
 
 # The frontend reads the generated file name from this header on downloads.
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
