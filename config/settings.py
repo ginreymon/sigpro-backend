@@ -104,10 +104,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-    *env.list("CORS_ALLOWED_ORIGINS_EXTRA", default=[]),
-]
+# Allowed origins come only from the environment, so production lists just its own domains.
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS_EXTRA", default=[])
 
 # The frontend reads the generated file name from this header on downloads.
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
@@ -135,6 +133,24 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = REFRESH_COOKIE_SECURE
 CSRF_TRUSTED_ORIGINS = [*CORS_ALLOWED_ORIGINS]
+
+# Session cookie (Django admin) follows the same HTTPS switch as the refresh/CSRF cookies.
+SESSION_COOKIE_SECURE = REFRESH_COOKIE_SECURE
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+
+# HTTPS enforcement. All default to off so HTTP deployments keep working; enable in the
+# production .env once IIS serves HTTPS.
+# SECURE_SSL_REDIRECT=True redirects HTTP to HTTPS. Behind IIS/ARR set USE_X_FORWARDED_PROTO=True
+# (and make the proxy send X-Forwarded-Proto) or Django never sees HTTPS and loops forever.
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+if env.bool("USE_X_FORWARDED_PROTO", default=False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# HSTS: start small (e.g. 300), raise to 31536000 once HTTPS is confirmed. Browsers cache it.
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 ROOT_URLCONF = 'config.urls'
 
