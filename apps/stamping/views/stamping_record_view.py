@@ -1,12 +1,5 @@
 from decimal import Decimal, InvalidOperation
 
-from rest_framework.decorators import action
-from rest_framework.response import Response
-
-from apps.production.services.op_record_batch_service import (
-    assert_single_record_within_cap,
-    simulate_single_record,
-)
 from apps.production.views.op_record_view import OpRecordViewSet
 from apps.stamping.models.additional_stamping_time import AdditionalStampingTime
 from apps.stamping.models.stamping_record import StampingRecord
@@ -68,28 +61,6 @@ class StampingRecordViewSet(OpRecordViewSet):
         """
         records = request.data.get('records')
         return _additional_times_extra_seconds(records) if isinstance(records, list) else 0.0
-
-    def _single_record_check_args(self, request) -> dict:
-        """Arguments of the efficiency check of one regular record (request.data is the record)."""
-        record = request.data
-        return {
-            'request': request,
-            'tipo_modulo': self.module_type,
-            'lines': self.get_batch_efficiency_lines([record]),
-            'extra_seconds': _additional_times_extra_seconds([record]),
-        }
-
-    @action(detail=False, methods=["post"], url_path="simulate")
-    def simulate(self, request):
-        """POST .../stamping-records/simulate/ — read-only efficiency check of a
-        regular record (same payload as create()); see simulate_single_record."""
-        return Response(simulate_single_record(**self._single_record_check_args(request)))
-
-    def create(self, request, *args, **kwargs):
-        # Regular (non-manual) flow only: the manual batch saves through
-        # perform_create and has its own cap check (perform_manual_duration_batch).
-        assert_single_record_within_cap(**self._single_record_check_args(request))
-        return super().create(request, *args, **kwargs)
 
     def get_batch_efficiency_lines(self, records) -> list:
         """SAM per record: stamping_reference_sam (id) -> StampingReferenceSam.sam.
