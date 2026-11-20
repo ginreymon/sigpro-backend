@@ -57,7 +57,8 @@ INSTALLED_APPS = [
     'apps.user',
     'apps.production',
     'apps.stamping',
-    'apps.integration'
+    'apps.integration',
+    'apps.email_service',
 ]
 
 REST_FRAMEWORK = {
@@ -265,6 +266,19 @@ SIESA_TEP_OPERATION_CENTER_ID = env('SIESA_TEP_OPERATION_CENTER_ID', default='00
 # Minimum TEP consecutive: the next document number is max(last stored + 1, this value).
 SIESA_TEP_DOCUMENT_NUMBER_START = env.int('SIESA_TEP_DOCUMENT_NUMBER_START', default=1)
 
+# Centralized email service (email_service app, Microsoft Graph). Disabled by default:
+# if not enabled/configured, send_email() logs and returns a failed result; startup is unaffected.
+EMAIL_SERVICE_ENABLED = env.bool('EMAIL_SERVICE_ENABLED', default=False)
+EMAIL_PROVIDER = env('EMAIL_PROVIDER', default='microsoft_graph')
+MICROSOFT_TENANT_ID = env('MICROSOFT_TENANT_ID', default='')
+MICROSOFT_CLIENT_ID = env('MICROSOFT_CLIENT_ID', default='')
+MICROSOFT_CLIENT_SECRET = env('MICROSOFT_CLIENT_SECRET', default='')
+MICROSOFT_SENDER_EMAIL = env('MICROSOFT_SENDER_EMAIL', default='')
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=15)
+EMAIL_TOKEN_CACHE_SECONDS = env.int('EMAIL_TOKEN_CACHE_SECONDS', default=3300)
+EMAIL_SAVE_TO_SENT_ITEMS = env.bool('EMAIL_SAVE_TO_SENT_ITEMS', default=True)
+EMAIL_MAX_RETRIES = env.int('EMAIL_MAX_RETRIES', default=3)
+
 # runserver's autoreload spawns a child process (RUN_MAIN=true); the pre-fork
 # parent never serves requests but would otherwise open the same log file too,
 # causing PermissionError on rotation when the child rotates it.
@@ -322,6 +336,11 @@ LOGGING = {
             "propagate": False,
         },
         "integration": {
+            "handlers": _LOG_HANDLERS,
+            "level": "INFO",
+            "propagate": False,
+        },
+        "email_service": {
             "handlers": _LOG_HANDLERS,
             "level": "INFO",
             "propagate": False,

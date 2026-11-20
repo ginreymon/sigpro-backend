@@ -1,0 +1,23 @@
+{% extends "emails/base.html" %}
+{% comment %}
+Generic notification. Context: title (str), message (str), details (optional list of (label, value)),
+action_url / action_label (optional).
+{% endcomment %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+  <h2 style="margin:0 0 16px 0;font-size:18px;color:#1f3a5f;">{{ title }}</h2>
+  <p style="margin:0 0 16px 0;">{{ message }}</p>
+  {% if details %}
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px 0;">
+    {% for label, value in details %}
+    <tr>
+      <td style="padding:6px 0;font-weight:bold;width:40%;color:#374151;">{{ label }}</td>
+      <td style="padding:6px 0;">{{ value }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% if action_url %}
+  <a href="{{ action_url }}" style="display:inline-block;padding:10px 20px;background-color:#1f3a5f;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">{{ action_label|default:"Ver en SIGPRO" }}</a>
+  {% endif %}
+{% endblock %}
