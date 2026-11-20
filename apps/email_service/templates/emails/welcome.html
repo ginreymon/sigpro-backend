@@ -1,0 +1,13 @@
+{% extends "emails/base.html" %}
+{% comment %}
+Per-user welcome. Context: user_name (str), username (str, optional), login_url (optional).
+{% endcomment %}
+{% block title %}Bienvenido a SIGPRO{% endblock %}
+{% block header %}Bienvenido a SIGPRO{% endblock %}
+{% block content %}
+  <p style="margin:0 0 16px 0;">Hola <strong>{{ user_name }}</strong>,</p>
+  <p style="margin:0 0 16px 0;">Tu cuenta en SIGPRO está lista.{% if username %} Tu usuario es <strong>{{ username }}</strong>.{% endif %}</p>
+  {% if login_url %}
+  <a href="{{ login_url }}" style="display:inline-block;padding:10px 20px;background-color:#1f3a5f;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">Ingresar a SIGPRO</a>
+  {% endif %}
+{% endblock %}
