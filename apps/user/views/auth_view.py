@@ -119,6 +119,18 @@ class AuthViewSet(viewsets.ViewSet):
         get_token(request._request)  # makes the CSRF middleware set the csrftoken cookie
         return response
 
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny], url_path='my-network')
+    def my_network(self, request):
+        # TEMPORARY diagnostic (remove once the internal-network rule is designed): echoes only
+        # what the caller's own request carries, so nothing sensitive is exposed.
+        meta = request.META
+        return Response({
+            "remote_addr": meta.get("REMOTE_ADDR"),
+            "x_forwarded_for": meta.get("HTTP_X_FORWARDED_FOR"),
+            "host": meta.get("HTTP_HOST"),
+            "server_addr": meta.get("SERVER_NAME"),
+        })
+
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path='token/refresh')
     def refresh_token(self, request):
 
