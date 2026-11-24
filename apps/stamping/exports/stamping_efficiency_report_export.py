@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -14,8 +14,6 @@ from apps.production.exports.efficiency_report_export import (
 from apps.production.helpers.excel_formatters import fmt_datetime_local, utc_to_local
 from apps.production.reports.productivity_columns import RECORD_DESCRIPTIONS, RECORD_LABELS, UNKNOWN_COLUMN_DESCRIPTION
 from apps.stamping.reports.stamping_columns import STAMPING_COLUMNS, STAMPING_LABELS, STAMPING_RECORD_FIELDS
-
-_HALF_DAY = timedelta(hours=12)
 
 
 def _num(value):
@@ -36,18 +34,6 @@ def _as_time(value) -> time | None:
 def _local_naive(value) -> datetime | None:
     local = utc_to_local(value)
     return local.replace(tzinfo=None) if local else None
-
-
-def _shift_start_datetime(workday_start: datetime | None, shift_start: time | None) -> datetime | None:
-    """Shift start time placed on the workday's date (shifted a day if it crosses midnight)."""
-    if workday_start is None or shift_start is None:
-        return None
-    candidate = datetime.combine(workday_start.date(), shift_start)
-    if candidate - workday_start > _HALF_DAY:
-        candidate -= timedelta(days=1)
-    elif workday_start - candidate > _HALF_DAY:
-        candidate += timedelta(days=1)
-    return candidate
 
 
 def _last_record_by_workday(records: list[dict]) -> dict:
@@ -71,7 +57,6 @@ def _derive(row: dict, last_record) -> dict:
     start = _local_naive(row.get("shift_start_utc"))
     workday_end = _local_naive(row.get("ended_at"))
     shift_end_utc = last_record or row.get("ended_at")
-    end = _local_naive(shift_end_utc)
     shift_start = _as_time(row.get("shift_start_time"))
     shift_end = _as_time(row.get("shift_end_time"))
 
@@ -86,15 +71,6 @@ def _derive(row: dict, last_record) -> dict:
     out["pieces_produced"] = round(completed * factor, 2) if factor is not None and completed is not None else None
     out["target_pieces"] = round(target * factor, 2) if factor is not None and target is not None else None
 
-    shift_start_dt = _shift_start_datetime(start, shift_start)
-    installed = (end - shift_start_dt).total_seconds() / 60 if end and shift_start_dt else None
-    out["installed_minutes"] = installed
-    if installed is None:
-        out["produced_minutes"] = out["productivity"] = None
-    else:
-        deductions = (_num(out.get("additional_minutes")) or 0) + (_num(row.get("total_break_minutes")) or 0)
-        out["produced_minutes"] = installed - deductions
-        out["productivity"] = out["produced_minutes"] / installed if installed else None
     return out
 
 
@@ -116,8 +92,8 @@ def _build_efficiency_sheet(wb, rows: list[dict]):
             cell.font = _CELL_FONT
             cell.border = _CELL_BORDER
             cell.alignment = _CENTER if isinstance(value, (int, float)) else _LEFT
-            if field == "productivity" and isinstance(value, float):
-                cell.number_format = "0.00%"  # ratio stored as a number, shown as a percentage
+            if field == "productividad" and isinstance(value, float):
+                cell.number_format = "0.00%"  # SQL ratio (produced / installed) shown as a percentage
             elif isinstance(value, float):
                 cell.number_format = "General"
     for col_idx, field in enumerate(fields, start=1):

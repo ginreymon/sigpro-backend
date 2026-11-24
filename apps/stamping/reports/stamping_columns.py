@@ -5,7 +5,8 @@ Confección catalog in apps/production/reports/productivity_columns.py).
 Each entry: (technical_name, "Excel header", "Spanish description"). Keys are either
 returned by fn_eficiencia_detallada_estampacion (after translate_keys) or derived by
 the stamping exporter (elapsed_hours, shift_label, shift_end, pieces_produced,
-target_pieces, produced_minutes, installed_minutes, productivity).
+target_pieces). Minutes and productivity come straight from the SQL
+(minutos_producidos, minutos_instalados, productividad), as in Confección.
 """
 
 from apps.production.reports.productivity_columns import CATALOG
@@ -39,9 +40,9 @@ STAMPING_COLUMNS = [
     ("target_pieces",    "Meta Piezas",
      "Piezas que se debían estampar según tiempo neto, SAM y operarios efectivos."),
     ("avg_stamped_pieces", *_same("avg_stamped_pieces")),
-    ("produced_minutes", "Minutos Producidos", "Minutos Instalados − (Minutos Adicionales + Minutos de Pausa)."),
-    ("installed_minutes", "Minutos Instalados", "(Fin Turno − Inicio Turno) en minutos."),
-    ("productivity",     "Productividad", "Minutos Producidos / Minutos Instalados, expresado como porcentaje (1 = 100 %)."),
+    ("minutos_producidos", *_same("minutos_producidos")),
+    ("minutos_instalados", *_same("minutos_instalados")),
+    ("productividad",    "Productividad", "Minutos producidos / minutos instalados (SQL), expresado como porcentaje."),
     ("efficiency",       *_same("efficiency")),
 ]
 
