@@ -24,6 +24,8 @@ REPORT_COLUMNS = [
     # Jornada / module / shift
     ("shift_start_utc",      "Inicio Jornada",     "Fecha y hora local (UTC-5) en que inició la jornada de trabajo del módulo en el turno."),
     ("ended_at",             "Fin Jornada",        "Fecha y hora local (UTC-5) de fin de la jornada. Vacío si la jornada sigue abierta."),
+    ("session_duration_hours", "Duración Jornada (h)",
+     "Horas entre el inicio y el fin de la jornada. Vacío si la jornada sigue abierta."),
     ("module_number",        "N° Módulo",          "Número del módulo (Confección) o máquina (Estampación)."),
     ("module_name",          "Módulo",             "Nombre del módulo o máquina."),
     ("module_location",      "Área",   "Área de producción a la que pertenece el módulo."),

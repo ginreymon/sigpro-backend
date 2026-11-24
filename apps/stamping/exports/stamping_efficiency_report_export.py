@@ -4,6 +4,9 @@ from datetime import datetime, time, timedelta
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 
+from apps.common.exports.employee_efficiency_sheets import (
+    EMPLOYEE_SHEET_DESCRIPTIONS, add_employee_efficiency_sheets, inject_dynamic_array_metadata,
+)
 from apps.production.exports.efficiency_report_export import (
     _build_dictionary_sheet, _build_records_sheet, _fmt, _preprocess, _record_value, _style_header,
     _CELL_BORDER, _CELL_FONT, _CENTER, _LEFT,
@@ -119,6 +122,7 @@ def _build_efficiency_sheet(wb, rows: list[dict]):
                 cell.number_format = "General"
     for col_idx, field in enumerate(fields, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = max(len(STAMPING_LABELS[field]) + 4, 14)
+    return ws
 
 
 def build_stamping_efficiency_report_excel(data: list[dict], has_employee: bool = False, records: list[dict] | None = None) -> bytes:
@@ -133,14 +137,16 @@ def build_stamping_efficiency_report_excel(data: list[dict], has_employee: bool 
     record_fields = [f for f in STAMPING_RECORD_FIELDS if any(v[f] != "" for v in record_values)]
 
     entries = {label: desc for _, label, desc in STAMPING_COLUMNS}
+    entries.update(EMPLOYEE_SHEET_DESCRIPTIONS)
     for f in record_fields:
         entries.setdefault(RECORD_LABELS.get(f, f), RECORD_DESCRIPTIONS.get(f, UNKNOWN_COLUMN_DESCRIPTION))
 
     wb = Workbook()
     _build_dictionary_sheet(wb.active, list(entries.items()))
-    _build_efficiency_sheet(wb, rows)
+    efficiency_ws = _build_efficiency_sheet(wb, rows)
+    dynamic_cells = add_employee_efficiency_sheets(wb, efficiency_ws, len(rows))
     _build_records_sheet(wb, record_fields, record_values)
 
     buf = io.BytesIO()
     wb.save(buf)
-    return buf.getvalue()
+    return inject_dynamic_array_metadata(buf.getvalue(), wb.sheetnames, dynamic_cells)
