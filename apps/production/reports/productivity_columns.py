@@ -76,6 +76,24 @@ REPORT_COLUMNS = [
     ("total_break_minutes",  "Min. Pausas",        "Total de minutos de pausa registrados en la jornada."),
 ]
 
+# Column order of the Confección "Eficiencia" sheet, aligned with the Stamping sheet
+# (apps/stamping/reports/stamping_columns.py): area, workday, module, shift, crew, orders,
+# SAM, breaks, quantities, minutes, productivity, efficiency. The groups above only organize
+# the descriptions; this tuple is the order the Excel uses. The employee-filter columns go last.
+CONFECCION_COLUMN_ORDER = (
+    "module_location", "shift_start_utc", "ended_at", "session_duration_hours", "module_number", "module_name",
+    "shift_name", "shift_start_time", "shift_end_time", "total_registers", "equivalent_employees", "employees",
+    "production_orders", "references", "sam", "additional_minutes", "additional_times", "total_break_minutes",
+    "breaks", "total_ordered", "total_completed", "total_scrap", "total_rejected", "total_produced",
+    "total_pieces_to_stamp", "avg_stamped_pieces", "unit_target", "minutos_producidos", "minutos_instalados",
+    "productividad", "efficiency",
+    "employee_id", "employee_id_number", "employee_first_name", "employee_last_name1", "employee_last_name2",
+    "employee_name",
+)
+assert {c[0] for c in REPORT_COLUMNS} == set(CONFECCION_COLUMN_ORDER), "column order out of sync with the catalog"
+_ORDER_INDEX = {key: i for i, key in enumerate(CONFECCION_COLUMN_ORDER)}
+REPORT_COLUMNS = sorted(REPORT_COLUMNS, key=lambda c: _ORDER_INDEX[c[0]])
+
 CATALOG = {key: (label, desc) for key, label, desc in REPORT_COLUMNS}
 
 # Returned by the SQL functions but not shown in the Excel: redundant ids, the
