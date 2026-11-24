@@ -42,7 +42,7 @@ STAMPING_COLUMNS = [
     ("avg_stamped_pieces", *_same("avg_stamped_pieces")),
     ("minutos_producidos", *_same("minutos_producidos")),
     ("minutos_instalados", *_same("minutos_instalados")),
-    ("productividad",    "Productividad", "Minutos producidos / minutos instalados (SQL), expresado como porcentaje."),
+    ("productividad",    *_same("productividad")),
     ("efficiency",       *_same("efficiency")),
 ]
 

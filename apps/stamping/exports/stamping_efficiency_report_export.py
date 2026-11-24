@@ -92,9 +92,7 @@ def _build_efficiency_sheet(wb, rows: list[dict]):
             cell.font = _CELL_FONT
             cell.border = _CELL_BORDER
             cell.alignment = _CENTER if isinstance(value, (int, float)) else _LEFT
-            if field == "productividad" and isinstance(value, float):
-                cell.number_format = "0.00%"  # SQL ratio (produced / installed) shown as a percentage
-            elif isinstance(value, float):
+            if isinstance(value, float):
                 cell.number_format = "General"
     for col_idx, field in enumerate(fields, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = max(len(STAMPING_LABELS[field]) + 4, 14)
