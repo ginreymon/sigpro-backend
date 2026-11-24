@@ -10,9 +10,46 @@ import io
 import re
 import zipfile
 
-from openpyxl.styles import Alignment, Font
+from openpyxl.formatting.rule import FormulaRule
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.formula import ArrayFormula
+
+# Same header look as the other sheets of the report (see efficiency_report_export.py).
+_HEADER_FILL = PatternFill("solid", fgColor="1F3864")
+_HEADER_FONT = Font(color="FFFFFF", bold=True, size=10)
+_HEADER_BORDER_SIDE = Side(style="thin", color="D9D9D9")
+_HEADER_BORDER = Border(left=_HEADER_BORDER_SIDE, right=_HEADER_BORDER_SIDE,
+                        top=_HEADER_BORDER_SIDE, bottom=_HEADER_BORDER_SIDE)
+
+
+# Body cells look like the "Eficiencia" / "Detalle registros" ones: size 10, thin grey border,
+# numbers centred and text left. Spilled cells cannot be styled one by one, so the font and
+# alignment go on the columns and the border on a conditional format that only marks filled cells.
+_CELL_FONT = Font(size=10)
+_CENTER = Alignment(horizontal="center", vertical="center")
+_LEFT = Alignment(horizontal="left", vertical="center")
+_HEADER_ROW_HEIGHT = 22
+
+
+def _style_column(ws, letter: str, alignment, number_format: str = "General"):
+    dim = ws.column_dimensions[letter]
+    dim.font, dim.alignment, dim.number_format = _CELL_FONT, alignment, number_format
+
+
+def _style_anchor(cell, alignment, number_format: str = "General"):
+    cell.font, cell.alignment, cell.number_format = _CELL_FONT, alignment, number_format
+
+
+def _border_filled_cells(ws, area: str):
+    top_left = area.split(":")[0]
+    ws.conditional_formatting.add(area, FormulaRule(formula=[f'LEN({top_left})>0'], border=_HEADER_BORDER))
+
+
+def _style_header_cell(cell):
+    cell.font, cell.fill, cell.border = _HEADER_FONT, _HEADER_FILL, _HEADER_BORDER
+    cell.alignment = Alignment(horizontal="center", vertical="center")
+
 
 EFFICIENCY_SHEET = "Eficiencia"
 LIST_SHEET = "Eficiencia por Empleado"
@@ -47,10 +84,10 @@ _LIST_FORMULA = (
     'EXPAND(INDEX(efs,i),cant,,INDEX(efs,i)))))))))),1),"")'
 )
 
-# X = spilled range of the list sheet; A4# / B3# = spilled ranges of the matrix sheet.
+# X = spilled range of the list sheet; A2# / B1# = spilled ranges of the matrix sheet.
 _MATRIX_DATES = '=IFERROR(TRANSPOSE(SORT(UNIQUE(INDEX(X,0,1)))),"")'
 _MATRIX_NAMES = '=IFERROR(SORT(UNIQUE(INDEX(X,0,2))),"")'
-_MATRIX_VALUES = '=IFERROR(AVERAGEIFS(INDEX(X,0,4),INDEX(X,0,2),A4#,INDEX(X,0,1),B3#),"")'
+_MATRIX_VALUES = '=IFERROR(AVERAGEIFS(INDEX(X,0,4),INDEX(X,0,2),A2#,INDEX(X,0,1),B1#),"")'
 
 _MATRIX_MAX_COLUMNS = 400  # day columns formatted ahead of the spill (a period is at most about a year)
 
@@ -91,49 +128,50 @@ def add_employee_efficiency_sheets(wb, efficiency_ws, data_rows: int) -> list[tu
         return f"{EFFICIENCY_SHEET}!{columns[header]}2:{columns[header]}{n}"
 
     dynamic: list[tuple[str, str]] = []
-    bold = Font(bold=True)
 
     # List: one row per (day, employee, module)
     ls = wb.create_sheet(LIST_SHEET, index=wb.sheetnames.index(efficiency_ws.title) + 1)
-    ls["A1"] = LIST_SHEET
-    ls["A1"].font = Font(bold=True, size=14)
     for col, label in enumerate(("Fecha", "Empleado", "Módulo", "Eficiencia (%)"), start=1):
-        ls.cell(row=3, column=col, value=label).font = bold
-    _put(ls, "A4", _LIST_FORMULA.format(
+        _style_header_cell(ls.cell(row=1, column=col, value=label))
+    _put(ls, "A2", _LIST_FORMULA.format(
         fech=rng(HEADER_START), emps=rng(HEADER_EMPLOYEES), mods=rng(HEADER_MODULE), efs=rng(HEADER_EFFICIENCY),
     ), dynamic)
-    ls["A4"].number_format = "dd/mm/yyyy"  # the anchor cell has its own style; the rest of the spill takes the column's
-    ls["D4"].number_format = "0.0"
-    ls.column_dimensions["A"].number_format = "dd/mm/yyyy"
-    ls.column_dimensions["D"].number_format = "0.0"
+    ls.row_dimensions[1].height = _HEADER_ROW_HEIGHT
+    for letter, alignment, number_format in (
+        ("A", _CENTER, "dd/mm/yyyy"), ("B", _LEFT, "General"), ("C", _LEFT, "General"), ("D", _CENTER, "0.0"),
+    ):
+        _style_column(ls, letter, alignment, number_format)
+        _style_anchor(ls[f"{letter}2"], alignment, number_format)  # a cell's own style overrides its column's
     for letter, width in (("A", 14), ("B", 44), ("C", 22), ("D", 16)):
         ls.column_dimensions[letter].width = width
-    ls.freeze_panes = "A4"
+    _border_filled_cells(ls, f"A2:D{n}")
+    ls.freeze_panes = "A2"
 
     # Matrix: employee x day
     ms = wb.create_sheet(MATRIX_SHEET, index=wb.sheetnames.index(LIST_SHEET) + 1)
-    ms["A1"] = MATRIX_SHEET
-    ms["A1"].font = Font(bold=True, size=14)
-    ms["A3"] = "Empleado \\ Fecha"
-    ms["A3"].font = bold
+    ms["A1"] = "Empleado \\ Fecha"
+    _style_header_cell(ms["A1"])
 
     def sub(formula):
-        return (formula.replace("INDEX(X,", f"INDEX({_spill_ref(LIST_SHEET, 'A4')},")
-                       .replace("A4#", _spill_ref(MATRIX_SHEET, "A4"))
-                       .replace("B3#", _spill_ref(MATRIX_SHEET, "B3")))
+        return (formula.replace("INDEX(X,", f"INDEX({_spill_ref(LIST_SHEET, 'A2')},")
+                       .replace("A2#", _spill_ref(MATRIX_SHEET, "A2"))
+                       .replace("B1#", _spill_ref(MATRIX_SHEET, "B1")))
 
-    _put(ms, "B3", sub(_MATRIX_DATES), dynamic)
-    _put(ms, "A4", sub(_MATRIX_NAMES), dynamic)
-    _put(ms, "B4", sub(_MATRIX_VALUES), dynamic)
+    _put(ms, "B1", sub(_MATRIX_DATES), dynamic)
+    _put(ms, "A2", sub(_MATRIX_NAMES), dynamic)
+    _put(ms, "B2", sub(_MATRIX_VALUES), dynamic)
     ms.column_dimensions["A"].width = 44
+    ms.row_dimensions[1].height = _HEADER_ROW_HEIGHT
+    _style_column(ms, "A", _LEFT)
+    _style_anchor(ms["A2"], _LEFT)
     for col in range(2, _MATRIX_MAX_COLUMNS + 2):
         letter = get_column_letter(col)
-        ms.column_dimensions[letter].number_format = "0.0"
-        ms[f"{letter}3"].number_format = "dd/mm"
-        ms[f"{letter}3"].alignment = Alignment(horizontal="center")
-    ms["A4"].number_format = "General"
-    ms["B4"].number_format = "0.0"
-    ms.freeze_panes = "B4"
+        _style_column(ms, letter, _CENTER, "0.0")
+        ms[f"{letter}1"].number_format = "yyyy-mm-dd"
+        _style_header_cell(ms[f"{letter}1"])  # spilled day headers keep the header look
+    _style_anchor(ms["B2"], _CENTER, "0.0")
+    _border_filled_cells(ms, f"A2:{get_column_letter(_MATRIX_MAX_COLUMNS + 1)}{n}")
+    ms.freeze_panes = "B2"
 
     return dynamic
 
