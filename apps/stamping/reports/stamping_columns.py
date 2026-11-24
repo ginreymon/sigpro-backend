@@ -41,7 +41,7 @@ STAMPING_COLUMNS = [
     ("avg_stamped_pieces", *_same("avg_stamped_pieces")),
     ("produced_minutes", "Minutos Producidos", "Minutos Instalados − (Minutos Adicionales + Minutos de Pausa)."),
     ("installed_minutes", "Minutos Instalados", "(Fin Turno − Inicio Turno) en minutos."),
-    ("productivity",     "Productividad", "Minutos Producidos / Minutos Instalados."),
+    ("productivity",     "Productividad", "Minutos Producidos / Minutos Instalados, expresado como porcentaje (1 = 100 %)."),
     ("efficiency",       *_same("efficiency")),
 ]
 
