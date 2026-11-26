@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.stamping',
     'apps.integration',
     'apps.email_service',
+    'apps.system_monitoring',
 ]
 
 REST_FRAMEWORK = {

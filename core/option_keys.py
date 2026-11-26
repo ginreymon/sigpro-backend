@@ -16,6 +16,8 @@ WORK_BREAKS = "admin/work-breaks"
 GENERAL_CONFIG = "admin/general-config"
 ORDER_EDITION = "admin/order-edition"
 WORK_SESSIONS_ADMIN = "admin/work-sessions"
+SYSTEM_MONITORING = "admin/system-monitoring"  # health summary (admins)
+SYSTEM_DIAGNOSTICS = "admin/system-diagnostics"  # technical detail (developers)
 
 # production
 PROD_DAY_OPERATION = "production/day-operation"

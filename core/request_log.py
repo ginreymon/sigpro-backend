@@ -1,7 +1,10 @@
 import logging
+import re
 import time
 
 from django.conf import settings
+
+from apps.system_monitoring import metrics_store
 
 logger = logging.getLogger("api.request")
 
@@ -24,6 +27,7 @@ class ApiRequestLogMiddleware:
         started = time.perf_counter()
         response = self.get_response(request)
         duration_ms = (time.perf_counter() - started) * 1000
+        self._record_metrics(request, response, duration_ms)
 
         logger.log(
             self._level_for(response.status_code),
@@ -40,6 +44,7 @@ class ApiRequestLogMiddleware:
         return response
 
     def process_exception(self, request, exception):
+        request._monitoring_exception = type(exception).__name__  # class only: messages may hold data
         if self._should_log(request.path):
             logger.error(
                 "%s %s unhandled exception user=%s",
@@ -48,6 +53,35 @@ class ApiRequestLogMiddleware:
                 self._user_label(request),
                 exc_info=exception,
             )
+
+    @staticmethod
+    def _route_label(match, path):
+        # Group by URL pattern (not concrete ids); strip router regex noise for readability.
+        if not (match and match.route):
+            return "<unmatched>"  # raw paths may carry ids/tokens and are unbounded (scanners)
+        route = re.sub(r"\(\?P<(\w+)>[^)]*\)", r"{\1}", match.route)
+        return "/" + route.replace("^", "").replace("$", "")
+
+    def _record_metrics(self, request, response, duration_ms):
+        # Monitoring polls are excluded so they do not skew latency/activity figures.
+        if request.path.startswith("/api/v1/system-monitoring/"):
+            return
+        try:
+            match = getattr(request, "resolver_match", None)
+            user = getattr(request, "user", None)
+            authenticated = user is not None and user.is_authenticated
+            metrics_store.record_request(
+                request.method,
+                self._route_label(match, request.path),
+                response.status_code,
+                duration_ms,
+                user_id=user.pk if authenticated else None,
+                username=user.get_username() if authenticated else None,
+                exception=getattr(request, "_monitoring_exception", None),
+            )
+        except Exception:
+            # Observability must never turn a successful request into a 500.
+            logger.exception("Failed to record request metrics")
 
     def _should_log(self, path):
         excluded = getattr(settings, "API_REQUEST_LOG_EXCLUDED_PATHS", ())
