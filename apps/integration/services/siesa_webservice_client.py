@@ -1,34 +1,34 @@
 """
-Cliente del webservice WSUNOEE de SIESA UNO EE: envía documentos (XML
-<Importar>) al método SOAP ImportarXML.
+Client for SIESA UNO EE's WSUNOEE webservice: sends documents (<Importar> XML)
+through the ImportarXML SOAP method.
 
-Patrón tomado de un ejemplo de referencia (crear_tercero.py — script Python
-que crea un tercero en SIESA vía WSUNOEE) y su evolución genérica
-(planos/core.py del mismo repo de ejemplos): configuración -> sobre XML
-<Importar> -> invocación SOAP con zeep -> interpretación de la respuesta
-(printTipoError). Ese ejemplo mezcla el armado de la línea de ancho fijo
-(específico de cada tabla SIESA, ej. Terceros) con el envío al webservice
-(genérico para cualquier tabla). Aquí solo vive lo genérico: construir el
-sobre <Importar> a partir de líneas ya armadas y enviarlo. Cada tipo de
-documento (Terceros, TEP, Requisiciones, ...) arma sus propias líneas de
-ancho fijo en su propio builder y le pasa el resultado a `send_flat_file_lines`.
+Pattern taken from a reference example (crear_tercero.py, a Python script that
+creates a third party in SIESA through WSUNOEE) and its generic evolution
+(planos/core.py from the same examples repo): configuration -> <Importar> XML
+envelope -> SOAP call with zeep -> response interpretation (printTipoError).
+That example mixes building the fixed-width line (specific to each SIESA table,
+e.g. Terceros) with sending to the webservice (generic for any table). Only the
+generic part lives here: build the <Importar> envelope from already-built lines
+and send it. Each document type (Terceros, TEP, Requisiciones, ...) builds its
+own fixed-width lines in its own builder and passes the result to
+`send_flat_file_lines`.
 
-ADVERTENCIAS (revisión 2026-09-23, ver conversación/commit para el detalle):
+WARNINGS (reviewed 2026-09-23, see the conversation/commit for details):
 
-- **`send_xml`/`send_flat_file_lines` son una llamada de red síncrona** (hasta
-  ~30s con el timeout configurado): bloquean el worker de Django mientras
-  espera a SIESA. Hoy solo las invoca `tep/send/`, a propósito en el ciclo
-  request/response.
-- **No valida el ancho/formato de `flat_file_lines`.** A propósito: esa
-  validación es responsabilidad del builder de cada documento (igual que
-  `construir_linea` en el repo de ejemplo), no de este transporte. Un builder
-  que no valide puede mandar una línea mal armada a SIESA sin ningún freno
-  local aquí.
-- **El WSDL puede estar servido por HTTP plano** (así viene configurado en el
-  ejemplo de referencia: `http://10.0.0.4:8508/...`). Si el ambiente real usa
-  ese mismo esquema, usuario/clave viajan sin cifrar en la red — es una
-  limitación del servidor SIESA/la red donde vive, no de este cliente; mitigar
-  con VPN/red interna, no con cambios aquí.
+- **`send_xml`/`send_flat_file_lines` are a synchronous network call** (up to
+  ~30s with the configured timeout): they block the Django worker while waiting
+  for SIESA. Today only `tep/send/` calls them, on purpose, in the
+  request/response cycle.
+- **It does not validate the width/format of `flat_file_lines`.** On purpose:
+  that validation is each document builder's responsibility (like
+  `construir_linea` in the example repo), not this transport's. A builder that
+  does not validate can send a malformed line to SIESA with no local safeguard
+  here.
+- **The WSDL may be served over plain HTTP** (that is how the reference example
+  is configured: `http://10.0.0.4:8508/...`). If the real environment uses the
+  same scheme, user/password travel unencrypted on the network. That is a
+  limitation of the SIESA server/network where it lives, not of this client;
+  mitigate with a VPN/internal network, not with changes here.
 """
 
 from __future__ import annotations
@@ -41,23 +41,25 @@ from xml.sax.saxutils import escape as xml_escape
 
 from django.conf import settings
 
+from apps.system_monitoring.metrics_store import record_siesa
+
 logger = logging.getLogger("integration.siesa_webservice")
 
-# Cache del cliente SOAP por wsdl_url: zeep.Client descarga y parsea el WSDL
-# completo en cada instanciación (costo real si esto se llama muchas veces
-# seguidas, ej. un lote de documentos). El WSDL no cambia en caliente durante
-# la vida del proceso, así que reusar el cliente es seguro. Con lock porque
-# Django puede servir con varios threads.
+# SOAP client cache per wsdl_url: zeep.Client downloads and parses the whole
+# WSDL on every instantiation (a real cost when called many times in a row,
+# e.g. a batch of documents). The WSDL does not change at runtime during the
+# process lifetime, so reusing the client is safe. Locked because Django may
+# serve with several threads.
 _client_cache: dict[str, Any] = {}
 _client_cache_lock = threading.Lock()
 
 
 class SiesaWebserviceConfigError(Exception):
-    """Falta configuración obligatoria (SIESA_WSUNOEE_*) para hablar con el webservice."""
+    """Required configuration (SIESA_WSUNOEE_*) to talk to the webservice is missing."""
 
 
 class SiesaWebserviceError(Exception):
-    """La llamada SOAP falló (WSDL inválido, timeout, red) o el webservice reportó error."""
+    """The SOAP call failed (invalid WSDL, timeout, network) or the webservice reported an error."""
 
 
 @dataclass(frozen=True)
@@ -66,7 +68,7 @@ class SiesaWebserviceConfig:
     connection_name: str
     company_id: str
     username: str
-    password: str = field(repr=False)  # nunca debe salir en logs/tracebacks/repr()
+    password: str = field(repr=False)  # must never appear in logs/tracebacks/repr()
 
     @classmethod
     def from_settings(cls) -> "SiesaWebserviceConfig":
@@ -95,20 +97,19 @@ class SiesaWebserviceResult:
 
 
 def build_import_xml(cfg: SiesaWebserviceConfig, flat_file_lines: list[str]) -> str:
-    """Arma el sobre <Importar> universal de WSUNOEE: línea de inicio, las
-    líneas de datos ya construidas (ancho fijo, una por <Linea>) y línea de
-    cierre, envueltas con las credenciales de conexión. Igual para cualquier
-    tipo de documento (Terceros, TEP, Requisiciones, ...) — lo único que
-    cambia por tabla es el contenido de `flat_file_lines`, armado antes por el
-    builder de ese documento."""
+    """Builds the universal WSUNOEE <Importar> envelope: start line, the
+    already-built data lines (fixed width, one per <Linea>) and closing line,
+    wrapped with the connection credentials. Identical for every document type
+    (Terceros, TEP, Requisiciones, ...); only the content of `flat_file_lines`
+    changes per table, built beforehand by that document's builder."""
     start_line = "000000100000001001"
-    total_lines = 1 + len(flat_file_lines) + 1  # inicio + datos + cierre
+    total_lines = 1 + len(flat_file_lines) + 1  # start + data + closing
     closing_line = f"{total_lines:07d}99990001001"
 
     all_lines = [start_line, *flat_file_lines, closing_line]
-    # Escapar es obligatorio: una línea con "&"/"<"/">" (frecuente en campos de
-    # notas de texto libre) rompe el XML o inyecta contenido en el sobre si no
-    # se escapa antes de interpolarla.
+    # Escaping is mandatory: a line with "&"/"<"/">" (common in free-text note
+    # fields) breaks the XML or injects content into the envelope if it is not
+    # escaped before interpolation.
     data_xml = "\n".join(f"    <Linea>{xml_escape(line)}</Linea>" for line in all_lines)
 
     return (
@@ -136,11 +137,11 @@ def _parse_result(soap_response: Any) -> SiesaWebserviceResult:
             from lxml import etree
             error_detail_xml = etree.tostring(value, pretty_print=True).decode("utf-8")
         else:
-            # Cuando hay error de negocio (ej. documento duplicado), WSUNOEE
-            # devuelve un dataset tipado (ej. "NewDataSet" con filas de error)
-            # que zeep deserializa a un objeto Python en vez de dejarlo como
-            # XML crudo -- no hay `tostring` posible sobre eso, así que se
-            # serializa a JSON con los datos tal cual para no perder el detalle.
+            # On a business error (e.g. duplicate document), WSUNOEE returns a
+            # typed dataset (e.g. "NewDataSet" with error rows) that zeep
+            # deserializes into a Python object instead of leaving raw XML --
+            # `tostring` is not possible on it, so it is serialized to JSON
+            # as-is to keep the detail.
             import json
             from zeep.helpers import serialize_object
             error_detail_xml = json.dumps(serialize_object(value), default=str, ensure_ascii=False)
@@ -155,18 +156,18 @@ def _parse_result(soap_response: Any) -> SiesaWebserviceResult:
 
 
 def _get_client(wsdl_url: str):
-    """Cliente zeep cacheado por wsdl_url (ver comentario de `_client_cache`
-    arriba) — evita re-descargar/re-parsear el WSDL en cada envío."""
+    """zeep client cached per wsdl_url (see the `_client_cache` comment above);
+    avoids re-downloading/re-parsing the WSDL on every send."""
     from zeep import Client
     from zeep.transports import Transport
 
     with _client_cache_lock:
         client = _client_cache.get(wsdl_url)
         if client is None:
-            # Sin timeout, un WSUNOEE colgado bloquearía esta llamada
-            # indefinidamente (peligroso si algún día se invoca desde un
-            # request/vista en vez de un job en background). `timeout` =
-            # fetch del WSDL, `operation_timeout` = la llamada SOAP en sí.
+            # Without a timeout, a hung WSUNOEE would block this call forever
+            # (dangerous if it is ever invoked from a request/view instead of a
+            # background job). `timeout` = WSDL fetch, `operation_timeout` =
+            # the SOAP call itself.
             transport = Transport(timeout=15, operation_timeout=30)
             logger.info("Connecting to WSUNOEE (first use, will cache): %s", wsdl_url)
             client = Client(wsdl_url, transport=transport)
@@ -175,12 +176,12 @@ def _get_client(wsdl_url: str):
 
 
 def send_xml(xml_data: str, cfg: SiesaWebserviceConfig | None = None) -> SiesaWebserviceResult:
-    """Invoca ImportarXML contra el webservice WSUNOEE con un XML <Importar>
-    ya armado. Lanza SiesaWebserviceError si la llamada SOAP falla (WSDL
-    inválido, timeout, red) — un printTipoError != 0 NO lanza excepción, se
-    reporta en el resultado (`ok=False`) para que quien llame decida qué
-    hacer (reintentar, marcar como fallido, etc.), igual que el resto de la
-    integración con SIESA en este proyecto no asume la semántica de error."""
+    """Calls ImportarXML on the WSUNOEE webservice with an already-built
+    <Importar> XML. Raises SiesaWebserviceError if the SOAP call fails (invalid
+    WSDL, timeout, network). A printTipoError != 0 does NOT raise: it is
+    reported in the result (`ok=False`) so the caller decides what to do
+    (retry, mark as failed, etc.), like the rest of the SIESA integration in
+    this project, which does not assume error semantics."""
     from requests.exceptions import RequestException
     from zeep.exceptions import Fault, TransportError
 
@@ -192,9 +193,11 @@ def send_xml(xml_data: str, cfg: SiesaWebserviceConfig | None = None) -> SiesaWe
         soap_response = client.service.ImportarXML(pvstrDatos=xml_data, printTipoError=0)
     except (Fault, TransportError, RequestException) as exc:
         logger.error("SOAP call to WSUNOEE failed: %s", exc)
+        record_siesa(False, "send")
         raise SiesaWebserviceError(f"Fallo la llamada al webservice SIESA: {exc}") from exc
 
     result = _parse_result(soap_response)
+    record_siesa(True, "send")  # reachability only: a business error (printTipoError) is not an outage
     if result.ok:
         logger.info("WSUNOEE responded with no error (printTipoError=0)")
     else:
@@ -208,9 +211,8 @@ def send_xml(xml_data: str, cfg: SiesaWebserviceConfig | None = None) -> SiesaWe
 def send_flat_file_lines(
     flat_file_lines: list[str], cfg: SiesaWebserviceConfig | None = None
 ) -> SiesaWebserviceResult:
-    """Atajo: arma el XML <Importar> a partir de las líneas de plano de ancho
-    fijo ya construidas por el builder del documento correspondiente, y lo
-    envía. Uso típico:
+    """Shortcut: builds the <Importar> XML from the fixed-width flat-file lines
+    already built by the matching document builder, and sends it. Typical use:
 
         from apps.integration.services.siesa_webservice_client import send_flat_file_lines
         result = send_flat_file_lines([header_line, detail_line_1, ...])
