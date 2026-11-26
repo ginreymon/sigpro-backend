@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, time
+from datetime import datetime
 
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
@@ -21,14 +21,6 @@ def _num(value):
         return None if value in (None, "") else float(value)
     except (TypeError, ValueError):
         return None
-
-
-def _as_time(value) -> time | None:
-    if isinstance(value, time):
-        return value
-    if isinstance(value, str) and value:
-        return time.fromisoformat(value)
-    return None
 
 
 def _local_naive(value) -> datetime | None:
@@ -57,13 +49,9 @@ def _derive(row: dict, last_record) -> dict:
     start = _local_naive(row.get("shift_start_utc"))
     workday_end = _local_naive(row.get("ended_at"))
     shift_end_utc = last_record or row.get("ended_at")
-    shift_start = _as_time(row.get("shift_start_time"))
-    shift_end = _as_time(row.get("shift_end_time"))
 
     out["elapsed_hours"] = round((workday_end - start).total_seconds() / 3600, 2) if start and workday_end else None
     out["shift_end"] = fmt_datetime_local(shift_end_utc)
-    if shift_start and shift_end:
-        out["shift_label"] = f"{shift_start:%H:%M} - {shift_end:%H:%M}"
 
     # Pieces per unit of the workday: total pieces to stamp / total ordered units.
     ordered, completed, target = _num(row.get("total_ordered")), _num(row.get("total_completed")), _num(row.get("unit_target"))

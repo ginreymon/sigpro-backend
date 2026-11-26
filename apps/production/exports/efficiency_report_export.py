@@ -43,8 +43,19 @@ _TEXT_FORMATTERS = {
 }
 
 
+def _as_time(value) -> time | None:
+    if isinstance(value, time):
+        return value
+    if isinstance(value, str) and value:
+        return time.fromisoformat(value)
+    return None
+
+
 def _preprocess(record: dict) -> dict:
     out = dict(record)
+    shift_start, shift_end = _as_time(out.get("shift_start_time")), _as_time(out.get("shift_end_time"))
+    if shift_start and shift_end:
+        out["shift_label"] = f"{shift_start:%H:%M} - {shift_end:%H:%M}"
     out["sam"] = fmt_sam_text(out.get("references"))  # before references becomes text
     if out.get("additional_time_seconds") is not None:
         out["additional_minutes"] = float(out["additional_time_seconds"]) / 60

@@ -29,9 +29,7 @@ REPORT_COLUMNS = [
     ("module_number",        "N° Módulo",          "Número del módulo (Confección) o máquina (Estampación)."),
     ("module_name",          "Módulo",             "Nombre del módulo o máquina."),
     ("module_location",      "Área",   "Área de producción a la que pertenece el módulo."),
-    ("shift_name",           "Turno",              "Nombre del turno de trabajo."),
-    ("shift_start_time",     "Inicio Turno",       "Hora de inicio del turno, tomada del horario congelado al abrir la sesión."),
-    ("shift_end_time",       "Fin Turno",          "Hora de fin del turno, tomada del horario congelado al abrir la sesión."),
+    ("shift_label",          "Turno", "Horario del turno (inicio - fin), tomado del horario congelado al abrir la sesión."),
     ("total_registers",      "N° Registros",       "Cantidad de asignaciones de módulo (actividades) que componen la jornada."),
 
     # People
@@ -82,7 +80,7 @@ REPORT_COLUMNS = [
 # the descriptions; this tuple is the order the Excel uses. The employee-filter columns go last.
 CONFECCION_COLUMN_ORDER = (
     "module_location", "shift_start_utc", "ended_at", "session_duration_hours", "module_number", "module_name",
-    "shift_name", "shift_start_time", "shift_end_time", "total_registers", "equivalent_employees", "employees",
+    "shift_label", "total_registers", "equivalent_employees", "employees",
     "production_orders", "references", "sam", "additional_minutes", "additional_times", "total_break_minutes",
     "breaks", "total_ordered", "total_completed", "total_scrap", "total_rejected", "total_produced",
     "total_pieces_to_stamp", "avg_stamped_pieces", "unit_target", "minutos_producidos", "minutos_instalados",
@@ -103,6 +101,7 @@ EXCLUDED_FIELDS = {
     "period_start", "period_end", "shift_id",
     "module_id", "work_center_id", "work_shift_id", "module_operator_count",
     "net_seconds", "total_planned", "additional_time_seconds",
+    "shift_name", "shift_start_time", "shift_end_time",  # folded into shift_label
 }
 
 # Fields that need rounding: field -> decimal places.
@@ -128,7 +127,7 @@ RECORD_COLUMNS = [
     ("id_registro",   "ID Registro",   "Identificador interno del registro de producción o estampación."),
     ("area",          *_same_as("module_location")),
     ("fecha",         *_same_as("shift_start_utc")),
-    ("turno",         *_same_as("shift_name")),
+    ("turno",         "Turno",         "Nombre del turno de trabajo."),
     ("horario",       "Horario Turno", "Horario del turno (hora inicio-hora fin), tomado del horario congelado al abrir la sesión."),
     ("documento",     *_same_as("production_orders")),
     ("hora_registro", "Hora Registro", "Fecha y hora local (UTC-5) en que se inició el registro."),
