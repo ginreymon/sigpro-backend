@@ -10,8 +10,11 @@ from apps.production.reports.productivity_columns import (
     CATALOG, REPORT_COLUMNS, EXCLUDED_FIELDS, ROUND_FIELDS, UTC_FIELDS, UNKNOWN_COLUMN_DESCRIPTION,
     RECORD_COLUMNS, RECORD_LABELS, RECORD_DESCRIPTIONS, RECORD_EXCLUDED_FIELDS, RECORD_UTC_FIELDS,
 )
+from apps.common.exports.employee_efficiency_sheets import (
+    EMPLOYEE_SHEET_DESCRIPTIONS, add_employee_efficiency_sheets, inject_dynamic_array_metadata,
+)
 from apps.production.helpers.excel_formatters import (
-    fmt_datetime_local, fmt_breaks_text, fmt_employees_text, fmt_additional_times_text,
+    utc_to_local, fmt_datetime_local, fmt_breaks_text, fmt_employees_text, fmt_additional_times_text,
     fmt_production_orders_text, fmt_references_text, fmt_sam_text,
 )
 
@@ -40,11 +43,27 @@ _TEXT_FORMATTERS = {
 }
 
 
+def _as_time(value) -> time | None:
+    if isinstance(value, time):
+        return value
+    if isinstance(value, str) and value:
+        return time.fromisoformat(value)
+    return None
+
+
 def _preprocess(record: dict) -> dict:
     out = dict(record)
+    shift_start, shift_end = _as_time(out.get("shift_start_time")), _as_time(out.get("shift_end_time"))
+    if shift_start and shift_end:
+        out["shift_label"] = f"{shift_start:%H:%M} - {shift_end:%H:%M}"
     out["sam"] = fmt_sam_text(out.get("references"))  # before references becomes text
     if out.get("additional_time_seconds") is not None:
         out["additional_minutes"] = float(out["additional_time_seconds"]) / 60
+    start, end = utc_to_local(out.get("shift_start_utc")), utc_to_local(out.get("ended_at"))
+    # Open workdays (no end) or an end before the start leave the cell empty.
+    out["session_duration_hours"] = (
+        round((end - start).total_seconds() / 3600, 2) if start and end and end >= start else None
+    )
     for field in UTC_FIELDS:
         out[field] = fmt_datetime_local(out.get(field))
     for field, formatter in _TEXT_FORMATTERS.items():
@@ -172,6 +191,8 @@ def build_efficiency_report_excel(data: list[dict], has_employee: bool = False, 
     for f in record_fields:
         entries.setdefault(RECORD_LABELS.get(f, f), RECORD_DESCRIPTIONS.get(f, UNKNOWN_COLUMN_DESCRIPTION))
 
+    entries.update(EMPLOYEE_SHEET_DESCRIPTIONS)
+
     wb = Workbook()
     _build_dictionary_sheet(wb.active, list(entries.items()))
 
@@ -197,8 +218,9 @@ def build_efficiency_report_excel(data: list[dict], has_employee: bool = False, 
     for col_idx, field in enumerate(fields, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = max(len(labels[field]) + 4, 14)
 
+    dynamic_cells = add_employee_efficiency_sheets(wb, ws, len(efficiency_rows))
     _build_records_sheet(wb, record_fields, record_values)
 
     buf = io.BytesIO()
     wb.save(buf)
-    return buf.getvalue()
+    return inject_dynamic_array_metadata(buf.getvalue(), wb.sheetnames, dynamic_cells)
