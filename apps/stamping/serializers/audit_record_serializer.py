@@ -52,6 +52,8 @@ class AuditedOpSummarySerializer(serializers.ModelSerializer):
 
     total_audited_quantity = serializers.SerializerMethodField()
     matches_total = serializers.SerializerMethodField()
+    cut_completed = serializers.SerializerMethodField()
+    cut_tracking = serializers.SerializerMethodField()
     updated_by_username = serializers.CharField(source='updated_by.username', read_only=True, default=None)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True, default=None)
 
@@ -60,6 +62,7 @@ class AuditedOpSummarySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'op_number', 'op_rowid', 'op_type', 'total_ordered_quantity',
             'total_audited_quantity', 'matches_total', 'is_audited',
+            'cut_completed', 'cut_tracking',
             'created_at', 'updated_at',
             'created_by', 'created_by_username',
             'updated_by', 'updated_by_username',
@@ -70,6 +73,21 @@ class AuditedOpSummarySerializer(serializers.ModelSerializer):
 
     def get_matches_total(self, obj):
         return obj.matches_total
+
+    def get_cut_completed(self, obj):
+        tracking = getattr(obj, 'cut_tracking', None)
+        return tracking.get('isCompleted') if tracking else None
+
+    def get_cut_tracking(self, obj):
+        tracking = getattr(obj, 'cut_tracking', None)
+        if not tracking:
+            return None
+        return {
+            'qty_to_execute': tracking.get('qtyToExecute'),
+            'qty_completed': tracking.get('qtyCompleted'),
+            'is_completed': tracking.get('isCompleted'),
+            'operation': tracking.get('operation'),
+        }
 
 
 class ColorAuditSerializer(serializers.Serializer):

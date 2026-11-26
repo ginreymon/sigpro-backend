@@ -62,6 +62,26 @@ class OPProductionService:
         return data
 
     @staticmethod
+    def get_cut_tracking(tipo_docto, consec_docto):
+        """Cut (CR001) progress of an OP from fn_trazabilidad_op, or None when the
+        OP is not in a valid state or has no CR001 operation (never "incomplete")."""
+        traz_list = OPCommonRepository.get_trazabilidad_op_json(consec_docto, tipo_docto) or []
+        op_traz = next(
+            (
+                t for t in traz_list
+                if t.get("documentType") == tipo_docto and t.get("documentNumber") == consec_docto
+            ),
+            None,
+        )
+        if not op_traz:
+            return None
+        # shortcut: first CR001 entry; if a route repeats CR001, Seg_* is identical per centre.
+        return next(
+            (e for e in (op_traz.get("tracking") or []) if e.get("workCenterCode") == CUT_WORK_CENTER_CODE),
+            None,
+        )
+
+    @staticmethod
     def get_sku_detail(tipo_docto, consec_docto, id_plan, sku_rowid):
         data = OPProductionRepository.get_detalle_produccion_op_json(tipo_docto, consec_docto, id_plan)
         if not data:

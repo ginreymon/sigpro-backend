@@ -1,5 +1,6 @@
 from django.db import transaction
 
+from apps.production.services.op_production_service import OPProductionService
 from apps.stamping.repositories.audit_record_repository import AuditRecordRepository
 
 
@@ -68,3 +69,14 @@ class AuditRecordService:
     @staticmethod
     def audited_ops(search=None):
         return AuditRecordRepository.audited_ops(search)
+
+    @staticmethod
+    def attach_cut_tracking(records) -> None:
+        """Sets `cut_tracking` (dict or None) on each record, one SP call per
+        distinct OP. Swap the loop for a batch query if this gets slow."""
+        cache = {}
+        for record in records:
+            key = (record.op_type, record.op_number)
+            if key not in cache:
+                cache[key] = OPProductionService.get_cut_tracking(*key)
+            record.cut_tracking = cache[key]

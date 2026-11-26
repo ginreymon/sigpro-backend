@@ -121,6 +121,7 @@ class AuditRecordViewSet(AuditModelViewSet):
         queryset = AuditRecordService.audited_ops(request.query_params.get('search'))
 
         page = self.paginate_queryset(queryset)
+        AuditRecordService.attach_cut_tracking(page)
         serializer = AuditedOpSummarySerializer(page, many=True, context=self.get_serializer_context())
         return self.get_paginated_response(serializer.data)
 
