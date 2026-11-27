@@ -9,6 +9,9 @@ class AuditRecordDetail(models.Model):
     sku_rowids = models.JSONField()
     ordered_quantity = models.PositiveIntegerField()
     audited_quantity = models.PositiveIntegerField()
+    # Manually entered meters equivalent to audited_quantity (kg). Only used by
+    # CALANDRA orders (machine type 4); NULL for every other order.
+    audited_meters = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
     class Meta:
         db_table = "stamping_audit_record_detail"

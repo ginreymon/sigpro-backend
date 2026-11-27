@@ -29,7 +29,7 @@ class AuditRecordSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'op_number', 'op_rowid', 'op_type', 'total_ordered_quantity', 'is_audited',
-            'color', 'sku_rowids', 'ordered_quantity', 'audited_quantity',
+            'color', 'sku_rowids', 'ordered_quantity', 'audited_quantity', 'audited_meters',
             'total_audited_quantity', 'matches_total', 'quantities_match',
             'created_at', 'updated_at',
             'created_by', 'created_by_username',
@@ -95,6 +95,11 @@ class ColorAuditSerializer(serializers.Serializer):
     sku_rowids = serializers.ListField(child=serializers.IntegerField())
     ordered_quantity = serializers.IntegerField(min_value=0)
     audited_quantity = serializers.IntegerField(min_value=0)
+    # Meters (CALANDRA only). Optional: when the key is absent the service keeps the
+    # value already saved for that color instead of erasing it.
+    audited_meters = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=0, required=False, allow_null=True,
+    )
 
 
 class AuditRecordBulkCreateSerializer(serializers.Serializer):

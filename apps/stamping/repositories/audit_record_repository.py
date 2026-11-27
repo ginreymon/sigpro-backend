@@ -41,9 +41,16 @@ class AuditRecordRepository:
                 sku_rowids=entry["sku_rowids"],
                 ordered_quantity=entry["ordered_quantity"],
                 audited_quantity=entry["audited_quantity"],
+                audited_meters=entry.get("audited_meters"),
             )
             for entry in colors
         ]
+
+    @classmethod
+    def meters_by_color(cls, op_number, op_rowid, op_type) -> dict:
+        return dict(
+            cls.block_details(op_number, op_rowid, op_type).values_list('color', 'audited_meters')
+        )
 
     @staticmethod
     def delete_block(op_number, op_rowid, op_type):
